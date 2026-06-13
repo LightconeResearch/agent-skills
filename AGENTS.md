@@ -32,6 +32,49 @@ Commit the regenerated files alongside your source change. CI runs `npm test` an
 fails if the generated files are out of sync. The generator is zero-dependency
 (Node ≥ 18 built-ins only) — no `npm install` is required.
 
+## Build tooling — design & rationale
+
+If you arrived expecting a plain skills folder and found a generator, here's why it
+exists and the shape it takes, so nothing surprises you.
+
+**Why a generator at all (not hand-maintained JSON).** The three targets disagree on
+layout. `npx skills` and the Claude marketplace both read the flat canonical `skills/`
+tree (Claude uses one `marketplace.json` with `source: "./"` + `skills: [...]` arrays,
+no per-plugin dirs). **Codex** wants the opposite: `.agents/plugins/marketplace.json`
+plus a `plugins/<name>/.codex-plugin/plugin.json` *with its own `skills/` directory*
+per plugin. Maintaining both against one set of skills by hand is exactly what drifts
+silently. So `skills.config.json` + `skills/` is the single source, and everything
+per-target is generated and drift-checked. **Do not edit a generated file to fix a
+target — change the source and rebuild.** If a manifest looks wrong, the bug is in
+`skills.config.json` or `scripts/lib.mjs`, not in the output.
+
+**How the pieces fit.** `scripts/lib.mjs` is the engine: it loads the config, parses
+each `SKILL.md` frontmatter, computes the transitive skill closure per plugin (own +
+dependency skills — Codex plugins are self-contained, so they bundle the whole
+closure), and returns the exact files + symlinks every target needs. `build.mjs` writes
+them; `validate.mjs` regenerates in memory and diffs against disk. Both import `lib.mjs`
+so the generator and the checker agree by construction.
+
+**Two deliberate, non-obvious choices** (don't "fix" these without reading this):
+
+- **Zero dependencies / hand-written frontmatter parser.** `lib.mjs` parses YAML
+  frontmatter itself (inline + folded/literal scalars) instead of pulling in
+  `gray-matter`, and there's no `tsx`/`vitest`. This is intentional: the generator runs
+  with no `npm install`, so it works in a fresh checkout and in CI without a setup step.
+  If you add a dependency, you give that up. The parser only needs to handle `name` and
+  `description` — if a skill ever needs richer frontmatter parsing, that's the tradeoff
+  to weigh.
+- **Codex skills are symlinks, not copies.** Each `plugins/<name>/skills/<skill>` is a
+  relative symlink back to the canonical `skills/<skill>` (git tracks them as symlinks,
+  mode `120000`). This keeps one source of truth instead of duplicating skill bodies
+  into `plugins/`. `validate.mjs` checks they resolve to a real `SKILL.md`.
+
+**Prior art.** The pattern is borrowed: databricks/databricks-agent-skills (a generated
+`manifest.json` registry from skill frontmatter, CI-validated, plus per-agent plugin
+dirs incl. `.codex-plugin/`) and supabase/agent-skills (the `source: "./"` + `strict:
+false` Claude marketplace style, and a build + sanity-test workflow). We trimmed both to
+zero-dep and reconciled them to the three-target need.
+
 ## Authoring conventions
 
 - `name`: 1–64 chars, lowercase letters/digits/hyphens, matches the directory.
