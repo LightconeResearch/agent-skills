@@ -134,7 +134,7 @@ Show summary table:
 | sub_analysis  | ...       | ...     | ...      |
 ```
 
-Then tell the user the spec is ready and they can begin implementation. Recommend running `/clear` first — the scoping conversation consumes significant context, and everything needed to continue is captured in `astra.yaml`.
+Then tell the user the spec is ready and they can begin implementation. Recommend clearing the conversation context first (e.g. `/clear` in Claude Code) — the scoping conversation consumes significant context, and everything needed to continue is captured in `astra.yaml`.
 
 ---
 
