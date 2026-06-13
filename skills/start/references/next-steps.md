@@ -39,4 +39,4 @@ Pick the most pressing item the state reveals; use `AskUserQuestion` when more t
 
 ## Restrictions
 
-This skill orchestrates and authors the spec — it does **not** write implementation code. It may run `lc`/`astra` commands (status, validate, run, verify, universe generate, export) and edit `astra.yaml` / `universes/*.yaml` / `CLAUDE.md`. When a next step needs new analysis *code* (a new recipe's script, a parameterization), that's the user's implementation work; this skill helps wire it into the spec and run it, not write it. Never fabricate evidence — all quotes must pass `astra validate --verify-evidence`.
+This skill orchestrates and authors the spec — it does **not** write implementation code. It may run `lc`/`astra` commands (status, validate, run, verify, universe generate, export) and edit `astra.yaml` / `universes/*.yaml`. When a next step needs new analysis *code* (a new recipe's script, a parameterization), that's the user's implementation work; this skill helps wire it into the spec and run it, not write it. Never fabricate evidence — all quotes must pass `astra validate --verify-evidence`.

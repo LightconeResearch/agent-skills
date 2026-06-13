@@ -12,7 +12,7 @@ description: >
   lightcone analysis", "set up my project", "continue the analysis", "what
   should I do next", or any session opened in a directory that has (or will
   have) an `astra.yaml`.
-allowed-tools: Read, Write(astra.yaml), Write(universes/*), Write(CLAUDE.md), Edit(astra.yaml), Edit(universes/*), Edit(CLAUDE.md), Glob, Grep, Bash(astra:*), Bash(lc:*), WebSearch, WebFetch, AskUserQuestion, Agent
+allowed-tools: Read, Write(astra.yaml), Write(universes/*), Edit(astra.yaml), Edit(universes/*), Glob, Grep, Bash(astra:*), Bash(lc:*), WebSearch, WebFetch, AskUserQuestion, Agent
 ---
 
 # /start
@@ -39,7 +39,7 @@ This skill uses the `lc` and `astra` CLIs, which are **not bundled with the skil
 
 ## Route A — set up a new analysis
 
-The project is empty or only scaffolded. Scope the analysis from the user's research question into a validated `astra.yaml` + project `CLAUDE.md`. Follow the full playbook in **[references/new-project.md](references/new-project.md)** — research question → analysis structure → literature & decisions → finalize. Honor its restrictions (you are a specification agent: only `astra.yaml`, `universes/*.yaml`, and `CLAUDE.md`; no implementation code; never read PDFs in the main context — delegate to `lc-extractor`).
+The project is empty or only scaffolded. Scope the analysis from the user's research question into a validated `astra.yaml`. Follow the full playbook in **[references/new-project.md](references/new-project.md)** — research question → analysis structure → literature & decisions → finalize. Honor its restrictions (you are a specification agent: only `astra.yaml` and `universes/*.yaml`; no implementation code; never read PDFs in the main context — delegate to `lc-extractor`).
 
 ## Route B — continue an existing analysis
 
