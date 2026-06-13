@@ -40,12 +40,17 @@ for (const [rel, expected] of Object.entries(files)) {
   if (readFileSync(abs, "utf8") !== expected) errors.push(`generated file out of date: ${rel} (run npm run build)`);
 }
 
-// 4. Codex skill symlinks exist and resolve to a real SKILL.md.
-for (const { link } of symlinks) {
+// 4. Codex symlinks exist and resolve: skill symlinks to a real SKILL.md,
+//    other (e.g. hooks) symlinks to an existing directory.
+for (const { link, kind } of symlinks) {
   const abs = join(ROOT, link);
   try {
     readlinkSync(abs); // must be a symlink
-    if (!statSync(join(abs, "SKILL.md")).isFile()) throw new Error("no SKILL.md");
+    if (kind === "skill") {
+      if (!statSync(join(abs, "SKILL.md")).isFile()) throw new Error("no SKILL.md");
+    } else if (!statSync(abs).isDirectory()) {
+      throw new Error("not a directory");
+    }
   } catch {
     errors.push(`broken Codex symlink: ${link} (run npm run build)`);
   }

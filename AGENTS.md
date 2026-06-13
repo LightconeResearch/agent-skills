@@ -40,9 +40,13 @@ exists and the shape it takes, so nothing surprises you.
 **Why a generator at all (not hand-maintained JSON).** The three targets disagree on
 layout. `npx skills` and the Claude marketplace both read the flat canonical `skills/`
 tree (Claude uses one `marketplace.json` with `source: "./"` + `skills: [...]` arrays,
-no per-plugin dirs). **Codex** wants the opposite: `.agents/plugins/marketplace.json`
-plus a `plugins/<name>/.codex-plugin/plugin.json` *with its own `skills/` directory*
-per plugin. Maintaining both against one set of skills by hand is exactly what drifts
+no per-plugin dirs). **Codex** (OpenAI Codex CLI) wants the opposite:
+`.agents/plugins/marketplace.json` plus a `plugins/<name>/.codex-plugin/plugin.json`
+*with its own `skills/` directory* per plugin — and, for a plugin that ships hooks,
+its own `hooks/` directory too (Codex reads the same Claude-compatible `hooks.json`
+protocol and aliases `${CLAUDE_PLUGIN_ROOT}`, so the generator declares the same
+`hooks` file and symlinks the canonical `hooks/` tree under the plugin root).
+Maintaining both against one set of skills by hand is exactly what drifts
 silently. So `skills.config.json` + `skills/` is the single source, and everything
 per-target is generated and drift-checked. **Do not edit a generated file to fix a
 target — change the source and rebuild.** If a manifest looks wrong, the bug is in
@@ -64,10 +68,13 @@ so the generator and the checker agree by construction.
   If you add a dependency, you give that up. The parser only needs to handle `name` and
   `description` — if a skill ever needs richer frontmatter parsing, that's the tradeoff
   to weigh.
-- **Codex skills are symlinks, not copies.** Each `plugins/<name>/skills/<skill>` is a
-  relative symlink back to the canonical `skills/<skill>` (git tracks them as symlinks,
-  mode `120000`). This keeps one source of truth instead of duplicating skill bodies
-  into `plugins/`. `validate.mjs` checks they resolve to a real `SKILL.md`.
+- **Codex skills (and hooks) are symlinks, not copies.** Each
+  `plugins/<name>/skills/<skill>` is a relative symlink back to the canonical
+  `skills/<skill>`, and for a hooks-bearing plugin `plugins/<name>/hooks` symlinks
+  back to the canonical `hooks/` (git tracks them as symlinks, mode `120000`). This
+  keeps one source of truth instead of duplicating bodies into `plugins/`.
+  `validate.mjs` checks skill symlinks resolve to a real `SKILL.md` and other
+  symlinks resolve to a directory.
 
 **Prior art.** The pattern is borrowed: databricks/databricks-agent-skills (a generated
 `manifest.json` registry from skill frontmatter, CI-validated, plus per-agent plugin
