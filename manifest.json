@@ -1,0 +1,60 @@
+{
+  "name": "lightcone-research",
+  "version": "0.1.0",
+  "description": "Agent skills for the Lightcone Research stack — the ASTRA spec and lightcone-cli project workflows.",
+  "repository": "https://github.com/LightconeResearch/agent-skills",
+  "generated": "Run `npm run build` to regenerate. Do not edit by hand.",
+  "skills": [
+    {
+      "name": "astra",
+      "path": "skills/astra",
+      "description": "Comprehensive reference for the `astra.yaml` specification — top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, narrative anchors, and composition mechanics. Invoke whenever reading, writing, validating, or debugging an `astra.yaml` spec; whenever working with decisions, options, prior_insights, findings, or evidence; or whenever the user asks about ASTRA schema, spec syntax, or sub-analysis composition.",
+      "plugins": [
+        "astra",
+        "lightcone"
+      ]
+    },
+    {
+      "name": "feedback",
+      "path": "skills/feedback",
+      "description": "File a bug report from the current session. Use when something breaks: /feedback <description of what went wrong>",
+      "plugins": [
+        "lightcone"
+      ]
+    },
+    {
+      "name": "start",
+      "path": "skills/start",
+      "description": "Entry point for working with a Lightcone / ASTRA analysis. Inspects the project state first, then routes: for an empty or freshly-scaffolded directory it scopes a new analysis from your research question; for an existing project it summarizes the analysis state (validation, materialization, decisions, findings, universes) and helps you choose the next step — run or verify outputs, refine decisions, write narrative, or publish. Use whenever you start, open, set up, continue, or resume work on a lightcone-cli / ASTRA project, or ask \"what next\" — e.g. \"start a lightcone analysis\", \"set up my project\", \"continue the analysis\", \"what should I do next\", or any session opened in a directory that has (or will have) an `astra.yaml`.",
+      "plugins": [
+        "lightcone"
+      ]
+    }
+  ],
+  "plugins": [
+    {
+      "name": "astra",
+      "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and narrative anchors. Use when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition.",
+      "skills": [
+        "astra"
+      ],
+      "dependencies": [],
+      "hasHooks": false,
+      "hasAgents": false
+    },
+    {
+      "name": "lightcone",
+      "description": "Work with a Lightcone / ASTRA analysis using the lightcone-cli (lc) toolchain. The `start` skill inspects project state and routes — scoping a new analysis from a research question, or surfacing the next step (run/verify outputs, refine decisions, write narrative, publish) on an existing one — and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Use for any interactive work inside an lc / ASTRA project. The `start` skill bundles the full lc CLI reference (references/cli.md).",
+      "skills": [
+        "astra",
+        "feedback",
+        "start"
+      ],
+      "dependencies": [
+        "astra"
+      ],
+      "hasHooks": true,
+      "hasAgents": true
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "lightcone",
+  "version": "0.1.0",
+  "description": "Work with a Lightcone / ASTRA analysis using the lightcone-cli (lc) toolchain. The `start` skill inspects project state and routes — scoping a new analysis from a research question, or surfacing the next step (run/verify outputs, refine decisions, write narrative, publish) on an existing one — and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Use for any interactive work inside an lc / ASTRA project. The `start` skill bundles the full lc CLI reference (references/cli.md).",
+  "author": {
+    "name": "Lightcone Research",
+    "email": "fr.eiffel@gmail.com"
+  },
+  "homepage": "https://github.com/LightconeResearch/agent-skills",
+  "repository": "https://github.com/LightconeResearch/agent-skills",
+  "license": "BSD-3-Clause",
+  "skills": "./skills/"
+}

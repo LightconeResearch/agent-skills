@@ -1,0 +1,21 @@
+{
+  "name": "@lightcone/agent-skills",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent skills for the Lightcone Research stack — ASTRA specs, lightcone-cli workflows, and paper reproduction.",
+  "type": "module",
+  "license": "BSD-3-Clause",
+  "author": "Lightcone Research",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LightconeResearch/agent-skills.git"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate.mjs",
+    "test": "node scripts/validate.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
