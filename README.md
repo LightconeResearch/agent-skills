@@ -60,11 +60,11 @@ claude plugin marketplace add LightconeResearch/agent-skills
 claude plugin install lightcone@lightcone-research
 ```
 
-Once installed, plugin skills are namespaced by plugin name: `/lightcone:new`,
-`/lightcone:from-code`, `/lightcone:feedback`, and `/astra:astra`. The `lightcone`
-plugin depends on `astra`; installing it pulls in the `astra` reference too. This is
-the **only** path that ships the SessionStart/PostToolUse hooks and the `lc-extractor`
-subagent (used by `new` for literature extraction).
+Once installed, plugin skills are namespaced by plugin name: `/lightcone:start`,
+`/lightcone:feedback`, and `/astra:astra`. The `lightcone` plugin depends on `astra`;
+installing it pulls in the `astra` reference too. This is the **only** path that ships
+the SessionStart/PostToolUse hooks and the `lc-extractor` subagent (used by `start`
+for literature extraction).
 
 ### Codex plugin
 
@@ -91,15 +91,14 @@ existing Git credentials — any one of:
 | Plugin | Skills (invocation) | Adds |
 |---|---|---|
 | **`astra`** | `astra` (`/astra:astra`) | — |
-| **`lightcone`** | `new` (`/lightcone:new`), `from-code` (`/lightcone:from-code`), `feedback` (`/lightcone:feedback`); depends on `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`lightcone`** | `start` (`/lightcone:start`), `feedback` (`/lightcone:feedback`); depends on `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
 
 ## Skills
 
 | Skill | What it does |
 |---|---|
 | [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, narrative anchors. |
-| [`new`](skills/new) | Scope a new ASTRA analysis from a research question into a full `astra.yaml`. Bundles the full `lc` execution reference at [`references/cli.md`](skills/new/references/cli.md) — commands, the Spec-Code Invariant, status interpretation, failure diagnosis, WRROC export. |
-| [`from-code`](skills/from-code) | Bring an existing codebase into ASTRA — scan, spec, parameterize, run. |
+| [`start`](skills/start) | Entry point for working with a Lightcone / ASTRA analysis: inspects project state and routes — scoping a new analysis from a research question, or surfacing the next step on an existing one. Bundles the new-project playbook, the next-steps router, and the full `lc` execution reference at [`references/cli.md`](skills/start/references/cli.md). |
 | [`feedback`](skills/feedback) | File a bug report against the right Lightcone repo with version/error context. |
 
 ## Repository layout

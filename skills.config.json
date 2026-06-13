@@ -20,8 +20,8 @@
     },
     {
       "name": "lightcone",
-      "description": "Work on an ASTRA analysis with the lightcone-cli (lc) toolchain: scaffold and scope new analyses from a research question, bring an existing codebase into ASTRA, run/verify/diagnose the lc workflow, and file feedback. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save. Use for any interactive work inside an lc / ASTRA project, including ingesting an existing project. The `new` skill bundles the full lc CLI reference (references/cli.md).",
-      "skills": ["new", "from-code", "feedback"],
+      "description": "Work with a Lightcone / ASTRA analysis using the lightcone-cli (lc) toolchain. The `start` skill inspects project state and routes — scoping a new analysis from a research question, or surfacing the next step (run/verify outputs, refine decisions, write narrative, publish) on an existing one — and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Use for any interactive work inside an lc / ASTRA project. The `start` skill bundles the full lc CLI reference (references/cli.md).",
+      "skills": ["start", "feedback"],
       "agents": ["agents/lc-extractor.md"],
       "hooks": "hooks/hooks.json",
       "dependencies": ["astra"]

@@ -55,7 +55,7 @@ Substrate CLIs (use --help on any):
 
 Reference skills (invoke when the surface above isn't enough):
   /astra   — astra.yaml spec: decisions, prior_insights, findings, evidence, sub-analyses, narrative anchors
-  /new     — scope/work an analysis; bundles the full lc workflow reference (references/cli.md)"
+  /start   — work an analysis: inspect state, route to setup or next steps; bundles the lc workflow reference"
 
 if [ "$validation_ok" -ne 0 ]; then
     # tail rather than head -- the leading lines are success markers

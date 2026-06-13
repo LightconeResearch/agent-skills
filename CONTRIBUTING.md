@@ -29,7 +29,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
    ```
    Keep the body under ~500 lines; offload detail to `skills/<name>/references/`.
 2. If it shells out to `lc`/`astra`, add the **Prerequisites** preflight block (copy
-   the pattern from `skills/new/SKILL.md`): check the CLI resolves, point to
+   the pattern from `skills/start/SKILL.md`): check the CLI resolves, point to
    `uv tool install lightcone-cli` if missing, and use `--help` to discover syntax.
 3. Add the skill to the relevant plugin(s) in `skills.config.json` (`plugins[].skills`).
 4. `npm run build && npm test`, then commit source **and** regenerated files together.

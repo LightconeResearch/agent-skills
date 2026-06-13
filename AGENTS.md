@@ -5,13 +5,13 @@ It is not an application — it packages `SKILL.md`-based skills for three insta
 targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
 from a single canonical source. Two plugins: `astra` (spec reference) and
 `lightcone` (the `lc` project workflow + hooks), which depends on `astra`. Plugin
-skills are namespaced by plugin name (e.g. `/lightcone:new`, `/astra:astra`).
+skills are namespaced by plugin name (e.g. `/lightcone:start`, `/astra:astra`).
 
 ## Where things live
 
 - `skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per
   skill; the directory name must equal the `name:` in the frontmatter.
-- `agents/` — Claude subagents (`lc-extractor`, used by the `new` skill). `hooks/` —
+- `agents/` — Claude subagents (`lc-extractor`, used by the `start` skill). `hooks/` —
   plugin `hooks.json` + bash scripts.
 - `skills.config.json` — declares how skills compose into the plugins
   (`astra`, `lightcone`) and their dependencies.
