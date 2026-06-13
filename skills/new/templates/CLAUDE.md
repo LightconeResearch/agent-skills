@@ -2,7 +2,7 @@
 
 ASTRA analysis project, orchestrated by lightcone-cli.
 
-The single source of truth for this analysis is `astra.yaml`. Spec syntax and CLI workflow live in the `/astra` and `/lc-cli` reference skills (named in the session-start primer; invoke when you need depth).
+The single source of truth for this analysis is `astra.yaml`. Spec syntax and CLI workflow live in the `/astra` and `/cli` reference skills (named in the session-start primer; invoke when you need depth).
 
 ### Quick Start
 

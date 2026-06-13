@@ -1,16 +1,16 @@
 ---
-name: lc-new
+name: new
 description: Use this skill whenever the user starts a new ASTRA analysis from a research question — scoping the question, structuring inputs and outputs, identifying decisions through literature, and landing astra.yaml + project CLAUDE.md. Triggers on verbs (`new`, `start`, `scope`) combined with nouns (`analysis`, `project`, `question`, `research`) — e.g. "new analysis", "start project", "scope research question" — even if the user doesn't say "project" explicitly. Don't use this for working inside an existing ASTRA project; this is for fresh scoping only.
 allowed-tools: Read, Write(astra.yaml), Write(universes/*), Write(CLAUDE.md), Edit(astra.yaml), Edit(universes/*), Edit(CLAUDE.md), Glob, Grep, Bash(astra:*), Bash(lc:*), WebSearch, WebFetch, AskUserQuestion, Agent
 ---
 
-# /lc-new
+# /new
 
 Create a new ASTRA analysis project through conversation. Build the spec iteratively -- write to `astra.yaml` after each phase so the user sees progress. Literature search and decision identification happen in distinct phases -- talk first, then extract papers, then identify decisions informed by both conversation and literature.
 
 ## Prerequisites
 
-This skill uses the `lc` and `astra` CLIs, which are **not bundled with the skill**. Confirm they resolve first — `command -v lc && command -v astra || echo "lightcone-cli toolchain not found"` — and if missing, install the toolchain (one package ships both): `uv tool install lightcone-cli` (or `pipx install lightcone-cli`). New projects start with `lc init <dir>`, which also creates the project venv. Discover command syntax with `--help` rather than guessing. See `/lc-cli` for the full workflow.
+This skill uses the `lc` and `astra` CLIs, which are **not bundled with the skill**. Confirm they resolve first — `command -v lc && command -v astra || echo "lightcone-cli toolchain not found"` — and if missing, install the toolchain (one package ships both): `uv tool install lightcone-cli` (or `pipx install lightcone-cli`). New projects start with `lc init <dir>`, which also creates the project venv. Discover command syntax with `--help` rather than guessing. For the full `lc` execution workflow — commands, the Spec-Code Invariant, `lc status` interpretation, failure diagnosis, and WRROC export — read [references/cli.md](references/cli.md).
 
 ## Setup
 

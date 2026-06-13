@@ -11,39 +11,31 @@
       "description": "Comprehensive reference for the `astra.yaml` specification — top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, narrative anchors, and composition mechanics. Invoke whenever reading, writing, validating, or debugging an `astra.yaml` spec; whenever working with decisions, options, prior_insights, findings, or evidence; or whenever the user asks about ASTRA schema, spec syntax, or sub-analysis composition.",
       "plugins": [
         "astra",
-        "lightcone-core"
+        "lightcone"
       ]
     },
     {
-      "name": "lc-cli",
-      "path": "skills/lc-cli",
-      "description": "Reference for `lc` CLI execution: commands (init/run/status/verify/build/export), the Spec-Code Invariant (`astra.yaml` and code never diverge), status interpretation (ok/stale/missing/alias), failure diagnosis, multiverse runs, scratch overrides for HPC, sub-analysis scaffolding, publishing via WRROC. Invoke whenever running, debugging, or diagnosing `lc` workflows; whenever interpreting `lc status` / `lc verify` output; or whenever the user asks about the development workflow surrounding `astra.yaml`.",
+      "name": "feedback",
+      "path": "skills/feedback",
+      "description": "File a bug report from the current session. Use when something breaks: /feedback <description of what went wrong>",
       "plugins": [
-        "lightcone-core"
+        "lightcone"
       ]
     },
     {
-      "name": "lc-feedback",
-      "path": "skills/lc-feedback",
-      "description": "File a bug report from the current session. Use when something breaks: /lc-feedback <description of what went wrong>",
-      "plugins": [
-        "lightcone-core"
-      ]
-    },
-    {
-      "name": "lc-from-code",
-      "path": "skills/lc-from-code",
+      "name": "from-code",
+      "path": "skills/from-code",
       "description": "Bring an existing project into ASTRA / lightcone-cli, starting from the code. Scans the codebase, drafts or augments astra.yaml, parameterizes decisions, and runs until outputs materialize. Triggers on \"migrate\", \"convert\", \"existing project\", \"wrap this code\", \"start from code\".",
       "plugins": [
-        "lightcone-core"
+        "lightcone"
       ]
     },
     {
-      "name": "lc-new",
-      "path": "skills/lc-new",
+      "name": "new",
+      "path": "skills/new",
       "description": "Use this skill whenever the user starts a new ASTRA analysis from a research question — scoping the question, structuring inputs and outputs, identifying decisions through literature, and landing astra.yaml + project CLAUDE.md. Triggers on verbs (`new`, `start`, `scope`) combined with nouns (`analysis`, `project`, `question`, `research`) — e.g. \"new analysis\", \"start project\", \"scope research question\" — even if the user doesn't say \"project\" explicitly. Don't use this for working inside an existing ASTRA project; this is for fresh scoping only.",
       "plugins": [
-        "lightcone-core"
+        "lightcone"
       ]
     }
   ],
@@ -59,14 +51,13 @@
       "hasAgents": false
     },
     {
-      "name": "lightcone-core",
-      "description": "Work on an ASTRA analysis with the lightcone-cli (lc) toolchain: scaffold and scope new analyses from a research question, bring an existing codebase into ASTRA, run/verify/diagnose the lc workflow, and file feedback. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save. Use for any interactive work inside an lc / ASTRA project, including ingesting an existing project.",
+      "name": "lightcone",
+      "description": "Work on an ASTRA analysis with the lightcone-cli (lc) toolchain: scaffold and scope new analyses from a research question, bring an existing codebase into ASTRA, run/verify/diagnose the lc workflow, and file feedback. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save. Use for any interactive work inside an lc / ASTRA project, including ingesting an existing project. The `new` skill bundles the full lc CLI reference (references/cli.md).",
       "skills": [
         "astra",
-        "lc-cli",
-        "lc-feedback",
-        "lc-from-code",
-        "lc-new"
+        "feedback",
+        "from-code",
+        "new"
       ],
       "dependencies": [
         "astra"

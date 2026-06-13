@@ -1,12 +1,12 @@
 ---
-name: lc-feedback
+name: feedback
 description: >
   File a bug report from the current session. Use when something breaks:
-  /lc-feedback <description of what went wrong>
+  /feedback <description of what went wrong>
 argument-hint: "<what went wrong>"
 ---
 
-# /lc-feedback
+# /feedback
 
 File a bug report against the right Lightcone repo based on the current session.
 
@@ -24,7 +24,7 @@ Stop.
 
 ## Step 1: Description
 
-The user should have provided a description inline (e.g., `/lc-feedback pipeline dies on second output`). If they didn't, ask briefly:
+The user should have provided a description inline (e.g., `/feedback pipeline dies on second output`). If they didn't, ask briefly:
 
 **What went wrong?**
 

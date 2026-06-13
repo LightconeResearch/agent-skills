@@ -29,7 +29,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
    ```
    Keep the body under ~500 lines; offload detail to `skills/<name>/references/`.
 2. If it shells out to `lc`/`astra`, add the **Prerequisites** preflight block (copy
-   the pattern from `skills/lc-cli/SKILL.md`): check the CLI resolves, point to
+   the pattern from `skills/new/SKILL.md`): check the CLI resolves, point to
    `uv tool install lightcone-cli` if missing, and use `--help` to discover syntax.
 3. Add the skill to the relevant plugin(s) in `skills.config.json` (`plugins[].skills`).
 4. `npm run build && npm test`, then commit source **and** regenerated files together.
@@ -62,11 +62,11 @@ Then `npm run build && npm test`.
 ```bash
 # Claude Code, against your local checkout:
 claude plugin marketplace add ./           # or: /plugin marketplace add ./ in-session
-claude plugin install lightcone-core@lightcone-research
+claude plugin install lightcone@lightcone-research
 
 # Validate the Claude plugin/marketplace manifests:
 claude plugin validate .
-claude plugin validate ./plugins/lightcone-core   # (Codex plugin.json layout)
+claude plugin validate ./plugins/lightcone   # (Codex plugin.json layout)
 
 # npx skills, from the repo:
 npx skills add ./ --list

@@ -16,7 +16,7 @@ allowed-tools: Read, Glob, Grep, Bash(astra:*)
 
 ## Prerequisites — the `astra` CLI
 
-This skill validates and inspects specs with the `astra` CLI, which is **not bundled with the skill**. Confirm it resolves first — `command -v astra || echo "astra not found"` — and if missing, install the toolchain (one package ships both `astra` and `lc`): `uv tool install lightcone-cli` (or `pipx install lightcone-cli`). Inside an ASTRA project, the project venv's `astra` is authoritative. Discover command syntax with `--help` (`astra --help`, `astra validate --help`) rather than guessing; the surface evolves. For the execution workflow around the spec, see `/lc-cli`.
+This skill validates and inspects specs with the `astra` CLI, which is **not bundled with the skill**. Confirm it resolves first — `command -v astra || echo "astra not found"` — and if missing, install the toolchain (one package ships both `astra` and `lc`): `uv tool install lightcone-cli` (or `pipx install lightcone-cli`). Inside an ASTRA project, the project venv's `astra` is authoritative. Discover command syntax with `--help` (`astra --help`, `astra validate --help`) rather than guessing; the surface evolves. For the `lc` execution workflow around the spec, see the `references/cli.md` reference bundled with the `lightcone:new` skill.
 
 ## What an ASTRA Analysis Is
 

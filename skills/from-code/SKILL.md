@@ -1,15 +1,15 @@
 ---
-name: lc-from-code
+name: from-code
 description: Bring an existing project into ASTRA / lightcone-cli, starting from the code. Scans the codebase, drafts or augments astra.yaml, parameterizes decisions, and runs until outputs materialize. Triggers on "migrate", "convert", "existing project", "wrap this code", "start from code".
 ---
 
-# /lc-from-code
+# /from-code
 
 End-to-end migration: scan existing code, draft or add to `astra.yaml`, parameterize decisions in the code, and run until everything materializes. This works both as a fresh start from code and as an augmenting pass inside an existing ASTRA project. The user's existing logic stays intact — changes should be minimal.
 
 ## Prerequisites
 
-This skill uses the `lc` and `astra` CLIs, which are **not bundled with the skill**. Confirm they resolve first — `command -v lc && command -v astra || echo "lightcone-cli toolchain not found"` — and if missing, install the toolchain (one package ships both): `uv tool install lightcone-cli` (or `pipx install lightcone-cli`). To wrap a fresh codebase, scaffold the project with `lc init` first. Discover command syntax with `--help` rather than guessing. See `/lc-cli` for the full workflow. (The scan-only invocation context below is read-only and does not need the CLIs.)
+This skill uses the `lc` and `astra` CLIs, which are **not bundled with the skill**. Confirm they resolve first — `command -v lc && command -v astra || echo "lightcone-cli toolchain not found"` — and if missing, install the toolchain (one package ships both): `uv tool install lightcone-cli` (or `pipx install lightcone-cli`). To wrap a fresh codebase, scaffold the project with `lc init` first. Discover command syntax with `--help` rather than guessing. The full `lc` execution reference (commands, the Spec-Code Invariant, status interpretation, failure diagnosis) ships with the `lightcone:new` skill as `references/cli.md`. (The scan-only invocation context below is read-only and does not need the CLIs.)
 
 ## Invocation contexts
 
