@@ -1,0 +1,44 @@
+{
+  "name": "lightcone-research",
+  "interface": {
+    "displayName": "Lightcone Research Skills"
+  },
+  "plugins": [
+    {
+      "name": "astra",
+      "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and narrative anchors. Use when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition.",
+      "source": {
+        "source": "local",
+        "path": "./plugins/astra"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "lightcone-core",
+      "description": "Work on an ASTRA analysis with the lightcone-cli (lc) toolchain: scaffold and scope new analyses from a research question, bring an existing codebase into ASTRA, run/verify/diagnose the lc workflow, and file feedback. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save. Use for any interactive work inside an lc / ASTRA project, including ingesting an existing project.",
+      "source": {
+        "source": "local",
+        "path": "./plugins/lightcone-core"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "lightcone-reproduction",
+      "description": "Reproduce a published scientific paper end-to-end in ASTRA. Orchestrates paper extraction, literature resolution, ralph-loop iteration, narrative authoring, figure/numeric comparison, and sentence-by-sentence claim auditing, plus the lc-extractor subagent for prior-insight extraction. Use when reproducing a paper from a DOI, arXiv ID, or PDF, or resuming a reproduction workdir. Builds on lightcone-core + astra.",
+      "source": {
+        "source": "local",
+        "path": "./plugins/lightcone-reproduction"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    }
+  ]
+}

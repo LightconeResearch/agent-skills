@@ -1,0 +1,13 @@
+{
+  "name": "lightcone-reproduction",
+  "version": "0.1.0",
+  "description": "Reproduce a published scientific paper end-to-end in ASTRA. Orchestrates paper extraction, literature resolution, ralph-loop iteration, narrative authoring, figure/numeric comparison, and sentence-by-sentence claim auditing, plus the lc-extractor subagent for prior-insight extraction. Use when reproducing a paper from a DOI, arXiv ID, or PDF, or resuming a reproduction workdir. Builds on lightcone-core + astra.",
+  "author": {
+    "name": "Lightcone Research",
+    "email": "fr.eiffel@gmail.com"
+  },
+  "homepage": "https://github.com/LightconeResearch/agent-skills",
+  "repository": "https://github.com/LightconeResearch/agent-skills",
+  "license": "BSD-3-Clause",
+  "skills": "./skills/"
+}
