@@ -2,11 +2,10 @@
 # PostToolUse(Write|Edit) hook: re-validate after writes to astra.yaml or a
 # universe file, push errors back to the agent as additionalContext.
 #
-# astra is resolved from the project venv via PATH (prepended at
-# SessionStart by activate-venv.sh). Issue #103 traced back to this hook
-# running an older, globally-installed astra when activate-venv failed
-# silently -- with the venv reliably on PATH that whole code path is
-# unnecessary.
+# astra is resolved project-venv-first (PATH is prepended at SessionStart by
+# activate-venv.sh), falling back to an ephemeral `uvx --from astra-tools astra`
+# run when there is no project install. Validation is stateless, so uvx is a
+# safe fallback; `lc` execution is project-bound and never runs this way.
 
 input=$(cat)
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_response.filePath // empty')
@@ -24,13 +23,21 @@ else
     exit 0
 fi
 
-command -v astra &>/dev/null || exit 0
+# Resolve an astra runner: project CLI on PATH first, else no-install uvx.
+if command -v astra &>/dev/null; then
+    astra_cmd=(astra)
+elif command -v uvx &>/dev/null; then
+    astra_cmd=(uvx --from astra-tools astra)
+else
+    exit 0
+fi
+
 cd "$project_root" 2>/dev/null || exit 0
 
 if [ "$filename" = "astra.yaml" ]; then
-    result=$(astra validate astra.yaml 2>&1)
+    result=$("${astra_cmd[@]}" validate astra.yaml 2>&1)
 else
-    result=$(astra validate "$file_path" 2>&1)
+    result=$("${astra_cmd[@]}" validate "$file_path" 2>&1)
 fi
 exit_code=$?
 

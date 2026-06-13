@@ -19,6 +19,8 @@ uv tool install lightcone-cli      # preferred (isolated tool install)
 
 Inside an ASTRA project the project venv is authoritative: `lc init` creates `.venv/` and the session-start hook prepends `.venv/bin` to `PATH`, so `lc`/`astra` resolve to the project's pinned versions rather than a global install. **Never guess command syntax — discover it with `--help`** (`lc --help`, `lc run --help`, `astra paper --help`); the surface evolves and `--help` is the source of truth.
 
+> **`astra` without an install.** The stateless `astra` operations (validate, spec inspection) can run with no install via `uvx --from astra-tools astra <cmd>` (the command is `astra`, the package `astra-tools`). `lc` execution is **not** a uvx target — it is project-bound (pinned project venv, content-addressed manifests, reproducibility), so it always uses the project install above.
+
 ## CLI Reference
 
 ```bash

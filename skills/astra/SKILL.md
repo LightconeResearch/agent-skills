@@ -9,14 +9,29 @@ description: >
   decisions, options, prior_insights, findings, or evidence; or whenever
   the user asks about ASTRA schema, spec syntax, or sub-analysis
   composition.
-allowed-tools: Read, Glob, Grep, Bash(astra:*)
+allowed-tools: Read, Glob, Grep, Bash(astra:*), Bash(uvx:*)
 ---
 
 # ASTRA Reference
 
 ## Prerequisites — the `astra` CLI
 
-This skill validates and inspects specs with the `astra` CLI, which is **not bundled with the skill**. Confirm it resolves first — `command -v astra || echo "astra not found"` — and if missing, install the toolchain (one package ships both `astra` and `lc`): `uv tool install lightcone-cli` (or `pipx install lightcone-cli`). Inside an ASTRA project, the project venv's `astra` is authoritative. Discover command syntax with `--help` (`astra --help`, `astra validate --help`) rather than guessing; the surface evolves. For the `lc` execution workflow around the spec, see the `references/cli.md` reference bundled with the `lightcone:start` skill.
+This skill runs the `astra` CLI (from the `astra-tools` package) to validate and inspect specs. It needs **no install** — resolve it in this order:
+
+- **Inside an `lc init` project**, the project venv's pinned `astra` is on `PATH` (the session-start hook activates it). Prefer it — it's fast and version-matched to the project.
+- **Otherwise**, run it ephemerally with no install via [uvx](https://docs.astral.sh/uv/) (ships with `uv`):
+  ```bash
+  uvx --from astra-tools astra validate astra.yaml
+  ```
+  The `--from` form is required because the command is `astra` but the package is `astra-tools`. Pin a version when determinism matters: `uvx --from astra-tools==<version> astra …`.
+
+Resolve-or-fallback in one line:
+
+```bash
+command -v astra >/dev/null && echo "astra: PATH" || echo "astra: run via 'uvx --from astra-tools astra'"
+```
+
+Discover command syntax with `--help` (`astra --help`, `astra validate --help`) rather than guessing; the surface evolves. For the `lc` execution workflow around the spec, see the `references/cli.md` reference bundled with the `lightcone:start` skill — note that `lc` execution is project-bound and is **not** a uvx target (it uses the project install).
 
 ## What an ASTRA Analysis Is
 

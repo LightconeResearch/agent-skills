@@ -25,8 +25,10 @@ uv tool install lightcone-cli      # preferred
 
 Each CLI-dependent skill opens with a short preflight: it checks the tools resolve,
 points you here if they don't, and always discovers command syntax via `--help`
-rather than guessing. `astra`-only reference skills work without the CLI for reading,
-but need it for validation.
+rather than guessing. The stateless `astra` operations (validation, spec inspection)
+need **no install at all** — they fall back to `uvx --from astra-tools astra <cmd>`,
+which fetches and runs the CLI ephemerally (requires only `uv`). `lc` execution is
+project-bound and uses the install above.
 
 ## Install
 
