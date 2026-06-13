@@ -49,22 +49,29 @@ Ask if the user has specific papers they want to look into. Also search with Web
 
 ### Extraction
 
-For each approved paper: `astra paper add <doi>`, `astra paper path <doi>`, then spawn one `lc-extractor` agent per paper. The agent definition already contains extraction instructions, output format, and verification logic -- you just fill in the paper-specific context.
+The extraction logic, verification loop, and required output format are the canonical procedure in **[extraction.md](extraction.md)** — the single source of truth. *Who* runs it depends on the harness; the procedure is identical either way.
 
-**Spawning each agent:** Use `Agent(subagent_type="lc-extractor", prompt="...")`. In the prompt, provide:
+For each approved paper, first acquire it: `astra paper add <doi>`, then `astra paper path <doi>` for the PDF path.
+
+**If subagents are available** (e.g. Claude Code's `Agent` tool) — preferred, because PDFs are large and stay out of the main context. Spawn one `lc-extractor` agent per paper with `Agent(subagent_type="lc-extractor", prompt="...")`. In each prompt, provide:
+- **Path to the procedure**: the absolute path to this skill's `references/extraction.md` (its sibling — the file you are reading now lives next to it). The subagent reads it and follows it exactly.
 - **Analysis context**: the analysis description and decisions this paper might inform
 - **Paper details**: DOI, version (arXiv only), PDF path (from `astra paper path`)
 - **Target decisions**: each decision ID, label, and options with descriptions
 - **Timestamp**: current time in ISO 8601
 
-Spawn all in a single message (parallel). Show progress as results come in:
+Spawn all in a single message (parallel).
+
+**If subagents are not available** (Codex and other harnesses) — process papers **one at a time**, yourself, following [extraction.md](extraction.md) for each: read the PDF, extract, verify, write the verified prior insights to `astra.yaml`, then **clear or compact context before the next paper** so PDF text does not accumulate. Never hold several PDFs in context at once.
+
+Either way, show progress as papers complete:
 
 ```
   ✓ Ba et al. 2016 -- 3 prior insights
   ○ Wu & He 2018 (reading...)
 ```
 
-Write extracted prior insights to astra.yaml immediately. Synthesize them by topic for the user.
+Write extracted prior insights to astra.yaml as they are verified. Synthesize them by topic for the user.
 
 ### Decision Identification
 
@@ -148,7 +155,7 @@ You MUST ONLY create/modify: `astra.yaml` and `universes/*.yaml`.
 
 You MUST NOT fabricate quotes -- all evidence must pass `astra validate --verify-evidence`.
 
-You MUST spawn `lc-extractor` agents for paper processing. One paper per agent. Never read a PDF in the main agent context.
+You MUST process papers **one at a time**, following [extraction.md](extraction.md). Where subagents are available, delegate to one `lc-extractor` per paper to keep PDFs out of the main context (preferred); where they are not, read and extract in the main context one paper at a time, clearing context between papers. Never hold several PDFs in context at once.
 
 ---
 
@@ -159,7 +166,7 @@ You MUST spawn `lc-extractor` agents for paper processing. One paper per agent. 
 - **Method-only decisions** -- Actively probe for data handling and exclusion criteria, not just method choices
 - **Literature as afterthought** -- Do not defer all literature to the end. Collect paper candidates during conversation (Phases 1-2) and extract them before identifying decisions (Extraction before Decision Identification in Phase 3)
 - **Too many papers** -- ~2 papers per topic area, max 10 per section; do not try to be exhaustive
-- **Background interruptions** -- Never spawn search or extraction subagents during conversation phases. Collect candidates first, then process them during Phase 3 Extraction
-- **Reading PDFs in main context** -- Always delegate to subagents; PDFs consume too much context
+- **Background interruptions** -- Never run search or extraction during conversation phases. Collect candidates first, then process them during Phase 3 Extraction
+- **Many PDFs in context at once** -- Process papers one at a time; delegate to subagents where available, otherwise clear context between papers. Never let multiple PDFs pile up in the main context
 - **Chat dump of decisions** -- Do not dump full candidate decision content in chat; write decisions to astra.yaml for review
 - **Skipping verification** -- If quotes were extracted, always run `astra validate --verify-evidence`

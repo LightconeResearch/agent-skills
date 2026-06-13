@@ -29,9 +29,9 @@ Pick the most pressing item the state reveals; use `AskUserQuestion` when more t
 
 | If the state shows… | Next step | How |
 |---|---|---|
-| **Validation errors** | Fix the spec | Edit `astra.yaml`, re-run `astra validate astra.yaml` until clean. The PostToolUse hook re-validates on every save. |
+| **Validation errors** | Fix the spec | Edit `astra.yaml`, re-run `astra validate astra.yaml` until clean. (On Claude Code the validate-on-save hook does this for you after each write; elsewhere, run it yourself.) |
 | **`missing` / `stale` outputs** | Materialize them | `lc run <output_id> --universe <name>` — build iteratively, upstream first. See [cli.md](cli.md) for status interpretation and failure diagnosis. |
-| **Decisions without evidence, or known gaps** | Literature & decisions pass | Reuse the Paper Collection → Extraction → Decision Identification flow in [new-project.md](new-project.md) (Phase 3); delegate PDFs to the `lc-extractor` subagent, one paper per agent. |
+| **Decisions without evidence, or known gaps** | Literature & decisions pass | Reuse the Paper Collection → Extraction → Decision Identification flow in [new-project.md](new-project.md) (Phase 3); process papers one at a time via [extraction.md](extraction.md) — delegated to the `lc-extractor` subagent where available, in-context otherwise. |
 | **Results exist but `narrative.findings` is TODO** | Write the findings/narrative | Fill the `narrative:` block in `astra.yaml` (see `/astra` → Narrative for the five-key structure and `#anchor` cross-references). Keep it grounded in the materialized results. |
 | **Outputs `ok` but never integrity-checked** | Verify provenance | `lc verify` — recompute hashes, walk the chain; repair any failures with `lc run`. |
 | **Meaningful decisions, single universe** | Explore the multiverse | `astra universe generate -n <name>` for alternative defensible paths, then `lc run` across universes. |

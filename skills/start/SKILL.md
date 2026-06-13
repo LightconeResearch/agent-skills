@@ -39,7 +39,7 @@ This skill uses the `lc` and `astra` CLIs, which are **not bundled with the skil
 
 ## Route A — set up a new analysis
 
-The project is empty or only scaffolded. Scope the analysis from the user's research question into a validated `astra.yaml`. Follow the full playbook in **[references/new-project.md](references/new-project.md)** — research question → analysis structure → literature & decisions → finalize. Honor its restrictions (you are a specification agent: only `astra.yaml` and `universes/*.yaml`; no implementation code; never read PDFs in the main context — delegate to `lc-extractor`).
+The project is empty or only scaffolded. Scope the analysis from the user's research question into a validated `astra.yaml`. Follow the full playbook in **[references/new-project.md](references/new-project.md)** — research question → analysis structure → literature & decisions → finalize. Honor its restrictions (you are a specification agent: only `astra.yaml` and `universes/*.yaml`; no implementation code; process papers one at a time — delegate to the `lc-extractor` subagent where available, otherwise extract in-context and clear context between papers).
 
 ## Route B — continue an existing analysis
 
