@@ -5,7 +5,7 @@
     "email": "fr.eiffel@gmail.com"
   },
   "metadata": {
-    "description": "Agent skills for the Lightcone Research stack — ASTRA specs, lightcone-cli project workflows, and paper reproduction.",
+    "description": "Agent skills for the Lightcone Research stack — the ASTRA spec and lightcone-cli project workflows.",
     "version": "0.1.0"
   },
   "plugins": [
@@ -29,29 +29,12 @@
         "./skills/lc-from-code",
         "./skills/lc-feedback"
       ],
-      "hooks": "./hooks/hooks.json",
-      "dependencies": [
-        "astra"
-      ]
-    },
-    {
-      "name": "lightcone-reproduction",
-      "description": "Reproduce a published scientific paper end-to-end in ASTRA. Orchestrates paper extraction, literature resolution, ralph-loop iteration, narrative authoring, figure/numeric comparison, and sentence-by-sentence claim auditing, plus the lc-extractor subagent for prior-insight extraction. Use when reproducing a paper from a DOI, arXiv ID, or PDF, or resuming a reproduction workdir. Builds on lightcone-core + astra.",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/lc-from-paper",
-        "./skills/ralph",
-        "./skills/narrative",
-        "./skills/paper-extraction",
-        "./skills/figure-comparison",
-        "./skills/check-sentence-by-sentence"
-      ],
       "agents": [
         "./agents/lc-extractor.md"
       ],
+      "hooks": "./hooks/hooks.json",
       "dependencies": [
-        "lightcone-core"
+        "astra"
       ]
     }
   ]

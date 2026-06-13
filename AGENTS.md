@@ -3,15 +3,17 @@
 This repository is the **source of truth for the Lightcone Research agent skills**.
 It is not an application — it packages `SKILL.md`-based skills for three install
 targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
-from a single canonical source.
+from a single canonical source. Two plugins: `astra` (spec reference) and
+`lightcone-core` (the `lc` project workflow + hooks), which depends on `astra`.
 
 ## Where things live
 
 - `skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per
   skill; the directory name must equal the `name:` in the frontmatter.
-- `agents/` — Claude subagents. `hooks/` — plugin `hooks.json` + bash scripts.
-- `skills.config.json` — declares how skills compose into the three plugins
-  (`astra`, `lightcone-core`, `lightcone-reproduction`) and their dependencies.
+- `agents/` — Claude subagents (`lc-extractor`, used by `lc-new`). `hooks/` — plugin
+  `hooks.json` + bash scripts.
+- `skills.config.json` — declares how skills compose into the plugins
+  (`astra`, `lightcone-core`) and their dependencies.
 - `scripts/build.mjs`, `scripts/validate.mjs` — the generator and the validator.
 
 ## Generated — do not hand-edit
