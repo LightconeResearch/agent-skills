@@ -8,10 +8,6 @@ Code, Codex, Cursor, and other compatible agents — and are also packaged as Cl
 Code and Codex **plugins** for the capabilities (hooks, subagents) that plain skills
 can't carry.
 
-> This repository is private for now. All install paths below work against a private
-> repo as long as your local Git/GitHub credentials can read it (see
-> [Private-repo access](#private-repo-access)).
-
 ## Prerequisites
 
 Most of these skills drive the `lc` and `astra` command-line tools, which are **not
@@ -19,16 +15,8 @@ bundled** with the skills — they ship the playbook, not the binaries. Install 
 toolchain (one package ships both):
 
 ```bash
-uv tool install lightcone-cli      # preferred
-# or: pipx install lightcone-cli
+uv tool install lightcone-cli
 ```
-
-Each CLI-dependent skill opens with a short preflight: it checks the tools resolve,
-points you here if they don't, and always discovers command syntax via `--help`
-rather than guessing. The stateless `astra` operations (validation, spec inspection)
-need **no install at all** — they fall back to `uvx --from astra-tools astra <cmd>`,
-which fetches and runs the CLI ephemerally (requires only `uv`). `lc` execution is
-project-bound and uses the install above.
 
 ## Install
 
@@ -64,9 +52,7 @@ claude plugin install lightcone@lightcone-research
 
 Once installed, plugin skills are namespaced by plugin name: `/lightcone:start`,
 `/lightcone:feedback`, and `/astra:astra`. The `lightcone` plugin depends on `astra`;
-installing it pulls in the `astra` reference too. This is the **only** path that ships
-the SessionStart/PostToolUse hooks and the `lc-extractor` subagent (used by `start`
-for literature extraction).
+installing it pulls in the `astra` reference too.
 
 ### Codex plugin
 
@@ -74,16 +60,6 @@ for literature extraction).
 codex plugin marketplace add LightconeResearch/agent-skills
 codex /plugins        # browse + install astra / lightcone
 ```
-
-Codex consumes the bundled skills natively, **and the `lightcone` plugin's hooks
-too**: OpenAI Codex CLI reads the same `hooks.json` protocol as Claude Code
-(SessionStart/PostToolUse, with `${CLAUDE_PLUGIN_ROOT}` aliased), so the
-session-start status primer and validate-on-save fire on Codex from the same
-scripts — no separate extension. (Caveat: the venv-on-PATH hook relies on Claude
-Code's env-file mechanism and is a no-op on Codex, so install the toolchain
-globally — `uv tool install lightcone-cli` — or have `lc`/`astra` on `PATH`;
-validate-on-save also falls back to `uvx`.) The `lc-extractor` subagent is still
-Claude-only for now.
 
 ### Private-repo access
 
