@@ -118,6 +118,13 @@ export function buildArtifacts(model) {
   // --- Codex per-plugin dirs (plugins/<name>/) -----------------------------
   // Codex plugins are self-contained: bundle the transitive skill closure as
   // relative symlinks back to the canonical skills/ tree (single source).
+  //
+  // Hooks: OpenAI Codex CLI reads the same Claude-compatible hooks.json
+  // protocol (SessionStart/PostToolUse with hookSpecificOutput.additionalContext)
+  // and aliases ${CLAUDE_PLUGIN_ROOT} → ${PLUGIN_ROOT}. So a plugin that ships
+  // hooks for Claude can declare the *same* hooks.json + scripts here — we just
+  // need them reachable under the Codex plugin root, so the hooks/ tree is
+  // symlinked back to the canonical hooks/ (same single-source pattern as skills).
   for (const p of config.plugins) {
     const pluginManifest = {
       name: p.name,
@@ -129,12 +136,23 @@ export function buildArtifacts(model) {
       license: "BSD-3-Clause",
       skills: "./skills/",
     };
+    // p.hooks is repo-relative (e.g. "hooks/hooks.json"); under the plugin root
+    // the symlinked hooks/ tree puts it at the same relative path.
+    if (p.hooks) pluginManifest.hooks = `./${p.hooks}`;
     files[`plugins/${p.name}/.codex-plugin/plugin.json`] = jsonl(pluginManifest);
     dirs.push(`plugins/${p.name}/skills`);
     for (const s of closure(p.name, byName)) {
       symlinks.push({
+        kind: "skill",
         link: `plugins/${p.name}/skills/${s}`,
         target: `../../../skills/${s}`,
+      });
+    }
+    if (p.hooks) {
+      symlinks.push({
+        kind: "dir",
+        link: `plugins/${p.name}/hooks`,
+        target: `../../hooks`,
       });
     }
   }

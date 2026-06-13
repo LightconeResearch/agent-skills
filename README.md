@@ -75,9 +75,15 @@ codex plugin marketplace add LightconeResearch/agent-skills
 codex /plugins        # browse + install astra / lightcone
 ```
 
-Codex consumes the bundled skills natively. (Claude-specific hooks and the
-`lc-extractor` subagent are not portable to Codex; the skills themselves carry the
-core workflow.)
+Codex consumes the bundled skills natively, **and the `lightcone` plugin's hooks
+too**: OpenAI Codex CLI reads the same `hooks.json` protocol as Claude Code
+(SessionStart/PostToolUse, with `${CLAUDE_PLUGIN_ROOT}` aliased), so the
+session-start status primer and validate-on-save fire on Codex from the same
+scripts — no separate extension. (Caveat: the venv-on-PATH hook relies on Claude
+Code's env-file mechanism and is a no-op on Codex, so install the toolchain
+globally — `uv tool install lightcone-cli` — or have `lc`/`astra` on `PATH`;
+validate-on-save also falls back to `uvx`.) The `lc-extractor` subagent is still
+Claude-only for now.
 
 ### Private-repo access
 
@@ -114,7 +120,7 @@ scripts/build.mjs           Regenerates every per-target file from the above
 scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm test)
 .claude-plugin/             Generated — Claude Code marketplace manifest
 .agents/plugins/            Generated — Codex marketplace manifest
-plugins/                    Generated — Codex per-plugin dirs (skills symlinked back to skills/)
+plugins/                    Generated — Codex per-plugin dirs (skills + hooks symlinked back to source)
 manifest.json               Generated — registry of all skills/plugins
 ```
 
