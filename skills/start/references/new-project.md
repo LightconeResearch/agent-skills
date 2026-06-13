@@ -1,6 +1,6 @@
 # New-project setup (Route A)
 
-The full scoping playbook for a fresh ASTRA project: turn a research question into a validated `astra.yaml` + project `CLAUDE.md`. Build the spec iteratively — write to `astra.yaml` after each phase so the user sees progress. Literature search and decision identification happen in distinct phases — talk first, then extract papers, then identify decisions informed by both conversation and literature.
+The full scoping playbook for a fresh ASTRA project: turn a research question into a validated `astra.yaml`. Build the spec iteratively — write to `astra.yaml` after each phase so the user sees progress. Literature search and decision identification happen in distinct phases — talk first, then extract papers, then identify decisions informed by both conversation and literature.
 
 ## Setup
 
@@ -113,15 +113,11 @@ Generate only `baseline` unless the user explicitly asks for additional universe
 
 Replace the TODO entries in `astra.yaml`'s `narrative:` block now that structure is stable: `summary` (one-paragraph framing), `methods` (decisions and sub-analyses), `inputs`, `outputs`. Use `#path.to.element` anchors for cross-references. Leave `findings` as TODO until results exist.
 
-### Populate CLAUDE.md
-
-Read the existing `CLAUDE.md` (created by `lc init`). Fill the `## Project Notes` section per the inline guidance there — context from the conversation that's not in `astra.yaml` and would be lost after `/clear`. The spec is the source of truth for structure, decisions, and evidence.
-
 ### Review with User
 
 > "Anything you'd like to change? Otherwise the specification is ready."
 
-If edits requested, apply, re-validate, and update CLAUDE.md.
+If edits requested, apply and re-validate.
 
 ---
 
@@ -138,7 +134,7 @@ Show summary table:
 | sub_analysis  | ...       | ...     | ...      |
 ```
 
-Then tell the user the spec is ready and they can begin implementation. Recommend running `/clear` first — the scoping conversation consumes significant context, and everything needed to continue is captured in `astra.yaml` and `CLAUDE.md`.
+Then tell the user the spec is ready and they can begin implementation. Recommend running `/clear` first — the scoping conversation consumes significant context, and everything needed to continue is captured in `astra.yaml`.
 
 ---
 
@@ -148,7 +144,7 @@ Then tell the user the spec is ready and they can begin implementation. Recommen
 
 You MUST NOT write Python, R, or other implementation code.
 
-You MUST ONLY create/modify: `astra.yaml`, `universes/*.yaml`, `CLAUDE.md` (Finalize only).
+You MUST ONLY create/modify: `astra.yaml` and `universes/*.yaml`.
 
 You MUST NOT fabricate quotes -- all evidence must pass `astra validate --verify-evidence`.
 
