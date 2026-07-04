@@ -6,12 +6,12 @@
 
 [![Agent Skills standard](https://img.shields.io/badge/standard-Agent%20Skills-7c3aed?style=for-the-badge)](https://agentskills.io)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-success?style=for-the-badge)](skills.config.json)
+[![Version](https://img.shields.io/badge/version-0.2.0-success?style=for-the-badge)](skills.config.json)
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-3-7c3aed?style=flat-square)](#-skills)
-[![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
+[![Skills](https://img.shields.io/badge/skills-10-7c3aed?style=flat-square)](#-skills)
+[![Plugins](https://img.shields.io/badge/plugins-3-7c3aed?style=flat-square)](#-plugins)
 
 </div>
 
@@ -26,7 +26,10 @@ Code and Codex **plugins** for the capabilities (hooks, subagents) that plain sk
 can't carry.
 
 > [!TIP]
-> **New here?** Install the [toolchain](#-prerequisites), then `npx skills add LightconeResearch/agent-skills` and ask your agent to `/lightcone:start`.
+> **New here?** Install the [toolchain](#-prerequisites), then `npx skills add LightconeResearch/agent-skills` and ask your agent to `/lightcone:lc-new`.
+
+> [!NOTE]
+> **Skill content is mid-migration.** These skills were just moved out of `lightcone-cli` into this repo; their packaging is settled but their bodies are being raised to high quality one at a time. Expect rough edges — especially in the `lightcone-experimental` plugin.
 
 ## 📦 Prerequisites
 
@@ -70,15 +73,17 @@ claude plugin marketplace add LightconeResearch/agent-skills
 claude plugin install lightcone@lightcone-research
 ```
 
-Once installed, plugin skills are namespaced by plugin name: `/lightcone:start`,
-`/lightcone:feedback`, and `/astra:astra`. The `lightcone` plugin depends on `astra`;
-installing it pulls in the `astra` reference too.
+Once installed, plugin skills are namespaced by plugin name: `/lightcone:lc-new`,
+`/lightcone:lc-feedback`, `/lightcone:lc-cli`, and `/astra:astra`. The `lightcone`
+plugin depends on `astra`; installing it pulls in the `astra` reference too. Add
+`/plugin install lightcone-experimental@lightcone-research` for the opt-in
+experimental skills.
 
 ### Codex plugin
 
 ```bash
 codex plugin marketplace add LightconeResearch/agent-skills
-codex /plugins        # browse + install astra / lightcone
+codex /plugins        # browse + install astra / lightcone / lightcone-experimental
 ```
 
 ### Private-repo access
@@ -94,16 +99,31 @@ existing Git credentials — any one of:
 
 | Plugin | Skills (invocation) | Adds |
 |---|---|---|
-| **`astra`** | `astra` (`/astra:astra`) | — |
-| **`lightcone`** | `start` (`/lightcone:start`), `feedback` (`/lightcone:feedback`); depends on `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`astra`** | `astra` (`/astra:astra`) | — standalone; use ASTRA without the rest of the stack |
+| **`lightcone`** | `lc-new`, `lc-feedback`, `lc-cli`; depends on `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`lightcone-experimental`** | `lc-from-paper`, `lc-from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison`; depends on `lightcone` | opt-in; under active development |
 
 ## ✨ Skills
 
+### Core
+
 | Skill | What it does |
 |---|---|
-| [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, narrative anchors. |
-| [`start`](skills/start) | Entry point for working with a Lightcone / ASTRA analysis: inspects project state and routes — scoping a new analysis from a research question, or surfacing the next step on an existing one. Bundles the new-project playbook, the next-steps router, and the full `lc` execution reference at [`references/cli.md`](skills/start/references/cli.md). |
-| [`feedback`](skills/feedback) | File a bug report against the right Lightcone repo with version/error context. |
+| [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, composition. |
+| [`lc-new`](skills/lc-new) | Scope a new ASTRA analysis from a research question — structure inputs/outputs, identify decisions through literature, land `astra.yaml`. |
+| [`lc-cli`](skills/lc-cli) | The `lc` execution reference — spec–code invariant, status interpretation, failure diagnosis. |
+| [`lc-feedback`](skills/lc-feedback) | File a bug report against the right Lightcone repo with version/error context. |
+
+### Experimental
+
+| Skill | What it does |
+|---|---|
+| [`lc-from-paper`](skills/lc-from-paper) | Reproduce a paper end-to-end into an ASTRA analysis (staged reproduction workflow). |
+| [`lc-from-code`](skills/lc-from-code) | Import an existing code repository into an ASTRA analysis. |
+| [`paper-extraction`](skills/paper-extraction) | Extract literature substrate — claims and verbatim quotes — from a paper's source. |
+| [`ralph`](skills/ralph) | Autonomous constitution-driven iteration loop for long-running reproduction work. |
+| [`check-sentence-by-sentence`](skills/check-sentence-by-sentence) | Verify a manuscript sentence by sentence against its sources. |
+| [`figure-comparison`](skills/figure-comparison) | Compare reproduced figures against the paper's originals. |
 
 ## 🗂️ Repository layout
 

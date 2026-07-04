@@ -1,0 +1,13 @@
+{
+  "name": "lightcone-experimental",
+  "version": "0.2.0",
+  "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`lc-from-paper`), code import (`lc-from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Depends on the core lightcone plugin. Install when you need capabilities beyond the core analysis workflow.",
+  "author": {
+    "name": "Lightcone Research",
+    "email": "info@lightconeresearch.org"
+  },
+  "homepage": "https://github.com/LightconeResearch/agent-skills",
+  "repository": "https://github.com/LightconeResearch/agent-skills",
+  "license": "BSD-3-Clause",
+  "skills": "./skills/"
+}
