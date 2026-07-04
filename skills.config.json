@@ -1,5 +1,5 @@
 {
-  "$comment": "SINGLE SOURCE OF TRUTH for the multi-target build. Edit this, then run `npm run build` to regenerate .claude-plugin/marketplace.json, .agents/plugins/marketplace.json, plugins/*, and manifest.json. CI (`npm test`) fails if the generated files drift from this config.",
+  "$comment": "SINGLE SOURCE OF TRUTH for the multi-target build. Edit this, then run `npm run build` to regenerate .claude-plugin/marketplace.json, .agents/plugins/marketplace.json, plugins/*, and manifest.json. CI (`npm test`) fails if the generated files drift. `dependencies` defines each plugin's build-time CLOSURE only: the build bundles every dependency's skills+hooks+agents into the self-contained plugins/<name>/ dir that BOTH harnesses install — no native (Claude-only) dependency resolution, so Claude Code and Codex install identically.",
   "marketplace": {
     "name": "lightcone-research",
     "displayName": "Lightcone Research Skills",
@@ -20,7 +20,7 @@
     },
     {
       "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `lc-new` scopes a new analysis from a research question, `lc-cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `lc-feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Depends on the astra plugin. Use for any interactive work inside an lc / ASTRA project.",
+      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `lc-new` scopes a new analysis from a research question, `lc-cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `lc-feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
       "skills": ["lc-new", "lc-feedback", "lc-cli"],
       "agents": ["agents/lc-extractor.md"],
       "hooks": "hooks/hooks.json",
@@ -28,7 +28,7 @@
     },
     {
       "name": "lightcone-experimental",
-      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`lc-from-paper`), code import (`lc-from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Depends on the core lightcone plugin. Install when you need capabilities beyond the core analysis workflow.",
+      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`lc-from-paper`), code import (`lc-from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Bundles the full core lightcone plugin (skills, hooks, lc-extractor subagent) plus the astra reference, so this one plugin is self-contained. Install when you need capabilities beyond the core analysis workflow.",
       "skills": ["lc-from-code", "lc-from-paper", "paper-extraction", "ralph", "check-sentence-by-sentence", "figure-comparison"],
       "dependencies": ["lightcone"]
     }

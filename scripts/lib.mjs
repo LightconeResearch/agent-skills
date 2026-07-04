@@ -55,15 +55,46 @@ export function loadModel() {
   return { config, skills };
 }
 
-/** Transitive skill closure for a plugin (its own skills + all dependency skills).
- *  Codex plugins are self-contained, so they bundle the whole closure. */
-export function closure(pluginName, byName, seen = new Set()) {
+/** Transitive plugin closure: this plugin plus every plugin it depends on
+ *  (deduped, dependency-first). Every generated plugin dir is self-contained —
+ *  it bundles this whole closure — so the two harnesses install identically and
+ *  neither relies on native dependency resolution. */
+export function closurePlugins(pluginName, byName, seen = new Set()) {
   if (seen.has(pluginName)) return [];
   seen.add(pluginName);
   const p = byName[pluginName];
-  const out = [...(p.skills || [])];
-  for (const dep of p.dependencies || []) out.push(...closure(dep, byName, seen));
+  const out = [];
+  for (const dep of p.dependencies || []) out.push(...closurePlugins(dep, byName, seen));
+  out.push(p);
+  return out;
+}
+
+/** Transitive skill closure (own skills + all dependency skills). */
+export function closure(pluginName, byName) {
+  const out = [];
+  for (const p of closurePlugins(pluginName, byName)) out.push(...(p.skills || []));
   return [...new Set(out)];
+}
+
+/** Transitive agent-file closure (repo-relative paths, e.g. "agents/lc-extractor.md"). */
+export function closureAgents(pluginName, byName) {
+  const out = [];
+  for (const p of closurePlugins(pluginName, byName)) out.push(...(p.agents || []));
+  return [...new Set(out)];
+}
+
+/** Transitive hooks closure — the distinct hooks.json paths across the closure.
+ *  Only one canonical hooks tree exists today; more than one distinct source
+ *  would need a merge step, so we assert the single-source invariant here. */
+export function closureHooks(pluginName, byName) {
+  const out = [...new Set(closurePlugins(pluginName, byName).flatMap((p) => (p.hooks ? [p.hooks] : [])))];
+  if (out.length > 1) {
+    throw new Error(
+      `plugin "${pluginName}": closure bundles ${out.length} distinct hooks.json sources ` +
+        `(${out.join(", ")}); merging hooks across dependencies is not implemented.`,
+    );
+  }
+  return out;
 }
 
 /** Produce every generated artifact. Returns:
@@ -79,54 +110,55 @@ export function buildArtifacts(model) {
   const symlinks = [];
   const dirs = [];
 
-  // --- Claude Code marketplace (.claude-plugin/marketplace.json) -----------
-  // supabase pattern: source "./" + strict:false, components selected by path.
-  const claudePlugins = config.plugins.map((p) => {
-    const entry = {
-      name: p.name,
-      description: p.description,
-      source: "./",
-      strict: false,
-      skills: p.skills.map((s) => `./skills/${s}`),
-    };
-    if (p.agents) entry.agents = p.agents.map((a) => `./${a}`);
-    if (p.hooks) entry.hooks = `./${p.hooks}`;
-    if (p.dependencies && p.dependencies.length) entry.dependencies = p.dependencies;
-    return entry;
-  });
+  // --- Both marketplaces point every plugin at its self-contained dir -------
+  // One mechanism, both harnesses: each plugins/<name>/ (generated below)
+  // bundles the plugin's full transitive closure — skills, hooks, agents — so
+  // installing it never triggers native dependency resolution. The two
+  // marketplace manifests differ only in surface syntax; the source dir is the
+  // same. `dependencies` in skills.config.json defines the build-time closure
+  // and is deliberately NOT emitted to either harness.
   files[".claude-plugin/marketplace.json"] = jsonl({
     name: mk.name,
     owner: mk.owner,
     metadata: { description: mk.description, version: mk.version },
-    plugins: claudePlugins,
+    plugins: config.plugins.map((p) => ({
+      name: p.name,
+      description: p.description,
+      source: `./plugins/${p.name}`,
+    })),
   });
 
-  // --- Codex marketplace (.agents/plugins/marketplace.json) ----------------
-  const codexPlugins = config.plugins.map((p) => ({
-    name: p.name,
-    description: p.description,
-    source: { source: "local", path: `./plugins/${p.name}` },
-    policy: { installation: "AVAILABLE" },
-    category: "Development",
-  }));
   files[".agents/plugins/marketplace.json"] = jsonl({
     name: mk.name,
     interface: { displayName: mk.displayName },
-    plugins: codexPlugins,
+    plugins: config.plugins.map((p) => ({
+      name: p.name,
+      description: p.description,
+      source: { source: "local", path: `./plugins/${p.name}` },
+      policy: { installation: "AVAILABLE" },
+      category: "Development",
+    })),
   });
 
-  // --- Codex per-plugin dirs (plugins/<name>/) -----------------------------
-  // Codex plugins are self-contained: bundle the transitive skill closure as
-  // relative symlinks back to the canonical skills/ tree (single source).
+  // --- Self-contained per-plugin dirs (plugins/<name>/) --------------------
+  // Each dir carries the whole closure and ships both harnesses' plugin
+  // manifests. Skills/agents/hooks are relative symlinks back to the canonical
+  // trees (single source, no content duplication); Claude and Codex both
+  // auto-discover skills/, agents/, and hooks/hooks.json under the plugin root.
   //
   // Hooks: OpenAI Codex CLI reads the same Claude-compatible hooks.json
   // protocol (SessionStart/PostToolUse with hookSpecificOutput.additionalContext)
-  // and aliases ${CLAUDE_PLUGIN_ROOT} → ${PLUGIN_ROOT}. So a plugin that ships
-  // hooks for Claude can declare the *same* hooks.json + scripts here — we just
-  // need them reachable under the Codex plugin root, so the hooks/ tree is
-  // symlinked back to the canonical hooks/ (same single-source pattern as skills).
+  // and aliases ${CLAUDE_PLUGIN_ROOT} → ${PLUGIN_ROOT}, so one hooks.json + one
+  // scripts tree serves both. Neither plugin manifest declares dependencies —
+  // the closure is already bundled.
   for (const p of config.plugins) {
-    const pluginManifest = {
+    const closureSkills = closure(p.name, byName);
+    const closAgents = closureAgents(p.name, byName);
+    const closHooks = closureHooks(p.name, byName); // 0 or 1 entry
+    const hooksPath = closHooks[0]; // repo-relative, e.g. "hooks/hooks.json"
+
+    // Shared metadata for both harnesses' manifests.
+    const base = {
       name: p.name,
       version: mk.version,
       description: p.description,
@@ -134,25 +166,49 @@ export function buildArtifacts(model) {
       homepage: `https://github.com/${mk.repo}`,
       repository: `https://github.com/${mk.repo}`,
       license: "BSD-3-Clause",
-      skills: "./skills/",
     };
-    // p.hooks is repo-relative (e.g. "hooks/hooks.json"); under the plugin root
-    // the symlinked hooks/ tree puts it at the same relative path.
-    if (p.hooks) pluginManifest.hooks = `./${p.hooks}`;
-    files[`plugins/${p.name}/.codex-plugin/plugin.json`] = jsonl(pluginManifest);
+
+    // Claude Code: components auto-discovered from skills/ agents/ hooks/ — the
+    // manifest just carries metadata. No dependencies (closure is bundled).
+    files[`plugins/${p.name}/.claude-plugin/plugin.json`] = jsonl(base);
+
+    // Codex: declares component roots explicitly (its convention).
+    const codexManifest = { ...base, skills: "./skills/" };
+    if (closAgents.length) codexManifest.agents = "./agents/";
+    if (hooksPath) codexManifest.hooks = `./${hooksPath}`;
+    files[`plugins/${p.name}/.codex-plugin/plugin.json`] = jsonl(codexManifest);
+
+    // skills/ — full closure, symlinked to canonical skills/.
     dirs.push(`plugins/${p.name}/skills`);
-    for (const s of closure(p.name, byName)) {
+    for (const s of closureSkills) {
       symlinks.push({
         kind: "skill",
         link: `plugins/${p.name}/skills/${s}`,
         target: `../../../skills/${s}`,
       });
     }
-    if (p.hooks) {
+
+    // agents/ — full closure, symlinked file-by-file to canonical agents/.
+    if (closAgents.length) dirs.push(`plugins/${p.name}/agents`);
+    for (const a of closAgents) {
+      const file = a.replace(/^agents\//, "");
+      symlinks.push({
+        kind: "agent",
+        link: `plugins/${p.name}/agents/${file}`,
+        target: `../../../${a}`,
+      });
+    }
+
+    // hooks/ — the whole canonical hooks tree (hooks.json + scripts), symlinked
+    // when the closure includes hooks. Link location is derived from the manifest
+    // path (dirname of hooksPath) so the symlink and the `hooks: ./<path>` the
+    // manifests reference can never drift, even if the canonical tree is renamed.
+    if (hooksPath) {
+      const hooksDir = dirname(hooksPath); // e.g. "hooks"
       symlinks.push({
         kind: "dir",
-        link: `plugins/${p.name}/hooks`,
-        target: `../../hooks`,
+        link: `plugins/${p.name}/${hooksDir}`,
+        target: `../../${hooksDir}`,
       });
     }
   }
@@ -181,8 +237,9 @@ export function buildArtifacts(model) {
       description: p.description,
       skills: closure(p.name, byName).sort(),
       dependencies: p.dependencies || [],
-      hasHooks: Boolean(p.hooks),
-      hasAgents: Boolean(p.agents),
+      // Reflect the bundled closure — what installing this one plugin gives you.
+      hasHooks: closureHooks(p.name, byName).length > 0,
+      hasAgents: closureAgents(p.name, byName).length > 0,
     })),
   });
 

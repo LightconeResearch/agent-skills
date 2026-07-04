@@ -43,48 +43,69 @@ uv tool install lightcone-cli
 
 ## 🚀 Install
 
-### `npx skills` — any compatible agent (Claude Code, Codex, …)
+Pick the plugin you want, then add the marketplace and install it — the same three
+plugins are available on **Claude Code** and **Codex**, and every plugin is
+**self-contained**: it bundles the full closure of its dependencies (skills, hooks,
+and subagents), so installing one plugin is all you need. There is **no separate
+dependency step and no divergence between the two harnesses.**
+
+| I want… | Install |
+|---|---|
+| The ASTRA spec reference only | `astra` |
+| The core `lc` analysis workflow (recommended) | `lightcone` — bundles `astra` |
+| The experimental paper-reproduction tooling | `lightcone-experimental` — bundles `lightcone` + `astra` |
+
+### Claude Code
+
+**From the terminal:**
 
 ```bash
-# Everything
-npx skills add LightconeResearch/agent-skills
-
-# A single skill
-npx skills add LightconeResearch/agent-skills --skill astra
-
-# Target a specific agent
-npx skills add LightconeResearch/agent-skills -a codex
-npx skills add LightconeResearch/agent-skills -a claude-code
-```
-
-`npx skills` installs the `SKILL.md` trees only — it does **not** install hooks or
-subagents. For the venv/validation hooks and the `lc-extractor` subagent (both in
-`lightcone`), use the native plugin paths below.
-
-### Claude Code plugin marketplace
-
-```bash
-# In a Claude Code session:
-/plugin marketplace add LightconeResearch/agent-skills
-/plugin install lightcone@lightcone-research
-
-# Or from the terminal:
 claude plugin marketplace add LightconeResearch/agent-skills
 claude plugin install lightcone@lightcone-research
 ```
 
-Once installed, plugin skills are namespaced by plugin name: `/lightcone:lc-new`,
-`/lightcone:lc-feedback`, `/lightcone:lc-cli`, and `/astra:astra`. The `lightcone`
-plugin depends on `astra`; installing it pulls in the `astra` reference too. Add
-`/plugin install lightcone-experimental@lightcone-research` for the opt-in
-experimental skills.
+**From inside a Claude Code session:**
 
-### Codex plugin
+```
+/plugin marketplace add LightconeResearch/agent-skills
+/plugin install lightcone@lightcone-research
+```
+
+(`/plugin install` opens a details pane; pick a scope — user / project / local —
+to confirm.)
+
+### Codex
+
+**From the terminal:**
 
 ```bash
 codex plugin marketplace add LightconeResearch/agent-skills
-codex /plugins        # browse + install astra / lightcone / lightcone-experimental
+codex plugin add lightcone@lightcone-research
 ```
+
+**From inside a Codex session:**
+
+```
+/plugins        # browse the marketplace, then install astra / lightcone / lightcone-experimental
+```
+
+### After installing
+
+Plugin skills are namespaced by plugin name: `/lightcone:lc-new`,
+`/lightcone:lc-feedback`, `/lightcone:lc-cli`, and (from the bundled `astra`)
+`/lightcone:astra`. The venv/validation **hooks** and the `lc-extractor`
+**subagent** ride along inside the `lightcone` plugin automatically. Swap
+`lightcone` for `astra` or `lightcone-experimental` in any command above.
+
+### `npx skills` — SKILL.md trees only
+
+```bash
+npx skills add LightconeResearch/agent-skills               # everything
+npx skills add LightconeResearch/agent-skills --skill astra # one skill
+```
+
+`npx skills` installs the `SKILL.md` trees only — it does **not** install hooks or
+subagents. Use the plugin paths above when you want the full `lightcone` capability.
 
 ### Private-repo access
 
@@ -97,11 +118,15 @@ existing Git credentials — any one of:
 
 ## 🧩 Plugins
 
-| Plugin | Skills (invocation) | Adds |
-|---|---|---|
-| **`astra`** | `astra` (`/astra:astra`) | — standalone; use ASTRA without the rest of the stack |
-| **`lightcone`** | `lc-new`, `lc-feedback`, `lc-cli`; depends on `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
-| **`lightcone-experimental`** | `lc-from-paper`, `lc-from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison`; depends on `lightcone` | opt-in; under active development |
+Each plugin is self-contained — it **bundles** the closure of everything below it,
+so installing one is all you need (no separate dependency install, identical on both
+harnesses).
+
+| Plugin | Skills (invocation) | Bundles | Adds |
+|---|---|---|---|
+| **`astra`** | `astra` (`/astra:astra`) | — | standalone; use ASTRA without the rest of the stack |
+| **`lightcone`** | `lc-new`, `lc-feedback`, `lc-cli` | `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`lightcone-experimental`** | `lc-from-paper`, `lc-from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | `lightcone` + `astra` (+ hooks + `lc-extractor`) | opt-in; under active development |
 
 ## ✨ Skills
 
@@ -136,13 +161,29 @@ scripts/build.mjs           Regenerates every per-target file from the above
 scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm test)
 .claude-plugin/             Generated — Claude Code marketplace manifest
 .agents/plugins/            Generated — Codex marketplace manifest
-plugins/                    Generated — Codex per-plugin dirs (skills + hooks symlinked back to source)
+plugins/                    Generated — self-contained per-plugin dirs both harnesses
+                            install (full skills+hooks+agents closure, symlinked to source)
 manifest.json               Generated — registry of all skills/plugins
+scripts/check-readme.mjs    Install-doc completeness check (part of npm test)
+scripts/smoke.mjs           Install smoke tests — real claude/codex + tmux (npm run smoke)
 ```
 
 The per-target manifests and the `plugins/` tree are **generated** from
 `skills.config.json` + `skills/`. Don't edit them by hand — run `npm run build` and
 commit the result. `npm test` fails if they drift. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## ✅ Verifying install
+
+`npm test` runs frontmatter validation, the generated-file drift check, and an
+install-doc completeness check (both harnesses × both interactive and CLI). For the
+real thing — installing each plugin into a throwaway environment and confirming it
+loads — run the smoke suite (needs `claude`, `codex`, and `tmux` on PATH; no LLM/API
+calls):
+
+```bash
+npm run smoke            # CLI install (both harnesses) + interactive tmux install (Claude)
+npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
+```
 
 ## 📄 License
 

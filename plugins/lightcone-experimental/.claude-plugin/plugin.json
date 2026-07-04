@@ -8,8 +8,5 @@
   },
   "homepage": "https://github.com/LightconeResearch/agent-skills",
   "repository": "https://github.com/LightconeResearch/agent-skills",
-  "license": "BSD-3-Clause",
-  "skills": "./skills/",
-  "agents": "./agents/",
-  "hooks": "./hooks/hooks.json"
+  "license": "BSD-3-Clause"
 }

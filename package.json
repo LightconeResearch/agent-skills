@@ -13,7 +13,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
-    "test": "node scripts/validate.mjs"
+    "test": "node scripts/validate.mjs && node scripts/check-readme.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "engines": {
     "node": ">=18"

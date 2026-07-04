@@ -104,7 +104,7 @@
     },
     {
       "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `lc-new` scopes a new analysis from a research question, `lc-cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `lc-feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Depends on the astra plugin. Use for any interactive work inside an lc / ASTRA project.",
+      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `lc-new` scopes a new analysis from a research question, `lc-cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `lc-feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
       "skills": [
         "astra",
         "lc-cli",
@@ -119,7 +119,7 @@
     },
     {
       "name": "lightcone-experimental",
-      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`lc-from-paper`), code import (`lc-from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Depends on the core lightcone plugin. Install when you need capabilities beyond the core analysis workflow.",
+      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`lc-from-paper`), code import (`lc-from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Bundles the full core lightcone plugin (skills, hooks, lc-extractor subagent) plus the astra reference, so this one plugin is self-contained. Install when you need capabilities beyond the core analysis workflow.",
       "skills": [
         "astra",
         "check-sentence-by-sentence",
@@ -135,8 +135,8 @@
       "dependencies": [
         "lightcone"
       ],
-      "hasHooks": false,
-      "hasAgents": false
+      "hasHooks": true,
+      "hasAgents": true
     }
   ]
 }
