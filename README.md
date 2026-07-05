@@ -26,7 +26,7 @@ Code and Codex **plugins** for the capabilities (hooks, subagents) that plain sk
 can't carry.
 
 > [!TIP]
-> **New here?** Install the [toolchain](#-prerequisites), then `npx skills add LightconeResearch/agent-skills` and ask your agent to `/lightcone:lc-new`.
+> **New here?** Install the [toolchain](#-prerequisites), then `claude plugin marketplace add LightconeResearch/agent-skills && claude plugin install lightcone@lightcone-research` and ask your agent to `/lightcone:lc-new`.
 
 > [!NOTE]
 > **Skill content is mid-migration.** These skills were just moved out of `lightcone-cli` into this repo; their packaging is settled but their bodies are being raised to high quality one at a time. Expect rough edges — especially in the `lightcone-experimental` plugin.
@@ -41,19 +41,22 @@ toolchain (one package ships both):
 uv tool install lightcone-cli
 ```
 
+This manual step is a stopgap — the plan is for each skill to install the tools it
+needs itself ([#6](https://github.com/LightconeResearch/agent-skills/issues/6)).
+
+## 🧩 Plugins
+
+Every plugin is **self-contained**: it bundles the full closure of its dependencies
+(skills, hooks, and subagents), so installing one plugin is all you need — no
+separate dependency step, identical on **Claude Code** and **Codex**.
+
+| Plugin | Skills | Bundles | Adds |
+|---|---|---|---|
+| **`astra`** | `astra` | — | standalone ASTRA spec reference, without the rest of the stack |
+| **`lightcone`** *(recommended)* | `lc-new`, `lc-feedback`, `lc-cli` | `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`lightcone-experimental`** | `lc-from-paper`, `lc-from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | `lightcone` + `astra` (+ hooks + `lc-extractor`) | opt-in; under active development |
+
 ## 🚀 Install
-
-Pick the plugin you want, then add the marketplace and install it — the same three
-plugins are available on **Claude Code** and **Codex**, and every plugin is
-**self-contained**: it bundles the full closure of its dependencies (skills, hooks,
-and subagents), so installing one plugin is all you need. There is **no separate
-dependency step and no divergence between the two harnesses.**
-
-| I want… | Install |
-|---|---|
-| The ASTRA spec reference only | `astra` |
-| The core `lc` analysis workflow (recommended) | `lightcone` — bundles `astra` |
-| The experimental paper-reproduction tooling | `lightcone-experimental` — bundles `lightcone` + `astra` |
 
 ### Claude Code
 
@@ -96,37 +99,6 @@ Plugin skills are namespaced by plugin name: `/lightcone:lc-new`,
 `/lightcone:astra`. The venv/validation **hooks** and the `lc-extractor`
 **subagent** ride along inside the `lightcone` plugin automatically. Swap
 `lightcone` for `astra` or `lightcone-experimental` in any command above.
-
-### `npx skills` — SKILL.md trees only
-
-```bash
-npx skills add LightconeResearch/agent-skills               # everything
-npx skills add LightconeResearch/agent-skills --skill astra # one skill
-```
-
-`npx skills` installs the `SKILL.md` trees only — it does **not** install hooks or
-subagents. Use the plugin paths above when you want the full `lightcone` capability.
-
-### Private-repo access
-
-While the repo is private, the installer/marketplace commands authenticate with your
-existing Git credentials — any one of:
-
-- an authenticated **`gh` CLI** session (`gh auth login`),
-- a **`GITHUB_TOKEN`** (or `GH_TOKEN`) env var with `repo` scope, or
-- an **SSH** remote (`git@github.com:LightconeResearch/agent-skills.git`) with your key in `ssh-agent`.
-
-## 🧩 Plugins
-
-Each plugin is self-contained — it **bundles** the closure of everything below it,
-so installing one is all you need (no separate dependency install, identical on both
-harnesses).
-
-| Plugin | Skills (invocation) | Bundles | Adds |
-|---|---|---|---|
-| **`astra`** | `astra` (`/astra:astra`) | — | standalone; use ASTRA without the rest of the stack |
-| **`lightcone`** | `lc-new`, `lc-feedback`, `lc-cli` | `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
-| **`lightcone-experimental`** | `lc-from-paper`, `lc-from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | `lightcone` + `astra` (+ hooks + `lc-extractor`) | opt-in; under active development |
 
 ## ✨ Skills
 

@@ -42,8 +42,8 @@ Edit `skills.config.json`:
 - `dependencies` — other plugins this one builds on. Claude resolves these on install;
   Codex plugins are self-contained, so the generator bundles the full transitive
   closure (own + dependency skills) as symlinks under `plugins/<name>/skills/`.
-- `hooks` — path to a `hooks.json` (Claude only; hook scripts reference
-  `${CLAUDE_PLUGIN_ROOT}`). `agents` — Claude subagent file paths.
+- `hooks` — path to a `hooks.json` (hook commands reference the plugin root as
+  `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` so both harnesses resolve it). `agents` — Claude subagent file paths.
 
 Then `npm run build && npm test`.
 

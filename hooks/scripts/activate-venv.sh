@@ -5,8 +5,8 @@
 # We don't `source` activate -- we only need PATH and VIRTUAL_ENV. Sourcing
 # activate also runs prompt mutations and defines a deactivate function we
 # don't want, and any non-zero status under `set -e` would silently skip
-# the writeback (the failure mode behind issue #103). Writing the two
-# exports directly to CLAUDE_ENV_FILE is the documented mechanism and is
+# the writeback, leaving downstream hooks on a stale global astra. Writing
+# the two exports directly to CLAUDE_ENV_FILE is the documented mechanism and is
 # what every downstream hook implicitly relies on for `astra` / `lc` to
 # resolve to the project venv rather than whatever system install happens
 # to be on PATH.

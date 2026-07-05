@@ -146,11 +146,12 @@ export function buildArtifacts(model) {
   // trees (single source, no content duplication); Claude and Codex both
   // auto-discover skills/, agents/, and hooks/hooks.json under the plugin root.
   //
-  // Hooks: OpenAI Codex CLI reads the same Claude-compatible hooks.json
-  // protocol (SessionStart/PostToolUse with hookSpecificOutput.additionalContext)
-  // and aliases ${CLAUDE_PLUGIN_ROOT} → ${PLUGIN_ROOT}, so one hooks.json + one
-  // scripts tree serves both. Neither plugin manifest declares dependencies —
-  // the closure is already bundled.
+  // Hooks: Codex reads the same hooks.json protocol (SessionStart/PostToolUse
+  // with hookSpecificOutput.additionalContext); commands reference the plugin
+  // root harness-neutrally as ${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT} (Claude Code
+  // sets the former, Codex the latter), so one hooks.json + one scripts tree
+  // serves both. Neither plugin manifest declares dependencies — the closure
+  // is already bundled.
   for (const p of config.plugins) {
     const closureSkills = closure(p.name, byName);
     const closAgents = closureAgents(p.name, byName);

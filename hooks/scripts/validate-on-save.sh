@@ -3,10 +3,8 @@
 # universe file, push errors back to the agent as additionalContext.
 #
 # astra is resolved from the project venv via PATH (prepended at
-# SessionStart by activate-venv.sh). Issue #103 traced back to this hook
-# running an older, globally-installed astra when activate-venv failed
-# silently -- with the venv reliably on PATH that whole code path is
-# unnecessary.
+# SessionStart by activate-venv.sh); if it isn't on PATH we exit silently
+# rather than fall back to a possibly-stale global install.
 
 input=$(cat)
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_response.filePath // empty')
