@@ -159,7 +159,7 @@ npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
 
 ## 📄 License
 
-BSD 3-Clause — see [LICENSE](LICENSE). Copyright © 2026 Centre National de la Recherche Scientifique (CNRS).
+BSD 3-Clause — see [LICENSE](LICENSE). Copyright (c) 2026, Centre National de la Recherche Scientifique (CNRS) and The Regents of the University of California.
 
 <div align="center">
 <sub>Built with ❤️ by <a href="https://github.com/LightconeResearch">Lightcone Research</a> · Skills follow the open <a href="https://agentskills.io">Agent Skills standard</a></sub>
