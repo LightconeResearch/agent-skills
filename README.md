@@ -10,7 +10,7 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-10-7c3aed?style=flat-square)](#-skills)
+[![Skills](https://img.shields.io/badge/skills-11-7c3aed?style=flat-square)](#-skills)
 [![Plugins](https://img.shields.io/badge/plugins-3-7c3aed?style=flat-square)](#-plugins)
 
 </div>
@@ -53,7 +53,7 @@ separate dependency step, identical on **Claude Code** and **Codex**.
 | Plugin | Skills | Bundles | Adds |
 |---|---|---|---|
 | **`astra`** | `astra` | — | standalone ASTRA spec reference, without the rest of the stack |
-| **`lightcone`** *(recommended)* | `lc-new`, `lc-feedback`, `lc-cli` | `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`lightcone`** *(recommended)* | `lc-new`, `lc-report`, `lc-feedback`, `lc-cli` | `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
 | **`lightcone-experimental`** | `lc-from-paper`, `lc-from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | `lightcone` + `astra` (+ hooks + `lc-extractor`) | opt-in; under active development |
 
 ## 🚀 Install
@@ -108,6 +108,7 @@ Plugin skills are namespaced by plugin name: `/lightcone:lc-new`,
 |---|---|
 | [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, composition. |
 | [`lc-new`](skills/lc-new) | Scope a new ASTRA analysis from a research question — structure inputs/outputs, identify decisions through literature, land `astra.yaml`. |
+| [`lc-report`](skills/lc-report) | Author the project's MyST report — prose that references `astra.yaml` elements by path (via the [MySTRA](https://github.com/LightconeResearch/MySTRA) plugin), so write-ups never drift from the analysis. |
 | [`lc-cli`](skills/lc-cli) | The `lc` execution reference — spec–code invariant, status interpretation, failure diagnosis. |
 | [`lc-feedback`](skills/lc-feedback) | File a bug report against the right Lightcone repo with version/error context. |
 

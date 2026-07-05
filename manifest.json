@@ -75,6 +75,15 @@
       ]
     },
     {
+      "name": "lc-report",
+      "path": "skills/lc-report",
+      "description": "Authors and extends the project's MyST report — the external write-up (`index.md` + `myst.yml`, scaffolded by `lc init`) that references `astra.yaml` elements by tree-path through the MySTRA plugin instead of restating them. Use whenever the user wants to write up an analysis: \"draft the report\", \"write up the results\", \"document the analysis\", \"draft the introduction/methods/results\", \"turn this into a paper\", or when results have materialized and a write-up is the natural next step. Also use to fix or extend an existing report page. Not for per-element spec prose (`description:`/`rationale:` live in `astra.yaml` — see the astra reference skill) and not for the HTML figure side-by-side (figure-comparison).",
+      "plugins": [
+        "lightcone",
+        "lightcone-experimental"
+      ]
+    },
+    {
       "name": "paper-extraction",
       "path": "skills/paper-extraction",
       "description": "Turn an arXiv ID or DOI into a standardized `work/reference/` directory: paper substrate (arXiv LaTeX source primary, PDF + Docling fallback), copied figure files, per-table `.tex` files, section outline with line numbers, deduplicated citation keys with every location they appear plus each cited paper's full citation text and resolved DOI, abstract, embedded bibliography (when present in source), and a valid `astra.yaml` representing the paper as an ASTRA artifact (with the paper's claimed numerical findings as ASTRA `findings:`). Emits a top-level `index.json` for the structural surface plus the `astra.yaml` for the semantic surface. Triggers on: \"read paper\", \"prep paper\", \"ingest paper\", \"extract paper\", \"set up paper\", \"fetch arxiv\", \"arxiv id\", \"DOI\", \"find paper\", or `/paper-extraction <id>`.",
@@ -104,12 +113,13 @@
     },
     {
       "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `lc-new` scopes a new analysis from a research question, `lc-cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `lc-feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
+      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `lc-new` scopes a new analysis from a research question, `lc-report` authors the MyST report that references astra.yaml elements by path, `lc-cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `lc-feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
       "skills": [
         "astra",
         "lc-cli",
         "lc-feedback",
-        "lc-new"
+        "lc-new",
+        "lc-report"
       ],
       "dependencies": [
         "astra"
@@ -129,6 +139,7 @@
         "lc-from-code",
         "lc-from-paper",
         "lc-new",
+        "lc-report",
         "paper-extraction",
         "ralph"
       ],
