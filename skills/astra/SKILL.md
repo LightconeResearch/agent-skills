@@ -356,7 +356,7 @@ The **`universe:` field** in universe files selects which sub-analysis universe 
 
 Per-element prose (what each Input, Output, Decision, Option, or Insight is and why) belongs on the elements themselves via `description`/`rationale`/`notes` -- those can be written from day one. The analysis-level `description` can be filled in at any time and is safe to leave short.
 
-Rich write-ups do not live in the spec at all: they are external MyST reports that reference analysis elements by tree-path (the `/lc-report` skill authors them; `lc init` scaffolds the template).
+Rich write-ups do not live in the spec at all: they are external MyST reports that reference analysis elements by tree-path (the `/report` skill authors them; `lc init` scaffolds the template).
 
 ```yaml
 description: |

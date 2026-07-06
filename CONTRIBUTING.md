@@ -39,9 +39,14 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 Edit `skills.config.json`:
 
 - `skills` — directly-owned skills (Claude exposes exactly these).
-- `dependencies` — other plugins this one builds on. Claude resolves these on install;
-  Codex plugins are self-contained, so the generator bundles the full transitive
-  closure (own + dependency skills) as symlinks under `plugins/<name>/skills/`.
+- `dependencies` — other plugins this one **bundles**. The generator inlines the full
+  transitive closure (own + dependency skills, hooks, agents) as symlinks under
+  `plugins/<name>/`, so the plugin is self-contained and installs identically on both
+  harnesses. Example: `lightcone` bundles `astra`.
+- `requires` — other plugins this one **depends on but does not bundle**. Documented
+  only: the user installs the required plugin separately (surfaced in the README and the
+  plugin description). Nothing is added to the closure. Example:
+  `lightcone-experimental` requires `lightcone`.
 - `hooks` — path to a `hooks.json` (hook commands reference the plugin root as
   `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` so both harnesses resolve it). `agents` — Claude subagent file paths.
 

@@ -1,5 +1,5 @@
 ---
-name: lc-report
+name: report
 description: >
   Authors and extends the project's MyST report — the external write-up
   (`index.md` + `myst.yml`, scaffolded by `lc init`) that references
@@ -14,7 +14,7 @@ description: >
   figure side-by-side (figure-comparison).
 ---
 
-# /lc-report
+# /report
 
 Author the project's report as MyST Markdown wired to the analysis through the MySTRA plugin. The plugin reads `astra.yaml` at build time and resolves `{astra}` references against it, so the report and the analysis cannot drift: figures, decisions, findings, and numbers stay single-sourced in the spec and in `results/`.
 
@@ -40,7 +40,7 @@ Check the CLIs resolve (silently):
 ## Setup
 
 1. **Read the spec.** `astra.yaml` at the project root, plus each sub-analysis's `astra.yaml`. Note inputs, outputs, decisions, findings, prior insights, and the sub-analysis tree — these are the elements the report will reference.
-2. **Note the active universe.** MySTRA resolves against the first `.yaml` file in `universes/` — it selects decision options and which `results/<universe>/` artifacts resolve.
+2. **Identify the active universe.** MySTRA resolves against the first `.yaml` file in `universes/`, in directory order — it selects decision options and which `results/<universe>/` artifacts resolve. Run `ls universes/` and check which file that actually is; don't assume it's `baseline.yaml` just because that's the convention — a differently-named universe (e.g. an in-progress `attempt-1.yaml`) can sort first and silently become active. If the wrong universe looks active, flag it to the user rather than guessing. This skill authors against that one active universe only; multiverse comparison (drafting prose that spans more than one universe) is out of scope for now.
 3. **Check materialization.** `lc status` — outputs that aren't materialized still embed (the spec entry renders) but `{astra:value}` reads from result files, so live numbers need `lc run` first.
 4. **Check the report scaffold.** `lc init` writes `myst.yml` + `index.md` at the project root. If they're missing (e.g. a reproduction workdir that never ran `lc init`), create them — the minimal `myst.yml` is in [`references/mystra-syntax.md`](references/mystra-syntax.md).
 

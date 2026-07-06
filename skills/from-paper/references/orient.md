@@ -14,7 +14,7 @@ Three things in the reproduction workdir, all committed together at the end:
 
 - **`constitution.md`** — drafted from [`../templates/constitution.md`](../templates/constitution.md). YAML frontmatter `status: active`, then Goal, Fidelity intent, Scope (in / out), Quality bar, Evidence (paper DOI, arXiv ID, code repo URL, where the substrate lives), Open dimensions. The ralph loop's driving document; each iteration reads it on entry. The body sharpens slowly; Open dimensions is updated each iteration as decisions worth user ratification surface. Task-bound — archivable once the reproduction closes.
 - **`CLAUDE.md`** — drafted from [`../templates/CLAUDE.md`](../templates/CLAUDE.md). Paper identity at the top (DOI, title, one-line subject), Rules (universal across reproductions; leave the template's defaults), Disagreements log (starts empty; iterations append), Open opportunities (starts empty; iterations append), Pointers (to `constitution.md`, `work/reference/`, etc.). The auto-loading walk-up; every Claude Code session in the workdir picks it up. Durable — stays useful for any follow-on work in this directory once the reproduction lands.
-- **`work/reference/` substrate** — paper substrate from `/paper-extraction` (`paper.pdf`, `source/` or `document.md`, `index.json`, `astra.yaml`, `figures/`, `tables/`, `bibliography-source.{bib,bbl}`) + code substrate from `/lc-from-code` scan-only (`code/`, `code-status.yaml`, `code-index.md`) when there's a reference code repo.
+- **`work/reference/` substrate** — paper substrate from `/paper-extraction` (`paper.pdf`, `source/` or `document.md`, `index.json`, `astra.yaml`, `figures/`, `tables/`, `bibliography-source.{bib,bbl}`) + code substrate from `/from-code` scan-only (`code/`, `code-status.yaml`, `code-index.md`) when there's a reference code repo.
 
 There is no separate "constitution skill" invocation — `/ralph`'s Authoring mode (Study → Draft → Refine → Launch) is what you're following here; the constitution authoring discipline + reference materials live there. Pull the discipline mentally; the deliverable is these two markdown files (plus the substrate produced by the inline skill invocations).
 
@@ -32,7 +32,7 @@ Wording is up to you, but cover the three forms cleanly. Something like:
 
 > *"What paper would you like to reproduce? An arXiv ID, a DOI, or a path to a PDF on disk all work — arXiv ID gives the cleanest acquisition because the LaTeX source comes through."*
 
-If the user supplied the identifier on the `/lc-from-paper` invocation, skip the ask. **No `AskUserQuestion` runs before paper-extraction has landed** — anything beyond the identifier is either inferable from the paper or belongs in a later stage where you can ground the question.
+If the user supplied the identifier on the `/from-paper` invocation, skip the ask. **No `AskUserQuestion` runs before paper-extraction has landed** — anything beyond the identifier is either inferable from the paper or belongs in a later stage where you can ground the question.
 
 ### Stage 2 — Run `/paper-extraction` inline; read the substrate
 
@@ -135,7 +135,7 @@ Ask in those terms:
 
 Capture paths into `CLAUDE.md`'s **Pointers** section. Don't proactively read them in ORIENT — that's ARCHITECT's job when it scopes the sub-analyses.
 
-### Stage 4 — Clone the code (if any) and run `/lc-from-code` scan-only
+### Stage 4 — Clone the code (if any) and run `/from-code` scan-only
 
 Skip cleanly when Stage 3's code-repo answer was "no public code." Otherwise:
 
@@ -143,7 +143,7 @@ Skip cleanly when Stage 3's code-repo answer was "no public code." Otherwise:
    ```bash
    git clone --depth 1 <url> work/reference/code
    ```
-   For multi-project monorepos where the user pointed at specific subpaths (e.g. GitHub `tree/<branch>/<path>` URLs), clone the whole repo on the named branch — don't sparse-checkout — and capture the primary subpaths in `code-status.yaml` so `/lc-from-code` knows where to focus.
+   For multi-project monorepos where the user pointed at specific subpaths (e.g. GitHub `tree/<branch>/<path>` URLs), clone the whole repo on the named branch — don't sparse-checkout — and capture the primary subpaths in `code-status.yaml` so `/from-code` knows where to focus.
 
 2. **Write `work/reference/code-status.yaml`:**
    ```yaml
@@ -156,14 +156,14 @@ Skip cleanly when Stage 3's code-repo answer was "no public code." Otherwise:
    notes: "..."
    ```
 
-3. **Invoke `/lc-from-code` in scan-only mode:**
+3. **Invoke `/from-code` in scan-only mode:**
    ```
-   /lc-from-code scan-only against work/reference/code/. From inside /lc-from-paper's ORIENT phase. Produce work/reference/code-index.md only — do not touch the project-root astra.yaml, do not parameterize any code, do not run anything, do not modify the cloned repo. Primary subpaths (per code-status.yaml): <list>.
+   /from-code scan-only against work/reference/code/. From inside /from-paper's ORIENT phase. Produce work/reference/code-index.md only — do not touch the project-root astra.yaml, do not parameterize any code, do not run anything, do not modify the cloned repo. Primary subpaths (per code-status.yaml): <list>.
    ```
 
-   The scan-only branch of `/lc-from-code` does the inventory pass and writes to `work/reference/code-index.md`. Its prompt-context surface carries the "stop at scan" contract.
+   The scan-only branch of `/from-code` does the inventory pass and writes to `work/reference/code-index.md`. Its prompt-context surface carries the "stop at scan" contract.
 
-When no public code repo exists, write `code-status.yaml` with `found: false` and skip `/lc-from-code` entirely. The code-as-canonical rule self-disables in that case.
+When no public code repo exists, write `code-status.yaml` with `found: false` and skip `/from-code` entirely. The code-as-canonical rule self-disables in that case.
 
 ### Stage 5 — Follow-up questions if the code surfaced anything new
 

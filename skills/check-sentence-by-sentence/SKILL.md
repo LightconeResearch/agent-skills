@@ -4,7 +4,7 @@ description: >
   Sentence-by-sentence audit of a paper against an ASTRA project's code. For
   every claim about implementation or results in the methodology, results,
   discussion, and appendices, locate the corresponding code (file:line) or
-  mark NOT FOUND. Only the user can invoke this skill, though this skill can be suggested for the user to invoke during paper reproduction. Other skills may mention this skill as an optional follow-up, but should not invoke it themselves. Run from the project folder containing astra.yaml. In lc-from-paper projects, read paper sources from
+  mark NOT FOUND. Only the user can invoke this skill, though this skill can be suggested for the user to invoke during paper reproduction. Other skills may mention this skill as an optional follow-up, but should not invoke it themselves. Run from the project folder containing astra.yaml. In from-paper projects, read paper sources from
   work/reference/: prefer arXiv TeX under work/reference/source/, fall back to
   Docling/Pandoc markdown at work/reference/document.md.
 argument-hint: "[path to paper source, e.g. work/reference/source/main.tex or work/reference/document.md]"
@@ -17,7 +17,7 @@ Every sentence that asserts an implementation detail or a numerical/empirical
 result is located in the code (`file:line`) or marked NOT FOUND. The agent
 does NOT run any code -- this is a static reading audit.
 
-In lc-from-paper projects, the paper substrate comes from `work/reference/`.
+In from-paper projects, the paper substrate comes from `work/reference/`.
 Path A is arXiv source at `work/reference/source/`; Path B is the parsed
 markdown fallback at `work/reference/document.md`, produced by Docling or
 Pandoc.
@@ -38,7 +38,7 @@ Pandoc.
    1. If the argument is a `.tex` file, use it in `tex` mode.
    2. If the argument is `work/reference/` or another directory, first look
       for TeX source under `<dir>/source/`, then for `<dir>/document.md`.
-   3. If no argument was supplied, prefer the lc-from-paper layout:
+   3. If no argument was supplied, prefer the from-paper layout:
       - `work/reference/source/<main>.tex` if TeX source exists. Identify the
         main file with `grep -l '\\documentclass' work/reference/source/*.tex`;
         if exactly one file matches, use it. If multiple files match, ask the
@@ -48,7 +48,7 @@ Pandoc.
         main TeX wrapper.
       - `work/reference/document.md` if there is no TeX source. This is the
         Docling/Pandoc fallback and should be audited in `markdown` mode.
-   4. Only after those lc-from-paper paths fail, look for an obvious legacy
+   4. Only after those from-paper paths fail, look for an obvious legacy
       `.tex` source in cwd: a top-level `*.tex`, or one inside `paper/`,
       `tex/`, or a similarly named subdirectory. If exactly one obvious
       candidate is found, use it in `tex` mode.

@@ -1,9 +1,9 @@
 ---
-name: lc-from-code
+name: from-code
 description: Bring an existing project into ASTRA / lightcone-cli, starting from the code. Scans the codebase, drafts or augments astra.yaml, parameterizes decisions, and runs until outputs materialize. Triggers on "migrate", "convert", "existing project", "wrap this code", "start from code".
 ---
 
-# /lc-from-code
+# /from-code
 
 End-to-end migration: scan existing code, draft or add to `astra.yaml`, parameterize decisions in the code, and run until everything materializes. This works both as a fresh start from code and as an augmenting pass inside an existing ASTRA project. The user's existing logic stays intact — changes should be minimal.
 
@@ -11,7 +11,7 @@ End-to-end migration: scan existing code, draft or add to `astra.yaml`, paramete
 
 This skill has two invocation contexts. The first is the user-driven default described in the phases below: do the full scan → spec → parameterize → run flow.
 
-The second is **scan-only**, used when `/lc-from-paper`'s ORIENT Stage 4 invokes this skill against a cloned reference repo at `work/reference/code/`. The invocation prompt will tell you explicitly to *do only Phase 1's scan*, write the inventory to a path it specifies (typically `work/reference/code-index.md`), and **stop** — do not touch `astra.yaml` at the project root, do not parameterize any code, do not run anything, do not modify the cloned repo. Reach for an Explore sub-agent (or parallel Explore spawns when the repo is large enough that one survey misses the breadth) — that's the cost-effective tool for inventorying a real codebase, and there's no longer any nested-context concern that would forbid it. Trust the invocation prompt's instructions over the fresh-migration defaults below; if the prompt says scan-only, the scan-only contract holds (stop after writing the inventory file).
+The second is **scan-only**, used when `/from-paper`'s ORIENT Stage 4 invokes this skill against a cloned reference repo at `work/reference/code/`. The invocation prompt will tell you explicitly to *do only Phase 1's scan*, write the inventory to a path it specifies (typically `work/reference/code-index.md`), and **stop** — do not touch `astra.yaml` at the project root, do not parameterize any code, do not run anything, do not modify the cloned repo. Reach for an Explore sub-agent (or parallel Explore spawns when the repo is large enough that one survey misses the breadth) — that's the cost-effective tool for inventorying a real codebase, and there's no longer any nested-context concern that would forbid it. Trust the invocation prompt's instructions over the fresh-migration defaults below; if the prompt says scan-only, the scan-only contract holds (stop after writing the inventory file).
 
 ## Phase 1: Scan & Spec
 
@@ -122,7 +122,7 @@ If the scan found existing results elsewhere in the project, compare them agains
 
 Then validate the spec and the provenance chain: `astra validate astra.yaml` and `lc verify`. Present summary to user.
 
-With outputs materialized, offer to draft the write-up: `/lc-report` authors the project's MyST report (`index.md`), referencing the freshly specced decisions and outputs by path.
+With outputs materialized, offer to draft the write-up: `/report` authors the project's MyST report (`index.md`), referencing the freshly specced decisions and outputs by path.
 
 ## Rules
 

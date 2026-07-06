@@ -2,7 +2,7 @@
 
 ARCHITECT is the structural seam: decide the sub-analysis decomposition, wire the inputs and outputs at the sub-analysis level, and author a short `description:` for each analysis — all in one stub `astra.yaml`. SPECIFY then fills the stub with `decisions:`, `prior_insights:`, and `findings:`. Splitting **structure** from **content** keeps each iteration's cognitive load manageable: ARCHITECT decides *what the analyses are*; SPECIFY decides *what's inside each one*.
 
-ARCHITECT is what a ralph iteration does when the workdir signals "ORIENT substrate present + project-root `astra.yaml` absent (or empty stub)." The heavy work of *understanding* the paper and code happened in `/paper-extraction` and `/lc-from-code`'s scan-only branch — both invoked inline during ORIENT in the user's main session. Their on-disk substrate (the structural `index.json`, the paper-extraction `astra.yaml`, the `code-index.md`) is what you read on entry. No persistent expert sub-agents; targeted reads against the substrate carry the orientation.
+ARCHITECT is what a ralph iteration does when the workdir signals "ORIENT substrate present + project-root `astra.yaml` absent (or empty stub)." The heavy work of *understanding* the paper and code happened in `/paper-extraction` and `/from-code`'s scan-only branch — both invoked inline during ORIENT in the user's main session. Their on-disk substrate (the structural `index.json`, the paper-extraction `astra.yaml`, the `code-index.md`) is what you read on entry. No persistent expert sub-agents; targeted reads against the substrate carry the orientation.
 
 ## Inputs
 
@@ -10,7 +10,7 @@ ARCHITECT is what a ralph iteration does when the workdir signals "ORIENT substr
 - `CLAUDE.md` — auto-loaded; Rules + accumulators (still empty at this point).
 - `work/reference/index.json` — paper-side structural index from `/paper-extraction` (figures, tables, section outline with line numbers, citations with resolved DOIs).
 - `work/reference/astra.yaml` — paper-extraction's ASTRA-shape stub of the paper itself: id, name, `description` (from abstract), optionally `findings:` (paper's claimed numerical results).
-- `work/reference/code-index.md` — code-side inventory from `/lc-from-code`'s scan: script inventory, candidate decisions with `file:line` refs, module map, entry-points, external data dependencies, container hints.
+- `work/reference/code-index.md` — code-side inventory from `/from-code`'s scan: script inventory, candidate decisions with `file:line` refs, module map, entry-points, external data dependencies, container hints.
 - `work/reference/source/` (Path A) or `work/reference/document.md` (Path B) — paper text. Grep into for specific facts; do not re-read whole.
 - `work/reference/code/` (when present) — the cloned reference code. Read targeted modules when `code-index.md` doesn't answer a structural question.
 - `work/notes/notes.md` — user-supplied prior notes, if any.

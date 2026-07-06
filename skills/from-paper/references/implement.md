@@ -31,7 +31,7 @@ Read `astra.yaml` and `implementation-notes.md`. For each output, write a script
 
 Without this discipline, the implementation drifts to "looks right" rather than "matches" — the failure mode the first-paper test surfaced.
 
-When the reference code is substantial enough that implementation is really a migration of an existing codebase, follow `/lc-from-code`'s migration workflow in **augment existing ASTRA** mode. Use its code scan, minimal parameter-plumbing, dependency/container, and baseline-preservation strategies, but apply them to this reproduction's existing `astra.yaml`. Do not create a second ASTRA project or duplicate the spec; add recipes, code-backed options, implementation notes, and missing structure to the current reproduction artifact.
+When the reference code is substantial enough that implementation is really a migration of an existing codebase, follow `/from-code`'s migration workflow in **augment existing ASTRA** mode. Use its code scan, minimal parameter-plumbing, dependency/container, and baseline-preservation strategies, but apply them to this reproduction's existing `astra.yaml`. Do not create a second ASTRA project or duplicate the spec; add recipes, code-backed options, implementation notes, and missing structure to the current reproduction artifact.
 
 ### Without a code reference (`work/reference/code/` is absent)
 

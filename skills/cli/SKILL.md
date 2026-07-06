@@ -1,5 +1,5 @@
 ---
-name: lc-cli
+name: cli
 description: >
   Reference for `lc` CLI execution: commands (init/run/status/verify/build/export),
   the Spec-Code Invariant (`astra.yaml` and code never diverge), status

@@ -41,7 +41,7 @@ For deeper voice / section guidance and the discipline that keeps a constitution
 
 1. **Study** — Read relevant files, understand existing patterns. This informs the *constitution*, not the implementation. The goal is pointers iterations will follow.
 
-2. **Draft** — Create the constitution as a markdown file. Some workflows expect it at a specific path so a runner picks it up (e.g. `/lc-from-paper` writes `constitution.md` at the reproduction workdir root); otherwise put it wherever the work lives. Frontmatter the file with:
+2. **Draft** — Create the constitution as a markdown file. Some workflows expect it at a specific path so a runner picks it up (e.g. `/from-paper` writes `constitution.md` at the reproduction workdir root); otherwise put it wherever the work lives. Frontmatter the file with:
 
    ```yaml
    ---

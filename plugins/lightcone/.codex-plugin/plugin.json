@@ -1,7 +1,7 @@
 {
   "name": "lightcone",
-  "version": "0.2.0",
-  "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `lc-new` scopes a new analysis from a research question, `lc-report` authors the MyST report that references astra.yaml elements by path, `lc-cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `lc-feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
+  "version": "0.0.1",
+  "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `report` authors the MyST report that references astra.yaml elements by path, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
   "author": {
     "name": "Lightcone Research",
     "email": "info@lightconeresearch.org"

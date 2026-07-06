@@ -1,5 +1,5 @@
 ---
-name: lc-from-paper
+name: from-paper
 description: >
   This skill should be used when the user wants to reproduce a published
   scientific paper in ASTRA — has a DOI, arXiv ID, or PDF — or asks to
@@ -13,13 +13,13 @@ description: >
   close-out runs back in the user's main session.
 ---
 
-# lc-from-paper
+# from-paper
 
 You are helping the user reproduce a published scientific paper as a complete ASTRA project. This is a long, complex task that won't fit in a single context window — it spans discrete phases: orient (figure out what the user wants, acquire paper + code), architect the spec, specify decisions and findings, resolve cited literature, implement, run, compare, review.
 
 The architecture is two-piece:
 
-1. **Interactive bookends in the user's main session.** ORIENT and REVIEW are conversations with the user. ORIENT runs in stages: ask for the paper, run `/paper-extraction` inline, interview the user (grounded in the paper), clone the code and run `/lc-from-code` scan-only (if a repo exists), possibly ask follow-up questions, then draft `constitution.md` + `CLAUDE.md` from the full paper-plus-code context for user review.
+1. **Interactive bookends in the user's main session.** ORIENT and REVIEW are conversations with the user. ORIENT runs in stages: ask for the paper, run `/paper-extraction` inline, interview the user (grounded in the paper), clone the code and run `/from-code` scan-only (if a repo exists), possibly ask follow-up questions, then draft `constitution.md` + `CLAUDE.md` from the full paper-plus-code context for user review.
 
 2. **A ralph loop for the long middle.** Once ORIENT lands — `constitution.md` + `CLAUDE.md` drafted, paper and code substrate on disk — you launch a ralph loop against the constitution. Each iteration starts a fresh session with the constitution loaded into its system prompt, surveys the workdir, picks the next valuable move (typically one phase's worth of work), does it, commits, and exits. Iteration N+1 reads N's work cold, so per-phase review collapses into "the next iteration is the review."
 
@@ -35,14 +35,14 @@ Eight phases (zero-indexed). ORIENT runs before the loop, in the user's main ses
 
 | # | Phase | Where it runs | Reference | Primary outputs |
 |---|---|---|---|---|
-| 0 | ORIENT | user's main session | [`references/orient.md`](references/orient.md) | per-paper `constitution.md` + `CLAUDE.md` + paper substrate at `work/reference/{paper.pdf, source/ or document.md, figures/, tables/, index.json, astra.yaml}` (from inline `/paper-extraction`) + code substrate at `work/reference/{code/, code-status.yaml, code-index.md}` (from inline `/lc-from-code` scan-only, when a repo exists) |
+| 0 | ORIENT | user's main session | [`references/orient.md`](references/orient.md) | per-paper `constitution.md` + `CLAUDE.md` + paper substrate at `work/reference/{paper.pdf, source/ or document.md, figures/, tables/, index.json, astra.yaml}` (from inline `/paper-extraction`) + code substrate at `work/reference/{code/, code-status.yaml, code-index.md}` (from inline `/from-code` scan-only, when a repo exists) |
 | 1 | ARCHITECT | ralph iteration | [`references/architect.md`](references/architect.md) | stub `astra.yaml` at project root (sub-analyses, inputs, outputs, per-analysis `description`) |
 | 2 | SPECIFY | ralph iteration | [`references/specify.md`](references/specify.md) | filled `astra.yaml` (`decisions:`, `findings:`, `prior_insights:` placeholders); `targets/targets.md`; `implementation-notes.md`; `universes/baseline.yaml` |
 | 3 | LITERATURE | ralph iteration | [`references/literature.md`](references/literature.md) | `astra.yaml`'s `prior_insights:` Evidence entries each carry resolved `quote:` + `location:` selectors; per-paper PDFs cached via `astra paper add` |
 | 4 | IMPLEMENT | ralph iteration | [`references/implement.md`](references/implement.md) | `scripts/`, `requirements.txt`, recipes in `astra.yaml` |
 | 5 | RUN | ralph iteration | [`references/run.md`](references/run.md) | `results/<universe>/<output>/` |
 | 6 | COMPARE | ralph iteration | [`references/compare.md`](references/compare.md) | `comparison-report.{yaml,md}` |
-| 7 | REVIEW | user's main session | [`references/review.md`](references/review.md) | `REPRODUCTION-SUMMARY.md`, `/figure-comparison` HTML, resolved `open-questions.md`, MyST report (`index.md` via `/lc-report`), finalized reproduction outcome |
+| 7 | REVIEW | user's main session | [`references/review.md`](references/review.md) | `REPRODUCTION-SUMMARY.md`, `/figure-comparison` HTML, resolved `open-questions.md`, MyST report (`index.md` via `/report`), finalized reproduction outcome |
 
 COMPARE produces a verdict plus an opportunity assessment — not just pass / fail, but where the gaps are, how much they likely matter, and how they sit relative to the constitution's fidelity intent. A subsequent iteration decides whether to spend another IMPLEMENT round (close a gap that sits below intent) or land the reproduction at its current trajectory and log the gap into CLAUDE.md's Open opportunities. Once the COMPARE → IMPLEMENT loop terminates (verdict `pass`, or `partial` with the un-acted opportunities logged), a subsequent cold-survey iteration finds nothing left to do and flips the constitution's `status:` to `closed`. The loop terminates; REVIEW runs in the user's main session.
 
@@ -55,7 +55,7 @@ ORIENT runs as one phase in **seven stages**:
 1. **Ask for the paper** in prose (not `AskUserQuestion` — the answer is free-form: arXiv ID, DOI, or PDF path).
 2. **Run `/paper-extraction <id>` inline** and read the substrate it produced — index.json, abstract, conclusions, data/code availability, acknowledgements. This grounds every subsequent question.
 3. **Interview the user** with `AskUserQuestion` for scope, fidelity intent, code repo confirmation, paper-specific conventions, prior familiarity, and external context — each question referencing the paper's actual figures, claims, and structure.
-4. **Clone the reference code and run `/lc-from-code` scan-only** (skip cleanly when no public code repo exists). The scan produces `code-index.md` — the iterations' code surface.
+4. **Clone the reference code and run `/from-code` scan-only** (skip cleanly when no public code repo exists). The scan produces `code-index.md` — the iterations' code surface.
 5. **Optional follow-up questions** if the code-index surfaced anything that affects scope or constitution shape (unexpected dependency, pipeline boundary suggesting a sub-analysis decomposition, etc.). Usually skipped.
 6. **Draft `constitution.md` + `CLAUDE.md`** — both files now informed by paper *and* code substrate. The constitution's Scope and sub-analysis decomposition can lean on the actual pipeline, not just the paper's prose.
 7. **Halt for explicit user approval, then commit, then launch.** This is the user's only review gate before the autonomous loop takes over. Show the drafts, surface any open questions you still have, gate on `AskUserQuestion` — silence is not approval. Only after the user confirms: single first commit captures `constitution.md` + `CLAUDE.md` + the full `work/reference/` substrate, then launch the ralph loop.
@@ -66,7 +66,7 @@ These get drafted into **two files** plus the substrate, all in the reproduction
 
 - **`constitution.md`** — the ralph loop's driving document. Goal, Fidelity intent, Scope, Quality bar, Evidence (paper DOI, arXiv ID, code repo URL), Open dimensions. Starts with YAML frontmatter `status: active` so the ralph launcher accepts it. Authored using the `/ralph` skill's authoring discipline (the constitution-authoring mode of `/ralph` — see its references on voice and sections).
 - **`CLAUDE.md`** — the auto-loading walk-up. Paper identity at the top, Rules (universal across reproductions; leave the template's defaults), Disagreements log (starts empty), Open opportunities (starts empty), Pointers (to `constitution.md`, `work/reference/`, etc.).
-- **`work/reference/`** — paper substrate from `/paper-extraction` + code substrate from `/lc-from-code` scan-only (when a code repo exists).
+- **`work/reference/`** — paper substrate from `/paper-extraction` + code substrate from `/from-code` scan-only (when a code repo exists).
 
 Templates ship in [`templates/constitution.md`](templates/constitution.md) and [`templates/CLAUDE.md`](templates/CLAUDE.md). Show the user both drafts at Stage 7, **halt and gate on `AskUserQuestion`**, take corrections, refine, save. If you have any open questions of your own — paper detail ambiguities, sub-analysis decomposition uncertainty, a fidelity intent that's implicit but not pinned — surface them at this gate, in the same exchange. Iterations run cold; questions held back are much harder to raise later.
 
@@ -120,7 +120,7 @@ Each iteration's survey reads the workdir to determine what phase is next. File 
 
 ## REVIEW close-out (after the loop)
 
-When the loop closes (the user reports back that the tmux session has exited, or `constitution.md`'s `status:` is `closed`), run REVIEW from the user's main session. See [`references/review.md`](references/review.md) for the full close-out: invoke `/figure-comparison` (mandatory) and optionally `/check-sentence-by-sentence`, walk `open-questions.md` with the user, draft `REPRODUCTION-SUMMARY.md`, author the MyST report via `/lc-report`, propagate un-acted opportunities into CLAUDE.md, commit.
+When the loop closes (the user reports back that the tmux session has exited, or `constitution.md`'s `status:` is `closed`), run REVIEW from the user's main session. See [`references/review.md`](references/review.md) for the full close-out: invoke `/figure-comparison` (mandatory) and optionally `/check-sentence-by-sentence`, walk `open-questions.md` with the user, draft `REPRODUCTION-SUMMARY.md`, author the MyST report via `/report`, propagate un-acted opportunities into CLAUDE.md, commit.
 
 REVIEW runs in your main session because `/figure-comparison` and `/check-sentence-by-sentence` both use `AskUserQuestion`, which isn't available inside ralph iterations.
 
@@ -151,7 +151,7 @@ When the user walks back into a workdir that already has artifacts:
 1. **Skip ORIENT** unless the user explicitly wants to revise scope (in which case edit `constitution.md` together, no re-draft from scratch).
 2. **If `constitution.md`'s `status:` is `active` and the tmux session isn't running**, re-launch the ralph loop: `.claude/skills/ralph/scripts/ralph constitution.md`. The next iteration surveys the workdir and picks up wherever the prior loop left off.
 3. **If `constitution.md`'s `status:` is `closed`**, the reproduction is at REVIEW. Run REVIEW close-out in your main session.
-4. **If ORIENT substrate is incomplete** — paper-extraction errored mid-flight, or the code clone / scan didn't land — finish the missing stages in your main session before launching the loop. Both `/paper-extraction` and `/lc-from-code` are survey-first and skip done work; re-invoking against partial state is safe.
+4. **If ORIENT substrate is incomplete** — paper-extraction errored mid-flight, or the code clone / scan didn't land — finish the missing stages in your main session before launching the loop. Both `/paper-extraction` and `/from-code` are survey-first and skip done work; re-invoking against partial state is safe.
 
 ## Anti-patterns
 

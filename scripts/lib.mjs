@@ -238,6 +238,8 @@ export function buildArtifacts(model) {
       description: p.description,
       skills: closure(p.name, byName).sort(),
       dependencies: p.dependencies || [],
+      // Documented-only prerequisites: not bundled, the user installs them.
+      requires: p.requires || [],
       // Reflect the bundled closure — what installing this one plugin gives you.
       hasHooks: closureHooks(p.name, byName).length > 0,
       hasAgents: closureAgents(p.name, byName).length > 0,

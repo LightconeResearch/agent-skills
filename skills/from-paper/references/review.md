@@ -25,7 +25,7 @@ The phase name **REVIEW** is freed by the old pre-implement REVIEW phase folding
 - `open-questions.md` — same file, but with `## Resolutions` section appended capturing what the user said for each entry
 - Edits to `astra.yaml` / `implementation-notes.md` / `universes/baseline.yaml` if any open-question resolution warrants a spec change
 - `REPRODUCTION-SUMMARY.md` — final summary; concise (~1–2 pages); the canonical record of what the reproduction landed on
-- `index.md` + `myst.yml` — the MyST report, authored via `/lc-report`: the rich, publication-shaped write-up that references `astra.yaml` elements by path
+- `index.md` + `myst.yml` — the MyST report, authored via `/report`: the rich, publication-shaped write-up that references `astra.yaml` elements by path
 - CLAUDE.md updates — **Paper-vs-code disagreements** entries reconciled with their resolutions (Open opportunities already there from COMPARE iterations)
 - A commit closing out the reproduction
 
@@ -75,11 +75,11 @@ A single markdown file at the project root, ~1–2 pages. The canonical record o
 
 Brief, not exhaustive. The depth lives in `astra.yaml` and the workdir's notes; the summary is the door into them.
 
-## Step 4: author the MyST report with `/lc-report`
+## Step 4: author the MyST report with `/report`
 
 `REPRODUCTION-SUMMARY.md` is the concise close-out record; the MyST report is the rich, publication-shaped companion — Introduction / Methods / Results prose that references the spec's decisions, findings, and outputs by path and pulls reproduced numbers in live, so it can never drift from what the pipeline actually produced.
 
-Invoke `/lc-report` in paper-reproduction mode. It reads the spec, `work/reference/`, the comparison verdict, and the open-question resolutions from Step 2 — the divergence passages ("during reproduction we found…") come straight from those resolutions. If `index.md` / `myst.yml` don't exist yet (reproduction workdirs typically weren't scaffolded by `lc init`), the skill creates them. It validates with `myst build --html` before finishing; show the user how to preview (`myst start`).
+Invoke `/report` in paper-reproduction mode. It reads the spec, `work/reference/`, the comparison verdict, and the open-question resolutions from Step 2 — the divergence passages ("during reproduction we found…") come straight from those resolutions. If `index.md` / `myst.yml` don't exist yet (reproduction workdirs typically weren't scaffolded by `lc init`), the skill creates them. It validates with `myst build --html` before finishing; show the user how to preview (`myst start`).
 
 If the user prefers to skip the report, log it as an Open opportunity in CLAUDE.md instead of silently dropping it.
 
