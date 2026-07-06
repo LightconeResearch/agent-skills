@@ -1,9 +1,9 @@
 ---
-name: lc-new
+name: new
 description: Use this skill whenever the user starts a new ASTRA analysis from a research question — scoping the question, structuring inputs and outputs, identifying decisions through literature, and landing astra.yaml + project CLAUDE.md. Triggers on verbs (`new`, `start`, `scope`) combined with nouns (`analysis`, `project`, `question`, `research`) — e.g. "new analysis", "start project", "scope research question" — even if the user doesn't say "project" explicitly. Don't use this for working inside an existing ASTRA project; this is for fresh scoping only.
 ---
 
-# /lc-new
+# /new
 
 Create a new ASTRA analysis project through conversation. Build the spec iteratively -- write to `astra.yaml` after each phase so the user sees progress. Literature search and decision identification happen in distinct phases -- talk first, then extract papers, then identify decisions informed by both conversation and literature.
 

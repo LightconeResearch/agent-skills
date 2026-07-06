@@ -1,1 +1,0 @@
-../../../agents/lc-extractor.md

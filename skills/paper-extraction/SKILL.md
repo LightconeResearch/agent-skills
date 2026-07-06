@@ -96,7 +96,7 @@ The skill produces only the paper's own reading materials. Anything not containe
 }
 ```
 
-The `citations:` block maps each cited paper's BibTeX key (Path A) or synthetic `<lastname>_<year>` key (Path B) to `{locations, citation, doi}`. Downstream consumers (e.g. lc-from-paper's SPECIFY when authoring `prior_insights:` placeholders, LITERATURE when discovering which DOIs to fetch) read the DOI directly from `citations[key].doi`. Unresolvable entries keep `citation: null` and/or `doi: null` and are flagged in `extraction_warnings`.
+The `citations:` block maps each cited paper's BibTeX key (Path A) or synthetic `<lastname>_<year>` key (Path B) to `{locations, citation, doi}`. Downstream consumers (e.g. from-paper's SPECIFY when authoring `prior_insights:` placeholders, LITERATURE when discovering which DOIs to fetch) read the DOI directly from `citations[key].doi`. Unresolvable entries keep `citation: null` and/or `doi: null` and are flagged in `extraction_warnings`.
 
 **`astra.yaml` is semantic and ASTRA-validating.** Treats the paper as an ASTRA artifact: `id`, `version`, `name`, a top-level `description:` (from the abstract), and `findings:` carrying the paper's claimed numerical results in ASTRA's Insight + Evidence shape. Read this when you want to know "what does this paper claim, with quote evidence anchored to the source." The script writes a stub (id, version, name, `description` from abstract, empty findings); Step 5 fills in `findings:`.
 

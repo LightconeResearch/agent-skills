@@ -55,7 +55,7 @@ Substrate CLIs (use --help on any):
 
 Reference skills (invoke when the surface above isn't enough):
   /astra   — astra.yaml spec: decisions, prior_insights, findings, evidence, sub-analyses, narrative anchors
-  /lc-cli  — lc workflow: spec-code invariant, status interpretation, failure diagnosis"
+  /cli  — lc workflow: spec-code invariant, status interpretation, failure diagnosis"
 
 if [ "$validation_ok" -ne 0 ]; then
     # tail rather than head -- the leading lines are success markers
