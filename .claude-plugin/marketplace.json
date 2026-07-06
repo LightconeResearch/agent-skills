@@ -5,35 +5,24 @@
     "email": "info@lightconeresearch.org"
   },
   "metadata": {
-    "description": "Agent skills for the Lightcone Research stack — the ASTRA spec and lightcone-cli project workflows.",
-    "version": "0.1.0"
+    "description": "Agent skills for Lightcone Research — the ASTRA spec and lightcone-cli project workflows.",
+    "version": "0.0.1"
   },
   "plugins": [
     {
       "name": "astra",
-      "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and narrative anchors. Use when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition.",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/astra"
-      ]
+      "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition.",
+      "source": "./plugins/astra"
     },
     {
       "name": "lightcone",
-      "description": "Work with a Lightcone / ASTRA analysis using the lightcone-cli (lc) toolchain. The `start` skill inspects project state and routes — scoping a new analysis from a research question, or surfacing the next step (run/verify outputs, refine decisions, write narrative, publish) on an existing one — and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Use for any interactive work inside an lc / ASTRA project. The `start` skill bundles the full lc CLI reference (references/cli.md).",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/start",
-        "./skills/feedback"
-      ],
-      "agents": [
-        "./agents/lc-extractor.md"
-      ],
-      "hooks": "./hooks/hooks.json",
-      "dependencies": [
-        "astra"
-      ]
+      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
+      "source": "./plugins/lightcone"
+    },
+    {
+      "name": "lightcone-experimental",
+      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Requires the `lightcone` plugin (install it first) — these skills build on the core lc workflow, hooks, and lc-extractor subagent but do NOT bundle them. Install when you need capabilities beyond the core analysis workflow.",
+      "source": "./plugins/lightcone-experimental"
     }
   ]
 }

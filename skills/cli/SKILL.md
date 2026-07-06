@@ -1,25 +1,19 @@
+---
+name: cli
+description: >
+  Reference for `lc` CLI execution: commands (init/run/status/verify/build/export),
+  the Spec-Code Invariant (`astra.yaml` and code never diverge), status
+  interpretation (ok/stale/missing/alias), failure diagnosis, multiverse
+  runs, scratch overrides for HPC, sub-analysis scaffolding, publishing
+  via WRROC. Invoke whenever running, debugging, or diagnosing `lc`
+  workflows; whenever interpreting `lc status` / `lc verify` output; or
+  whenever the user asks about the development workflow surrounding
+  `astra.yaml`.
+---
+
 # lightcone-cli Reference
 
 Reference for lightcone-cli execution: CLI commands, development workflow, status interpretation, and failure diagnosis. For `astra.yaml` spec syntax, invoke `/astra`.
-
-## Prerequisites — the `lc` and `astra` CLIs
-
-This skill drives two command-line tools, `lc` and `astra`. They are **not bundled with this skill** — it ships only the playbook. Before running anything, confirm both resolve:
-
-```bash
-command -v lc && command -v astra || echo "lightcone-cli toolchain not found"
-```
-
-If either is missing, install the toolchain — one package ships both binaries:
-
-```bash
-uv tool install lightcone-cli      # preferred (isolated tool install)
-# or: pipx install lightcone-cli
-```
-
-Inside an ASTRA project the project venv is authoritative: `lc init` creates `.venv/` and the session-start hook prepends `.venv/bin` to `PATH`, so `lc`/`astra` resolve to the project's pinned versions rather than a global install. **Never guess command syntax — discover it with `--help`** (`lc --help`, `lc run --help`, `astra paper --help`); the surface evolves and `--help` is the source of truth.
-
-> **`astra` without an install.** The stateless `astra` operations (validate, spec inspection) can run with no install via `uvx --from astra-tools astra <cmd>` (the command is `astra`, the package `astra-tools`). `lc` execution is **not** a uvx target — it is project-bound (pinned project venv, content-addressed manifests, reproducibility), so it always uses the project install above.
 
 ## CLI Reference
 

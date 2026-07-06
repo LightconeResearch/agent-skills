@@ -1,6 +1,11 @@
-# New-project setup (Route A)
+---
+name: new
+description: Use this skill whenever the user starts a new ASTRA analysis from a research question — scoping the question, structuring inputs and outputs, identifying decisions through literature, and landing astra.yaml + project CLAUDE.md. Triggers on verbs (`new`, `start`, `scope`) combined with nouns (`analysis`, `project`, `question`, `research`) — e.g. "new analysis", "start project", "scope research question" — even if the user doesn't say "project" explicitly. Don't use this for working inside an existing ASTRA project; this is for fresh scoping only.
+---
 
-The full scoping playbook for a fresh ASTRA project: turn a research question into a validated `astra.yaml`. Build the spec iteratively — write to `astra.yaml` after each phase so the user sees progress. Literature search and decision identification happen in distinct phases — talk first, then extract papers, then identify decisions informed by both conversation and literature.
+# /new
+
+Create a new ASTRA analysis project through conversation. Build the spec iteratively -- write to `astra.yaml` after each phase so the user sees progress. Literature search and decision identification happen in distinct phases -- talk first, then extract papers, then identify decisions informed by both conversation and literature.
 
 ## Setup
 
@@ -19,7 +24,7 @@ Then sharpen:
 - "What would a clear answer look like?" (sharpens the description)
 - "Why does this matter?" (context for decisions)
 
-**Update astra.yaml** — set `name`. (`astra init` scaffolded a placeholder example decision/input/output plus a TODO `narrative` skeleton; the placeholder structure is replaced in Phases 2–3, and narrative prose is filled in Finalize once structure has settled — written too early it goes stale.)
+**Update astra.yaml** — set `name`. (`astra init` scaffolded a placeholder example decision/input/output plus a TODO `description`; the placeholder structure is replaced in Phases 2–3, and the `description` is filled in Finalize once structure has settled — written too early it goes stale.)
 
 ---
 
@@ -109,15 +114,19 @@ astra universe generate -n baseline
 
 Generate only `baseline` unless the user explicitly asks for additional universes.
 
-### Populate Narrative
+### Populate Description
 
-Replace the TODO entries in `astra.yaml`'s `narrative:` block now that structure is stable: `summary` (one-paragraph framing), `methods` (decisions and sub-analyses), `inputs`, `outputs`. Use `#path.to.element` anchors for cross-references. Leave `findings` as TODO until results exist.
+Replace the TODO `description:` in `astra.yaml` with a short one-or-two-paragraph orientation now that structure is stable — what the analysis is and how its pieces fit together. Keep it brief; per-element prose lives on each Input/Output/Decision/Option via `description`/`rationale`. 
+
+### Populate CLAUDE.md
+
+Read the existing `CLAUDE.md` (created by `lc init`). Fill the `## Project Notes` section per the inline guidance there — context from the conversation that's not in `astra.yaml` and would be lost after `/clear`. The spec is the source of truth for structure, decisions, and evidence.
 
 ### Review with User
 
 > "Anything you'd like to change? Otherwise the specification is ready."
 
-If edits requested, apply and re-validate.
+If edits requested, apply, re-validate, and update CLAUDE.md.
 
 ---
 
@@ -134,7 +143,7 @@ Show summary table:
 | sub_analysis  | ...       | ...     | ...      |
 ```
 
-Then tell the user the spec is ready and they can begin implementation. Recommend clearing the conversation context first (e.g. `/clear` in Claude Code) — the scoping conversation consumes significant context, and everything needed to continue is captured in `astra.yaml`.
+Then tell the user the spec is ready and they can begin implementation. Recommend running `/clear` first — the scoping conversation consumes significant context, and everything needed to continue is captured in `astra.yaml` and `CLAUDE.md`.
 
 ---
 
@@ -144,7 +153,7 @@ Then tell the user the spec is ready and they can begin implementation. Recommen
 
 You MUST NOT write Python, R, or other implementation code.
 
-You MUST ONLY create/modify: `astra.yaml` and `universes/*.yaml`.
+You MUST ONLY create/modify: `astra.yaml`, `universes/*.yaml`, `CLAUDE.md` (Finalize only).
 
 You MUST NOT fabricate quotes -- all evidence must pass `astra validate --verify-evidence`.
 

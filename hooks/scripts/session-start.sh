@@ -5,8 +5,8 @@
 # primer so the agent knows what substrate commands exist and which
 # reference skills carry the depth. Project name / decision count /
 # universe count are intentionally omitted -- they are trivia the agent
-# reads from astra.yaml when needed, and they cost against the 10k
-# additionalContext budget.
+# reads from astra.yaml and project docs when needed, and they cost against
+# the 10k additionalContext budget.
 
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.cwd // empty')
@@ -55,7 +55,7 @@ Substrate CLIs (use --help on any):
 
 Reference skills (invoke when the surface above isn't enough):
   /astra   — astra.yaml spec: decisions, prior_insights, findings, evidence, sub-analyses, narrative anchors
-  /start   — work an analysis: inspect state, route to setup or next steps; bundles the lc workflow reference"
+  /cli  — lc workflow: spec-code invariant, status interpretation, failure diagnosis"
 
 if [ "$validation_ok" -ne 0 ]; then
     # tail rather than head -- the leading lines are success markers

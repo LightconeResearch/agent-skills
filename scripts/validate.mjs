@@ -28,6 +28,7 @@ for (const p of config.plugins) {
   seen.add(p.name);
   for (const s of p.skills) if (!skills[s]) errors.push(`plugin "${p.name}": references unknown skill "${s}"`);
   for (const d of p.dependencies || []) if (!byName[d]) errors.push(`plugin "${p.name}": unknown dependency "${d}"`);
+  for (const r of p.requires || []) if (!byName[r]) errors.push(`plugin "${p.name}": unknown required plugin "${r}"`);
   for (const a of p.agents || []) if (!existsSync(join(ROOT, a))) errors.push(`plugin "${p.name}": missing agent file ${a}`);
   if (p.hooks && !existsSync(join(ROOT, p.hooks))) errors.push(`plugin "${p.name}": missing hooks file ${p.hooks}`);
 }
@@ -40,19 +41,21 @@ for (const [rel, expected] of Object.entries(files)) {
   if (readFileSync(abs, "utf8") !== expected) errors.push(`generated file out of date: ${rel} (run npm run build)`);
 }
 
-// 4. Codex symlinks exist and resolve: skill symlinks to a real SKILL.md,
-//    other (e.g. hooks) symlinks to an existing directory.
+// 4. Bundled plugin-closure symlinks exist and resolve: skill → a real
+//    SKILL.md, agent → a real file, dir (hooks) → an existing directory.
 for (const { link, kind } of symlinks) {
   const abs = join(ROOT, link);
   try {
     readlinkSync(abs); // must be a symlink
     if (kind === "skill") {
       if (!statSync(join(abs, "SKILL.md")).isFile()) throw new Error("no SKILL.md");
+    } else if (kind === "agent") {
+      if (!statSync(abs).isFile()) throw new Error("not a file");
     } else if (!statSync(abs).isDirectory()) {
       throw new Error("not a directory");
     }
   } catch {
-    errors.push(`broken Codex symlink: ${link} (run npm run build)`);
+    errors.push(`broken plugin-closure symlink: ${link} (run npm run build)`);
   }
 }
 

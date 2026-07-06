@@ -27,6 +27,7 @@ for (const { link, target } of symlinks) {
 }
 
 console.log(
-  `Generated ${Object.keys(files).length} files and ${symlinks.length} skill symlinks across ` +
-    `Claude (.claude-plugin), Codex (.agents/plugins + plugins/), and manifest.json.`,
+  `Generated ${Object.keys(files).length} files and ${symlinks.length} closure symlinks ` +
+    `(skills + agents + hooks) across Claude (.claude-plugin), Codex (.agents/plugins), ` +
+    `the shared plugins/ dirs, and manifest.json.`,
 );

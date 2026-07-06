@@ -1,6 +1,6 @@
 ---
 name: lc-extractor
-description: Extract prior insights from scientific papers for ASTRA analyses. Reads PDFs, identifies claims relevant to target decisions, extracts verbatim quotes, and verifies them. Use for literature extraction during /lightcone:start.
+description: Extract prior insights from scientific papers for ASTRA analyses. Reads PDFs, identifies claims relevant to target decisions, extracts verbatim quotes, and verifies them. Use for literature extraction during /new.
 tools: Read, Bash
 model: sonnet
 ---

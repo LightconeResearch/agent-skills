@@ -6,12 +6,12 @@
 
 [![Agent Skills standard](https://img.shields.io/badge/standard-Agent%20Skills-7c3aed?style=for-the-badge)](https://agentskills.io)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-success?style=for-the-badge)](skills.config.json)
+[![Version](https://img.shields.io/badge/version-0.0.1-success?style=for-the-badge)](skills.config.json)
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-3-7c3aed?style=flat-square)](#-skills)
-[![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
+[![Skills](https://img.shields.io/badge/skills-10-7c3aed?style=flat-square)](#-skills)
+[![Plugins](https://img.shields.io/badge/plugins-3-7c3aed?style=flat-square)](#-plugins)
 
 </div>
 
@@ -26,7 +26,10 @@ Code and Codex **plugins** for the capabilities (hooks, subagents) that plain sk
 can't carry.
 
 > [!TIP]
-> **New here?** Install the [toolchain](#-prerequisites), then `npx skills add LightconeResearch/agent-skills` and ask your agent to `/lightcone:start`.
+> **New here?** Install the [toolchain](#-prerequisites), then `claude plugin marketplace add LightconeResearch/agent-skills && claude plugin install lightcone@lightcone-research` and ask your agent to `/lightcone:new`.
+
+> [!NOTE]
+> **Skill content is mid-migration.** These skills were just moved out of `lightcone-cli` into this repo; their packaging is settled but their bodies are being raised to high quality one at a time. Expect rough edges — especially in the `lightcone-experimental` plugin.
 
 ## 📦 Prerequisites
 
@@ -38,72 +41,88 @@ toolchain (one package ships both):
 uv tool install lightcone-cli
 ```
 
+This manual step is a stopgap — the plan is for each skill to install the tools it
+needs itself.
+
+## 🧩 Plugins
+
+The `lightcone` plugin is **self-contained**: it bundles the full closure of its
+dependencies (skills, hooks, and subagents), so installing it is all you need — no
+separate dependency step, identical on **Claude Code** and **Codex**.
+`lightcone-experimental` is the exception: it ships only its own six skills and
+**requires the `lightcone` plugin** — install `lightcone` first.
+
+| Plugin | Skills | Bundles | Requires | Adds |
+|---|---|---|---|---|
+| **`astra`** | `astra` | — | — | standalone ASTRA spec reference |
+| **`lightcone`** *(recommended)* | `new`, `feedback`, `cli` | `astra` | — | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`lightcone-experimental`** | `from-paper`, `from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | — (ships only its own skills) | **`lightcone`** (install it first) | opt-in; under active development |
+
 ## 🚀 Install
 
-### `npx skills` — any compatible agent (Claude Code, Codex, …)
+### Claude Code
+
+**From the terminal:**
 
 ```bash
-# Everything
-npx skills add LightconeResearch/agent-skills
-
-# A single skill
-npx skills add LightconeResearch/agent-skills --skill astra
-
-# Target a specific agent
-npx skills add LightconeResearch/agent-skills -a codex
-npx skills add LightconeResearch/agent-skills -a claude-code
-```
-
-`npx skills` installs the `SKILL.md` trees only — it does **not** install hooks or
-subagents. For the venv/validation hooks and the `lc-extractor` subagent (both in
-`lightcone`), use the native plugin paths below.
-
-### Claude Code plugin marketplace
-
-```bash
-# In a Claude Code session:
-/plugin marketplace add LightconeResearch/agent-skills
-/plugin install lightcone@lightcone-research
-
-# Or from the terminal:
 claude plugin marketplace add LightconeResearch/agent-skills
 claude plugin install lightcone@lightcone-research
 ```
 
-Once installed, plugin skills are namespaced by plugin name: `/lightcone:start`,
-`/lightcone:feedback`, and `/astra:astra`. The `lightcone` plugin depends on `astra`;
-installing it pulls in the `astra` reference too.
+**From inside a Claude Code session:**
 
-### Codex plugin
+```
+/plugin marketplace add LightconeResearch/agent-skills
+/plugin install lightcone@lightcone-research
+```
+
+(`/plugin install` opens a details pane; pick a scope — user / project / local —
+to confirm.)
+
+### Codex
+
+**From the terminal:**
 
 ```bash
 codex plugin marketplace add LightconeResearch/agent-skills
-codex /plugins        # browse + install astra / lightcone
+codex plugin add lightcone@lightcone-research
 ```
 
-### Private-repo access
+**From inside a Codex session:**
 
-While the repo is private, the installer/marketplace commands authenticate with your
-existing Git credentials — any one of:
+```
+/plugins        # browse the marketplace, then install astra / lightcone / lightcone-experimental
+```
 
-- an authenticated **`gh` CLI** session (`gh auth login`),
-- a **`GITHUB_TOKEN`** (or `GH_TOKEN`) env var with `repo` scope, or
-- an **SSH** remote (`git@github.com:LightconeResearch/agent-skills.git`) with your key in `ssh-agent`.
+### After installing
 
-## 🧩 Plugins
-
-| Plugin | Skills (invocation) | Adds |
-|---|---|---|
-| **`astra`** | `astra` (`/astra:astra`) | — |
-| **`lightcone`** | `start` (`/lightcone:start`), `feedback` (`/lightcone:feedback`); depends on `astra` | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+Plugin skills are namespaced by plugin name: `/lightcone:new`,
+`/lightcone:feedback`, `/lightcone:cli`, and (from the bundled `astra`)
+`/lightcone:astra`. The venv/validation **hooks** and the `lc-extractor`
+**subagent** ride along inside the `lightcone` plugin automatically. Swap
+`lightcone` for `astra` or `lightcone-experimental` in any command above.
 
 ## ✨ Skills
 
+### Core
+
 | Skill | What it does |
 |---|---|
-| [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, narrative anchors. |
-| [`start`](skills/start) | Entry point for working with a Lightcone / ASTRA analysis: inspects project state and routes — scoping a new analysis from a research question, or surfacing the next step on an existing one. Bundles the new-project playbook, the next-steps router, and the full `lc` execution reference at [`references/cli.md`](skills/start/references/cli.md). |
+| [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, composition. |
+| [`new`](skills/new) | Scope a new ASTRA analysis from a research question — structure inputs/outputs, identify decisions through literature, land `astra.yaml`. |
+| [`cli`](skills/cli) | The `lc` execution reference — spec–code invariant, status interpretation, failure diagnosis. |
 | [`feedback`](skills/feedback) | File a bug report against the right Lightcone repo with version/error context. |
+
+### Experimental
+
+| Skill | What it does |
+|---|---|
+| [`from-paper`](skills/from-paper) | Reproduce a paper end-to-end into an ASTRA analysis (staged reproduction workflow). |
+| [`from-code`](skills/from-code) | Import an existing code repository into an ASTRA analysis. |
+| [`paper-extraction`](skills/paper-extraction) | Extract literature substrate — claims and verbatim quotes — from a paper's source. |
+| [`ralph`](skills/ralph) | Autonomous constitution-driven iteration loop for long-running reproduction work. |
+| [`check-sentence-by-sentence`](skills/check-sentence-by-sentence) | Verify a manuscript sentence by sentence against its sources. |
+| [`figure-comparison`](skills/figure-comparison) | Compare reproduced figures against the paper's originals. |
 
 ## 🗂️ Repository layout
 
@@ -116,17 +135,31 @@ scripts/build.mjs           Regenerates every per-target file from the above
 scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm test)
 .claude-plugin/             Generated — Claude Code marketplace manifest
 .agents/plugins/            Generated — Codex marketplace manifest
-plugins/                    Generated — Codex per-plugin dirs (skills + hooks symlinked back to source)
+plugins/                    Generated — self-contained per-plugin dirs both harnesses
+                            install (full skills+hooks+agents closure, symlinked to source)
 manifest.json               Generated — registry of all skills/plugins
+scripts/smoke.mjs           Install smoke tests — real claude/codex + tmux (npm run smoke)
 ```
 
 The per-target manifests and the `plugins/` tree are **generated** from
 `skills.config.json` + `skills/`. Don't edit them by hand — run `npm run build` and
 commit the result. `npm test` fails if they drift. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## ✅ Verifying install
+
+`npm test` runs frontmatter validation and the generated-file drift check. For the
+real thing — installing each plugin into a throwaway environment and confirming it
+loads — run the smoke suite (needs `claude`, `codex`, and `tmux` on PATH; no LLM/API
+calls):
+
+```bash
+npm run smoke            # CLI install (both harnesses) + interactive tmux install (Claude)
+npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
+```
+
 ## 📄 License
 
-BSD 3-Clause — see [LICENSE](LICENSE). Copyright © 2026 Centre National de la Recherche Scientifique (CNRS).
+BSD 3-Clause — see [LICENSE](LICENSE). Copyright (c) 2026, Centre National de la Recherche Scientifique (CNRS) and The Regents of the University of California.
 
 <div align="center">
 <sub>Built with ❤️ by <a href="https://github.com/LightconeResearch">Lightcone Research</a> · Skills follow the open <a href="https://agentskills.io">Agent Skills standard</a></sub>
