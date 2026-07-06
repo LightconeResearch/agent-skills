@@ -54,7 +54,7 @@ separate dependency step, identical on **Claude Code** and **Codex**.
 
 | Plugin | Skills | Bundles | Requires | Adds |
 |---|---|---|---|---|
-| **`astra`** | `astra` | — | — | standalone ASTRA spec reference, without the rest of the stack |
+| **`astra`** | `astra` | — | — | standalone ASTRA spec reference |
 | **`lightcone`** *(recommended)* | `new`, `feedback`, `cli` | `astra` | — | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
 | **`lightcone-experimental`** | `from-paper`, `from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | — (ships only its own skills) | **`lightcone`** (install it first) | opt-in; under active development |
 
@@ -138,7 +138,6 @@ scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm
 plugins/                    Generated — self-contained per-plugin dirs both harnesses
                             install (full skills+hooks+agents closure, symlinked to source)
 manifest.json               Generated — registry of all skills/plugins
-scripts/check-readme.mjs    Install-doc completeness check (part of npm test)
 scripts/smoke.mjs           Install smoke tests — real claude/codex + tmux (npm run smoke)
 ```
 
@@ -148,8 +147,7 @@ commit the result. `npm test` fails if they drift. See [CONTRIBUTING.md](CONTRIB
 
 ## ✅ Verifying install
 
-`npm test` runs frontmatter validation, the generated-file drift check, and an
-install-doc completeness check (both harnesses × both interactive and CLI). For the
+`npm test` runs frontmatter validation and the generated-file drift check. For the
 real thing — installing each plugin into a throwaway environment and confirming it
 loads — run the smoke suite (needs `claude`, `codex`, and `tmux` on PATH; no LLM/API
 calls):
