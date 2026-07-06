@@ -5,7 +5,7 @@
     "email": "info@lightconeresearch.org"
   },
   "metadata": {
-    "description": "Agent skills for the Lightcone Research stack — the ASTRA spec and lightcone-cli project workflows.",
+    "description": "Agent skills for Lightcone Research — the ASTRA spec and lightcone-cli project workflows.",
     "version": "0.0.1"
   },
   "plugins": [

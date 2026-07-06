@@ -5,7 +5,7 @@
 # primer so the agent knows what substrate commands exist and which
 # reference skills carry the depth. Project name / decision count /
 # universe count are intentionally omitted -- they are trivia the agent
-# reads from astra.yaml and CLAUDE.md when needed, and they cost against
+# reads from astra.yaml and project docs when needed, and they cost against
 # the 10k additionalContext budget.
 
 input=$(cat)

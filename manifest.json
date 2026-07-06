@@ -1,7 +1,7 @@
 {
   "name": "lightcone-research",
   "version": "0.0.1",
-  "description": "Agent skills for the Lightcone Research stack — the ASTRA spec and lightcone-cli project workflows.",
+  "description": "Agent skills for Lightcone Research — the ASTRA spec and lightcone-cli project workflows.",
   "repository": "https://github.com/LightconeResearch/agent-skills",
   "generated": "Run `npm run build` to regenerate. Do not edit by hand.",
   "skills": [
