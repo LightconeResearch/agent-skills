@@ -85,6 +85,14 @@
       "plugins": [
         "lightcone-experimental"
       ]
+    },
+    {
+      "name": "report",
+      "path": "skills/report",
+      "description": "Authors and extends the project's MyST report — the external write-up (`index.md` + `myst.yml`, scaffolded by `lc init`) that references `astra.yaml` elements by tree-path through the MySTRA plugin instead of restating them. Use whenever the user wants to write up an analysis: \"draft the report\", \"write up the results\", \"document the analysis\", \"draft the introduction/methods/results\", \"turn this into a paper\", or when results have materialized and a write-up is the natural next step. Also use to fix or extend an existing report page. Not for per-element spec prose (`description:`/`rationale:` live in `astra.yaml` — see the astra reference skill) and not for the HTML figure side-by-side (figure-comparison).",
+      "plugins": [
+        "lightcone"
+      ]
     }
   ],
   "plugins": [
@@ -101,12 +109,13 @@
     },
     {
       "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
+      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `report` authors the MyST report that references astra.yaml elements by path, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
       "skills": [
         "astra",
         "cli",
         "feedback",
-        "new"
+        "new",
+        "report"
       ],
       "dependencies": [
         "astra"
