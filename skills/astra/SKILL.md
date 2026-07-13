@@ -15,7 +15,7 @@ description: >
 
 ## What an ASTRA Analysis Is
 
-An ASTRA analysis is a structured layer between the code and the paper. It surfaces the inputs a computation depends on, the outputs it produces, and -- critically -- every methodological decision that could plausibly affect the results. The goal is to make the full decision space explicit and machine-readable, so that alternative defensible choices can be systematically explored rather than silently baked in.
+An ASTRA analysis is an intermediate layer of abstraction between code and paper: a machine-readable record of the inputs, outputs, and every consequential methodological decision -- with its reasoning -- at the level needed to make the scientific claims verifiable and reproducible. The goal is to make the full decision space explicit, so that alternative defensible choices can be systematically explored rather than silently baked in.
 
 An `astra.yaml` spec captures this for a single unit of work. The structure is **self-similar**: a top-level analysis and a nested sub-analysis have exactly the same shape. Everything in this reference applies equally to both.
 
