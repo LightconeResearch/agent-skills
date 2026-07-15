@@ -10,7 +10,7 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-10-7c3aed?style=flat-square)](#-skills)
+[![Skills](https://img.shields.io/badge/skills-11-7c3aed?style=flat-square)](#-skills)
 [![Plugins](https://img.shields.io/badge/plugins-3-7c3aed?style=flat-square)](#-plugins)
 
 </div>
@@ -55,7 +55,7 @@ separate dependency step, identical on **Claude Code** and **Codex**.
 | Plugin | Skills | Bundles | Requires | Adds |
 |---|---|---|---|---|
 | **`astra`** | `astra` | — | — | standalone ASTRA spec reference |
-| **`lightcone`** *(recommended)* | `new`, `feedback`, `cli` | `astra` | — | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`lightcone`** *(recommended)* | `new`, `report`, `feedback`, `cli` | `astra` | — | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
 | **`lightcone-experimental`** | `from-paper`, `from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | — (ships only its own skills) | **`lightcone`** (install it first) | opt-in; under active development |
 
 ## 🚀 Install
@@ -97,7 +97,7 @@ codex plugin add lightcone@lightcone-research
 ### After installing
 
 Plugin skills are namespaced by plugin name: `/lightcone:new`,
-`/lightcone:feedback`, `/lightcone:cli`, and (from the bundled `astra`)
+`/lightcone:report`, `/lightcone:feedback`, `/lightcone:cli`, and (from the bundled `astra`)
 `/lightcone:astra`. The venv/validation **hooks** and the `lc-extractor`
 **subagent** ride along inside the `lightcone` plugin automatically. Swap
 `lightcone` for `astra` or `lightcone-experimental` in any command above.
@@ -110,6 +110,7 @@ Plugin skills are namespaced by plugin name: `/lightcone:new`,
 |---|---|
 | [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, composition. |
 | [`new`](skills/new) | Scope a new ASTRA analysis from a research question — structure inputs/outputs, identify decisions through literature, land `astra.yaml`. |
+| [`report`](skills/report) | Author the project's MyST report — prose that references `astra.yaml` elements by path (via the [MySTRA](https://github.com/LightconeResearch/MySTRA) plugin), so write-ups never drift from the analysis. |
 | [`cli`](skills/cli) | The `lc` execution reference — spec–code invariant, status interpretation, failure diagnosis. |
 | [`feedback`](skills/feedback) | File a bug report against the right Lightcone repo with version/error context. |
 
