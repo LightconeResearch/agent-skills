@@ -30,6 +30,12 @@ const CODEX_PROBE_SKILLS = {
   lightcone: "new",
   "lightcone-experimental": "from-paper",
 };
+// Hooks auto-discover from a packaged hooks/hooks.json (no manifest declaration),
+// so their presence in the cache is what makes them load — probe the plugins that
+// ship them. Same silent-omission risk as skills; keep the assertions symmetric.
+const CODEX_PROBE_HOOKS = {
+  lightcone: "hooks/hooks.json",
+};
 
 const args = process.argv.slice(2);
 const only = args.includes("--cli") ? "cli" : args.includes("--tmux") ? "tmux" : "all";
@@ -65,13 +71,13 @@ function codexEnabled(listOut, id) {
   return listOut.split("\n").some((l) => l.includes(id) && /installed, enabled/i.test(l));
 }
 
-// Installation can report success even when an archive silently omits symlinked
-// skill trees. Assert a known SKILL.md exists in at least one cached version.
-function codexSkillCached(codexHome, plugin, skill) {
+// Installation can report success even when an archive silently omits packaged
+// component trees. Assert a known file exists in at least one cached version.
+function codexFileCached(codexHome, plugin, relPath) {
   const versions = join(codexHome, "plugins", "cache", MARKET, plugin);
   if (!existsSync(versions)) return false;
   return readdirSync(versions).some((version) =>
-    existsSync(join(versions, version, "skills", skill, "SKILL.md")),
+    existsSync(join(versions, version, relPath)),
   );
 }
 
@@ -109,9 +115,12 @@ function cliCodex() {
       const list = run("codex", ["plugin", "list"], env);
       if (codexEnabled(list.out, `${p}@${MARKET}`)) pass(`${p}: installed + enabled`);
       else fail(`${p}: not enabled after add:\n${list.out.trim().slice(-300)}`);
-      const probe = CODEX_PROBE_SKILLS[p];
-      if (codexSkillCached(env.CODEX_HOME, p, probe)) pass(`${p}: ${probe} skill packaged in cache`);
-      else fail(`${p}: installed cache is missing skills/${probe}/SKILL.md`);
+      const skill = CODEX_PROBE_SKILLS[p];
+      if (codexFileCached(env.CODEX_HOME, p, `skills/${skill}/SKILL.md`)) pass(`${p}: ${skill} skill packaged in cache`);
+      else fail(`${p}: installed cache is missing skills/${skill}/SKILL.md`);
+      const hook = CODEX_PROBE_HOOKS[p];
+      if (hook && codexFileCached(env.CODEX_HOME, p, hook)) pass(`${p}: ${hook} packaged in cache`);
+      else if (hook) fail(`${p}: installed cache is missing ${hook}`);
     }
   } finally { rmSync(home, { recursive: true, force: true }); }
 }
