@@ -1,6 +1,6 @@
 {
   "name": "lightcone-research",
-  "description": "Agent skills for Lightcone Research — ASTRA authoring and validation.",
+  "description": "Agent skills for Lightcone Research — ASTRA authoring, validation, and Lightcone execution.",
   "repository": "https://github.com/LightconeResearch/agent-skills",
   "generated": "Run `npm run build` to regenerate. Do not edit by hand.",
   "skills": [
@@ -9,7 +9,16 @@
       "path": "plugins/astra/skills/astra",
       "description": "ASTRA (astra.yaml) support: what the format is, and how to drive the `astra` CLI. Invoke whenever reading, writing, validating, or restructuring an astra.yaml spec, working with universes or evidence, or when the user asks about ASTRA.",
       "plugins": [
-        "astra"
+        "astra",
+        "lightcone"
+      ]
+    },
+    {
+      "name": "estimate",
+      "path": "plugins/lightcone/skills/estimate",
+      "description": "Estimate CPU, memory, GPU, disk, and walltime requirements for Lightcone outputs; record them in ASTRA recipe.resources; and decide whether a target fits the current local/SLURM allocation or should use lc run --async. Use for expensive simulations, training, scaling studies, resource-related scheduling failures, first asynchronous submissions, or any request to size, benchmark, queue, or classify a Lightcone job.",
+      "plugins": [
+        "lightcone"
       ]
     }
   ],
@@ -22,6 +31,21 @@
         "astra"
       ],
       "dependencies": [],
+      "requires": [],
+      "hasHooks": true,
+      "hasAgents": false
+    },
+    {
+      "name": "lightcone",
+      "version": "0.0.3",
+      "description": "Prepare Lightcone jobs for asynchronous execution: estimate recipe resources and classify synchronous execution in the current local or SLURM allocation versus detached submission with lc run --async. Bundles the ASTRA authoring skill and validation hooks.",
+      "skills": [
+        "astra",
+        "estimate"
+      ],
+      "dependencies": [
+        "astra"
+      ],
       "requires": [],
       "hasHooks": true,
       "hasAgents": false
