@@ -66,7 +66,7 @@ every target needs. `build.mjs` writes
 them; `validate.mjs` regenerates in memory and diffs against disk. Both import `lib.mjs`
 so the generator and the checker agree by construction.
 
-**Two deliberate, non-obvious choices** (don't "fix" these without reading this):
+**Two deliberate, non-obvious choices** (don't change these without reading this):
 
 - **Zero dependencies / hand-written frontmatter parser.** `lib.mjs` parses YAML
   frontmatter itself (inline + folded/literal scalars) instead of pulling in
@@ -75,13 +75,13 @@ so the generator and the checker agree by construction.
   If you add a dependency, you give that up. The parser only needs to handle `name` and
   `description` — if a skill ever needs richer frontmatter parsing, that's the tradeoff
   to weigh.
-- **Codex skills (and hooks) are symlinks, not copies.** Each
-  `plugins/<name>/skills/<skill>` is a relative symlink back to the canonical
-  `skills/<skill>`, and for a hooks-bearing plugin `plugins/<name>/hooks` symlinks
-  back to the canonical `hooks/` (git tracks them as symlinks, mode `120000`). This
-  keeps one source of truth instead of duplicating bodies into `plugins/`.
-  `validate.mjs` checks skill symlinks resolve to a real `SKILL.md` and other
-  symlinks resolve to a directory.
+- **Generated plugin contents are real files, not symlinks.** Codex installs a
+  plugin by archiving its directory and does not follow symlinks that point back
+  to canonical `skills/`, `agents/`, or `hooks/`. The generator therefore copies
+  the complete closure into `plugins/<name>/`, while canonical files remain the
+  only authoring source. `validate.mjs` compares every packaged file byte-for-byte
+  with that source and checks executable permissions, so generated copies cannot
+  drift silently.
 
 **Prior art.** The pattern is borrowed: databricks/databricks-agent-skills (a generated
 `manifest.json` registry from skill frontmatter, CI-validated, plus per-agent plugin

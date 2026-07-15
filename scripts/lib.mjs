@@ -1,7 +1,7 @@
 // Shared build logic for the multi-target skills repo.
 //
 // One source of truth: skills.config.json + the canonical skills/ directory.
-// buildArtifacts() returns the exact bytes/symlinks each target needs, so the
+// buildArtifacts() returns the exact generated files/copies each target needs, so the
 // generator (build.mjs) and the drift check (validate.mjs) agree by construction.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -11,6 +11,28 @@ import { fileURLToPath } from "node:url";
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 export const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** Return every regular file below a repo-relative directory, deterministically. */
+function filesUnder(relDir) {
+  const out = [];
+  const visit = (rel) => {
+    for (const name of readdirSync(join(ROOT, rel)).sort()) {
+      const child = `${rel}/${name}`;
+      const st = statSync(join(ROOT, child));
+      if (st.isDirectory()) visit(child);
+      else if (st.isFile()) out.push(child);
+    }
+  };
+  visit(relDir);
+  return out;
+}
+
+function pluginDisplayName(name) {
+  return name
+    .split("-")
+    .map((part) => (part === "astra" ? "ASTRA" : part[0].toUpperCase() + part.slice(1)))
+    .join(" ");
+}
 
 /** Minimal YAML-frontmatter reader — handles inline, quoted, and folded/literal
  *  (`>` / `|`) scalars, which is all SKILL.md frontmatter uses. */
@@ -99,15 +121,15 @@ export function closureHooks(pluginName, byName) {
 
 /** Produce every generated artifact. Returns:
  *   - files: { relPath: jsonString }  (deterministic, newline-terminated)
- *   - symlinks: [{ link: relPath, target: relTargetFromLinkDir }]
- *   - dirs: [relPath]  (directories that must exist even if only holding symlinks)
+ *   - copies: [{ source: canonicalRelPath, dest: generatedRelPath, kind }]
+ *   - dirs: [relPath]  (directories that must exist even when otherwise empty)
  */
 export function buildArtifacts(model) {
   const { config, skills } = model;
   const mk = config.marketplace;
   const byName = Object.fromEntries(config.plugins.map((p) => [p.name, p]));
   const files = {};
-  const symlinks = [];
+  const copies = [];
   const dirs = [];
 
   // --- Both marketplaces point every plugin at its self-contained dir -------
@@ -135,15 +157,16 @@ export function buildArtifacts(model) {
       name: p.name,
       description: p.description,
       source: { source: "local", path: `./plugins/${p.name}` },
-      policy: { installation: "AVAILABLE" },
+      policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
       category: "Development",
     })),
   });
 
   // --- Self-contained per-plugin dirs (plugins/<name>/) --------------------
   // Each dir carries the whole closure and ships both harnesses' plugin
-  // manifests. Skills/agents/hooks are relative symlinks back to the canonical
-  // trees (single source, no content duplication); Claude and Codex both
+  // manifests. Skills/agents/hooks are generated copies of the canonical trees;
+  // this is necessary because plugin installers archive the plugin directory
+  // without following symlinks that point outside it. Claude and Codex both
   // auto-discover skills/, agents/, and hooks/hooks.json under the plugin root.
   //
   // Hooks: Codex reads the same hooks.json protocol (SessionStart/PostToolUse
@@ -173,43 +196,57 @@ export function buildArtifacts(model) {
     // manifest just carries metadata. No dependencies (closure is bundled).
     files[`plugins/${p.name}/.claude-plugin/plugin.json`] = jsonl(base);
 
-    // Codex: declares component roots explicitly (its convention).
-    const codexManifest = { ...base, skills: "./skills/" };
-    if (closAgents.length) codexManifest.agents = "./agents/";
-    if (hooksPath) codexManifest.hooks = `./${hooksPath}`;
+    // Codex: declare the supported skill root and required interface metadata.
+    // Agents and hooks remain packaged for harness auto-discovery, but are not
+    // declared because the current Codex manifest schema rejects those fields.
+    const displayName = pluginDisplayName(p.name);
+    const codexManifest = {
+      ...base,
+      skills: "./skills/",
+      interface: {
+        displayName,
+        shortDescription: `Use ${displayName} in Codex.`,
+        longDescription: p.description,
+        developerName: mk.owner.name,
+        category: "Development",
+        capabilities: [],
+        defaultPrompt: [`Help me use ${displayName}.`],
+      },
+    };
     files[`plugins/${p.name}/.codex-plugin/plugin.json`] = jsonl(codexManifest);
 
-    // skills/ — full closure, symlinked to canonical skills/.
+    // skills/ — materialize the full closure from canonical skills/. This keeps
+    // generated plugins self-contained while skills/ remains the authoring source.
     dirs.push(`plugins/${p.name}/skills`);
     for (const s of closureSkills) {
-      symlinks.push({
+      const sourceRoot = `skills/${s}`;
+      for (const source of filesUnder(sourceRoot)) copies.push({
         kind: "skill",
-        link: `plugins/${p.name}/skills/${s}`,
-        target: `../../../skills/${s}`,
+        source,
+        dest: `plugins/${p.name}/skills/${s}/${source.slice(sourceRoot.length + 1)}`,
       });
     }
 
-    // agents/ — full closure, symlinked file-by-file to canonical agents/.
+    // agents/ — materialize the full closure file-by-file.
     if (closAgents.length) dirs.push(`plugins/${p.name}/agents`);
     for (const a of closAgents) {
       const file = a.replace(/^agents\//, "");
-      symlinks.push({
+      copies.push({
         kind: "agent",
-        link: `plugins/${p.name}/agents/${file}`,
-        target: `../../../${a}`,
+        source: a,
+        dest: `plugins/${p.name}/agents/${file}`,
       });
     }
 
-    // hooks/ — the whole canonical hooks tree (hooks.json + scripts), symlinked
-    // when the closure includes hooks. Link location is derived from the manifest
-    // path (dirname of hooksPath) so the symlink and the `hooks: ./<path>` the
-    // manifests reference can never drift, even if the canonical tree is renamed.
+    // hooks/ — materialize the whole canonical hooks tree (hooks.json + scripts)
+    // when the closure includes hooks. The destination is derived from the
+    // canonical manifest path so the generated tree cannot drift if it is renamed.
     if (hooksPath) {
       const hooksDir = dirname(hooksPath); // e.g. "hooks"
-      symlinks.push({
-        kind: "dir",
-        link: `plugins/${p.name}/${hooksDir}`,
-        target: `../../${hooksDir}`,
+      for (const source of filesUnder(hooksDir)) copies.push({
+        kind: "hook",
+        source,
+        dest: `plugins/${p.name}/${hooksDir}/${source.slice(hooksDir.length + 1)}`,
       });
     }
   }
@@ -246,7 +283,7 @@ export function buildArtifacts(model) {
     })),
   });
 
-  return { files, symlinks, dirs };
+  return { files, copies, dirs };
 }
 
 function jsonl(obj) {

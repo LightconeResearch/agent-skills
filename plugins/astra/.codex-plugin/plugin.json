@@ -9,5 +9,16 @@
   "homepage": "https://github.com/LightconeResearch/agent-skills",
   "repository": "https://github.com/LightconeResearch/agent-skills",
   "license": "BSD-3-Clause",
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ASTRA",
+    "shortDescription": "Use ASTRA in Codex.",
+    "longDescription": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition.",
+    "developerName": "Lightcone Research",
+    "category": "Development",
+    "capabilities": [],
+    "defaultPrompt": [
+      "Help me use ASTRA."
+    ]
+  }
 }

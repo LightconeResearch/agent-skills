@@ -17,7 +17,7 @@
 // asserts, and cleans up. Auto-skips when no authenticated REPL is reachable.
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,11 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const PLUGINS = ["astra", "lightcone", "lightcone-experimental"];
 const MARKET = "lightcone-research";
+const CODEX_PROBE_SKILLS = {
+  astra: "astra",
+  lightcone: "new",
+  "lightcone-experimental": "from-paper",
+};
 
 const args = process.argv.slice(2);
 const only = args.includes("--cli") ? "cli" : args.includes("--tmux") ? "tmux" : "all";
@@ -58,6 +63,16 @@ function claudeEnabled(listOut, id) {
 // Codex `plugin list` is one row per plugin: the id and its status share a line.
 function codexEnabled(listOut, id) {
   return listOut.split("\n").some((l) => l.includes(id) && /installed, enabled/i.test(l));
+}
+
+// Installation can report success even when an archive silently omits symlinked
+// skill trees. Assert a known SKILL.md exists in at least one cached version.
+function codexSkillCached(codexHome, plugin, skill) {
+  const versions = join(codexHome, "plugins", "cache", MARKET, plugin);
+  if (!existsSync(versions)) return false;
+  return readdirSync(versions).some((version) =>
+    existsSync(join(versions, version, "skills", skill, "SKILL.md")),
+  );
 }
 
 // ---- CLI phase (hermetic) ------------------------------------------------
@@ -94,6 +109,9 @@ function cliCodex() {
       const list = run("codex", ["plugin", "list"], env);
       if (codexEnabled(list.out, `${p}@${MARKET}`)) pass(`${p}: installed + enabled`);
       else fail(`${p}: not enabled after add:\n${list.out.trim().slice(-300)}`);
+      const probe = CODEX_PROBE_SKILLS[p];
+      if (codexSkillCached(env.CODEX_HOME, p, probe)) pass(`${p}: ${probe} skill packaged in cache`);
+      else fail(`${p}: installed cache is missing skills/${probe}/SKILL.md`);
     }
   } finally { rmSync(home, { recursive: true, force: true }); }
 }

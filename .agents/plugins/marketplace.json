@@ -12,7 +12,8 @@
         "path": "./plugins/astra"
       },
       "policy": {
-        "installation": "AVAILABLE"
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
       },
       "category": "Development"
     },
@@ -24,7 +25,8 @@
         "path": "./plugins/lightcone"
       },
       "policy": {
-        "installation": "AVAILABLE"
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
       },
       "category": "Development"
     },
@@ -36,7 +38,8 @@
         "path": "./plugins/lightcone-experimental"
       },
       "policy": {
-        "installation": "AVAILABLE"
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
       },
       "category": "Development"
     }
