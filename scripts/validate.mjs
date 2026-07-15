@@ -2,7 +2,7 @@
 // Validate skills + confirm the generated files are in sync with the source.
 // Usage: npm test   (CI fails on any error below)
 
-import { readFileSync, readlinkSync, existsSync, statSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT, NAME_RE, loadModel, buildArtifacts, closure } from "./lib.mjs";
 
@@ -34,28 +34,27 @@ for (const p of config.plugins) {
 }
 
 // 3. Generated files match what the current source would produce (no drift).
-const { files, symlinks } = buildArtifacts(model);
+const { files, copies } = buildArtifacts(model);
 for (const [rel, expected] of Object.entries(files)) {
   const abs = join(ROOT, rel);
   if (!existsSync(abs)) { errors.push(`generated file missing: ${rel} (run npm run build)`); continue; }
   if (readFileSync(abs, "utf8") !== expected) errors.push(`generated file out of date: ${rel} (run npm run build)`);
 }
 
-// 4. Bundled plugin-closure symlinks exist and resolve: skill → a real
-//    SKILL.md, agent → a real file, dir (hooks) → an existing directory.
-for (const { link, kind } of symlinks) {
-  const abs = join(ROOT, link);
-  try {
-    readlinkSync(abs); // must be a symlink
-    if (kind === "skill") {
-      if (!statSync(join(abs, "SKILL.md")).isFile()) throw new Error("no SKILL.md");
-    } else if (kind === "agent") {
-      if (!statSync(abs).isFile()) throw new Error("not a file");
-    } else if (!statSync(abs).isDirectory()) {
-      throw new Error("not a directory");
-    }
-  } catch {
-    errors.push(`broken plugin-closure symlink: ${link} (run npm run build)`);
+// 4. Every packaged closure file exists, matches its canonical source bytes,
+//    and preserves executable permission where relevant.
+for (const { source, dest } of copies) {
+  const src = join(ROOT, source);
+  const dst = join(ROOT, dest);
+  if (!existsSync(dst)) {
+    errors.push(`generated packaged file missing: ${dest} (run npm run build)`);
+    continue;
+  }
+  if (!readFileSync(src).equals(readFileSync(dst))) {
+    errors.push(`generated packaged file out of date: ${dest} (run npm run build)`);
+  }
+  if ((statSync(src).mode & 0o111) !== (statSync(dst).mode & 0o111)) {
+    errors.push(`generated packaged file mode differs: ${dest} (run npm run build)`);
   }
 }
 
@@ -65,5 +64,5 @@ if (errors.length) {
 }
 console.log(
   `✓ ${Object.keys(skills).length} skills, ${config.plugins.length} plugins, ` +
-    `${symlinks.length} symlinks — frontmatter valid and generated files in sync.`,
+  `${copies.length} packaged files — frontmatter valid and generated files in sync.`,
 );
