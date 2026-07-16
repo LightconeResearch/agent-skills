@@ -14,9 +14,17 @@
       ]
     },
     {
+      "name": "classify-run",
+      "path": "plugins/lightcone/skills/classify-run",
+      "description": "Decide whether a Lightcone target should run synchronously in the current local or SLURM allocation or asynchronously through lc run --async. Detect compute allocation versus cluster login node, compare ASTRA recipe.resources with worker-node capacity and remaining walltime, and return or execute the exact lc command. Use immediately before every production lc run or submission, after allocation or session changes, when resuming work, or whenever asked to run, queue, submit, or choose sync versus async execution.",
+      "plugins": [
+        "lightcone"
+      ]
+    },
+    {
       "name": "estimate",
       "path": "plugins/lightcone/skills/estimate",
-      "description": "Estimate CPU, memory, GPU, disk, and walltime requirements for Lightcone outputs; record them in ASTRA recipe.resources; and decide whether a target fits the current local/SLURM allocation or should use lc run --async. Use for expensive simulations, training, scaling studies, resource-related scheduling failures, first asynchronous submissions, or any request to size, benchmark, queue, or classify a Lightcone job.",
+      "description": "Estimate CPU, memory, GPU, disk, and walltime requirements for Lightcone outputs and record them in ASTRA recipe.resources for a specific workload and hardware shape. Use when resources are missing, stale, uncertain, or implicated in scheduling failures; for expensive simulations, training, scaling studies, and first production runs; or whenever asked to size or benchmark a Lightcone recipe. This skill estimates reusable requirements but does not choose the current run mode; use classify-run immediately before execution.",
       "plugins": [
         "lightcone"
       ]
@@ -41,6 +49,7 @@
       "description": "Prepare Lightcone jobs for asynchronous execution: estimate recipe resources and classify synchronous execution in the current local or SLURM allocation versus detached submission with lc run --async. Bundles the ASTRA authoring skill and validation hooks.",
       "skills": [
         "astra",
+        "classify-run",
         "estimate"
       ],
       "dependencies": [

@@ -2,19 +2,20 @@
 name: estimate
 description: >
   Estimate CPU, memory, GPU, disk, and walltime requirements for Lightcone
-  outputs; record them in ASTRA recipe.resources; and decide whether a target
-  fits the current local/SLURM allocation or should use lc run --async. Use for
-  expensive simulations, training, scaling studies, resource-related scheduling
-  failures, first asynchronous submissions, or any request to size, benchmark,
-  queue, or classify a Lightcone job.
+  outputs and record them in ASTRA recipe.resources for a specific workload and
+  hardware shape. Use when resources are missing, stale, uncertain, or implicated
+  in scheduling failures; for expensive simulations, training, scaling studies,
+  and first production runs; or whenever asked to size or benchmark a Lightcone
+  recipe. This skill estimates reusable requirements but does not choose the
+  current run mode; use classify-run immediately before execution.
 ---
 
 # Estimate Lightcone Resources
 
-Estimate from evidence, write the estimate into the ASTRA specification, and
-recommend synchronous or asynchronous execution. Do not turn judgment calls
-into engine policy: `lc` owns deterministic validation and submission, while
-this skill owns measurement, extrapolation, and run-shape choices.
+Estimate from evidence and write the result into the ASTRA specification. Keep
+this reusable measurement separate from the per-run sync/async decision: this
+skill owns measurement, extrapolation, and candidate job shape; `classify-run`
+compares that result with the environment available at execution time.
 
 ## Prerequisites
 
@@ -39,11 +40,6 @@ this skill owns measurement, extrapolation, and run-shape choices.
    lc --help
    ```
 
-   If `lc run --async` is unavailable, explain that the installed
-   lightcone-cli does not yet support asynchronous submission and recommend an
-   upgrade. Never replace it with a hand-written `sbatch`, which would bypass
-   Lightcone's snapshot, container, validation, and manifest path.
-
 ## 1. Resolve the target
 
 Identify the output(s) and universe(s) being estimated. If the request is
@@ -62,9 +58,22 @@ For every rule in the requested output's upstream sub-DAG, inspect:
 Do not estimate only the named leaf when an expensive upstream rule is also
 required.
 
-## 2. Inspect available capacity
+## 2. Inspect the measurement environment
 
-Inside SLURM, collect the current allocation facts without launching work:
+Tie every measurement to its hardware and execution shape. Before launching a
+pilot, distinguish these environments:
+
+- **Existing SLURM allocation (`SLURM_JOB_ID` is set):** the agent is already
+  running inside a compute allocation. Pilot commands and plain `lc run` reuse
+  that allocation; plain `lc run` does not submit another job. Keep pilots within
+  its node shape and remaining walltime.
+- **Cluster login/submit node without `SLURM_JOB_ID`:** do not run compute pilots
+  on the login node. Request an interactive allocation or make a conservative
+  static estimate from prior measurements.
+- **Non-cluster local machine:** run only pilots that fit local CPU, memory, and
+  GPU availability.
+
+Inside a SLURM allocation, collect facts without launching work:
 
 ```bash
 env | grep '^SLURM_' | sort
@@ -74,11 +83,11 @@ squeue -h -j "$SLURM_JOB_ID" -O TimeLeft
 Use `SLURM_CPUS_ON_NODE`, `SLURM_MEM_PER_NODE`, `SLURM_GPUS_ON_NODE`, and
 `SLURM_NNODES` when present. Outside SLURM, inspect local CPU count, available
 memory, and GPUs with platform-appropriate tools such as `nproc`, `free -b`,
-and `nvidia-smi`.
+and `nvidia-smi`, but first establish that the host is not a cluster login node.
 
-Distinguish **capacity** from **availability**: the resource request describes
-what a rule needs; sync/async classification additionally considers the time
-remaining in the current allocation.
+Record the CPU/GPU model, node shape, process/thread count, container, precision,
+and other hardware-sensitive settings with the evidence. Current capacity bounds
+safe pilot design; it does not decide how a later production run should execute.
 
 ## 3. Decide whether to measure
 
@@ -151,64 +160,18 @@ then validate:
 astra validate astra.yaml
 ```
 
-Fix validation errors before recommending a run. Resource estimates do not
+Fix validation errors before returning the estimate. Resource estimates do not
 change scientific provenance, but the measurement notes must explain their
 basis.
-
-## 5. Classify sync versus async
-
-Classify each requested target after all required rules have estimates:
-
-- **Synchronous:** every rule fits one available worker node and the padded
-  `time_limit` fits the current allocation's remaining walltime with room for
-  upstream work and shutdown.
-- **Asynchronous:** the shape does not fit the current allocation, remaining
-  walltime is insufficient, the work should survive the agent session, or the
-  current environment is a login node where compute is prohibited.
-- **Pilot first:** uncertainty is still large enough that neither request is
-  defensible.
-
-On a local machine without a configured SLURM backend, recommend a larger local
-or interactive allocation instead of claiming `--async` will work. If several
-shapes are valid on Perlmutter, prefer the smallest shape that fits `shared`;
-only recommend a larger `regular` shape when the measured speedup or memory need
-justifies it.
-
-Treat `lc` preflight failures as authoritative. If synchronous `lc run` reports
-that declared resources or walltime cannot fit, preserve the diagnostic and
-recommend its copyable `lc run --async ...` retry.
-
-## 6. Execute only when requested
-
-If the user asked only for an estimate or recommendation, stop after updating
-and validating the spec. Report the evidence, request, classification, and exact
-next command without submitting anything.
-
-When the user has asked to run or submit, always use `lc`:
-
-```bash
-# Fits the current allocation
-lc run <output> --universe <universe>
-
-# Needs a detached SLURM allocation
-lc run --async <output> --universe <universe>
-
-# Observe materialization and queued/running job state
-lc status --universe <universe>
-```
-
-Pass `--account` when requested or when no configured/current allocation account
-is available. Submission may originate on a login or compute node. Do not call
-`sbatch`, `srun`, Snakemake, or `podman-hpc` yourself: the asynchronous job must
-enter the same synchronous `lc run` path so container wrapping, including
-`podman-hpc`, validation, locking, and manifests remain identical.
 
 ## Result
 
 Conclude with a compact table:
 
-| Output / universe | Evidence | Declared resources | Decision | Next command |
+| Output / universe | Evidence | Hardware shape | Declared resources | Confidence |
 |---|---|---|---|---|
 
 Call out extrapolation model, safety factor, QoS-cap risk, missing measurements,
-and any assumption that could change the classification.
+and assumptions that would invalidate the estimate. Do not classify or submit
+the production run. If execution is requested, hand off to `classify-run`, which
+must inspect the allocation and remaining walltime again at that moment.
