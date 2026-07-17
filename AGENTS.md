@@ -37,6 +37,20 @@ Commit the regenerated files alongside your source change. CI runs `npm test` an
 fails if the generated files are out of sync. The generator is zero-dependency
 (Node ≥ 18 built-ins only) — no `npm install` is required.
 
+## The astra plugin's derived reference
+
+`skills/astra/references/walkthrough.md` is **derived, not authored** — a mechanical
+transform of the astra-spec `docs/getting-started.md` at the pinned schema version,
+produced by `scripts/derive-walkthrough.mjs` (`npm run derive:walkthrough`). Don't
+hand-edit it; change the transform or bump the pin and re-derive. The astra
+toolchain pins live in exactly one place — `hooks/astra/scripts/astra-pins.sh`
+(`ASTRA_TOOLS_PIN` / `ASTRA_SPEC_PIN`) — read by both the astra hooks (which run
+`astra` via a project venv or a dual-pinned `uvx`) and the derivation script. At a
+pin bump: edit `astra-pins.sh`, run `npm run derive:walkthrough && npm run build`,
+commit together. (Unlike the fully-generated targets, the walkthrough needs network
+to derive, so it is committed and only re-derived deliberately — `npm test` does not
+regenerate it.)
+
 ## Build tooling — design & rationale
 
 If you arrived expecting a plain skills folder and found a generator, here's why it
