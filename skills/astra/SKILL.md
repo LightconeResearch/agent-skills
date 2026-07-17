@@ -58,12 +58,14 @@ flagged and the human waved through costs a moment. A choice you made silently
 that turns out to matter costs the result's credibility. Bias toward making the
 choice visible.
 
-**Write the prose as you go.** Each element carries a `description` /
-`rationale` / `notes`; the analysis carries a top-level `description`. Fill them
-while the reasoning is fresh — a decision without a rationale is a decision no
-reviewer can weigh. The point is not documentation for its own sake; it is that
-the next reader (often the human, sometimes a later you) can reconstruct the
-thinking.
+**Write the prose as you go.** Inputs, outputs, and options carry a
+`description`; decisions carry a `rationale`; the analysis carries a top-level
+`narrative` split into five sections — summary, findings, methods, inputs,
+outputs — each required once its structured counterpart has entries (check the
+exact shapes with `astra spec narrative`). Fill them while the reasoning is
+fresh — a decision without a rationale is a decision no reviewer can weigh. The
+point is not documentation for its own sake; it is that the next reader (often
+the human, sometimes a later you) can reconstruct the thinking.
 
 ## Judgment
 
