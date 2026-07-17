@@ -29,9 +29,7 @@ Three properties are the whole point, and every judgment below serves them:
   evidence — a quote in a paper, an artifact from a run. Nothing is asserted
   without a path back to where it came from.
 - **Observable.** The full decision space is machine-readable, so alternative
-  defensible analyses can be enumerated and run rather than argued about. A
-  choice you bury in code is invisible; a choice you name as a decision can be
-  swept.
+  defensible analyses can be enumerated and swept rather than argued about.
 - **Legible.** A person who never saw the work can read the spec and understand
   what was done and why. Legibility is the acceptance test for everything you
   write here.
@@ -49,14 +47,11 @@ When you hit a fork that could move a result — an estimator, a cut, a prior, a
 calibration — the move is not to quietly pick the one you'd default to. It is to
 make it a `decision` with real `options`, set a `default`, and say why in the
 `rationale`. That is how a choice becomes reviewable: the human can see it, agree
-or override, and the sweep can explore it later. Silently baking in a defensible
-choice is the one failure that ASTRA exists to prevent — it is exactly the
-erasure the format is fighting.
+or override, and the sweep can explore it later. Baking a defensible choice in
+silently is the erasure ASTRA exists to prevent.
 
-**When you are unsure, surface it rather than resolve it.** A decision you
-flagged and the human waved through costs a moment. A choice you made silently
-that turns out to matter costs the result's credibility. Bias toward making the
-choice visible.
+**When you are unsure whether a choice matters, surface it rather than resolve
+it silently.** Bias toward the visible.
 
 **Write the prose as you go.** Inputs, outputs, and options carry a
 `description`; decisions carry a `rationale`; the analysis carries a top-level
@@ -75,10 +70,9 @@ is the part no schema can serve.
 ### What deserves to be a decision
 
 A decision is a methodological choice where a different defensible option could
-plausibly change a numerical result. Include it if flipping the choice could
-shift a quantitative outcome — even modestly, since small choices compound.
-When genuinely in doubt, include it: the cost of a spurious decision is a wasted
-option; the cost of a missing one is a silent bake-in.
+plausibly change a numerical result — even modestly, since small choices
+compound. When genuinely in doubt, include it: the cost of a spurious decision
+is a wasted option; the cost of a missing one is a silent bake-in.
 
 **These are decisions:** algorithmic choices (MCMC vs optimization, KDE vs
 histogram); numerical parameters and thresholds (sigma-clip level, bin width,
@@ -130,34 +124,26 @@ hierarchy is not.
 
 ## Vocabulary index
 
-The field-level grammar — every concept, its fields, constraints, and
-cross-references — is served by the installed tool, in sync with the schema
-that `astra validate` checks against. Do not carry it in your head or paste it
-from memory; read it from the source:
+Everything here runs through the installed `astra` tool — the plugin resolves it
+for you (if `uv` itself is missing: `curl -LsSf https://astral.sh/uv/install.sh | sh`),
+and saved files are validated automatically. It is also ground truth for the
+format: the field-level grammar — every concept, its fields, constraints, and
+cross-references — is served in sync with the schema that `astra validate`
+checks against. Do not carry it in your head or paste it from memory; read it
+from the source:
 
 - `astra spec` — the concept map, one line each.
 - `astra spec <term>` — one concept in full (description, field table, rules,
   cross-references). The mode to reach for while authoring.
 - `astra spec --full` — the entire reference (long).
 
-The concepts, by family:
-
-- **Analysis** — `analysis`, `input`, `output`, `decision`, `option`, `recipe`,
-  `resources` (plus the `inputtype` / `outputtype` enums).
-- **Universe** — `universe`, `universenode`, `decisionselection`.
-- **Insight** — `insight`, `evidence`, `textquoteselector`, `fragmentselector`,
-  `insightcollection`.
+Concepts fall into three families — analysis, universe, insight — but read them
+from `astra spec`, not here. Mind the structural shape as you do: `inputs` and
+`outputs` are lists of objects (`- id: …`); `decisions`, `options`, `analyses`,
+`prior_insights`, and `findings` are maps keyed by id.
 
 `references/walkthrough.md` is a ground-up narrative tour of the format, derived
-from the astra-spec docs at the pinned version — most useful before there is a
-developed astra.yaml to learn from. Once one exists, `astra spec` largely
+from the astra-spec docs at a pinned version that may lag your installed CLI —
+where the two disagree, `astra spec` wins. Most useful before there is a
+developed astra.yaml to learn from; once one exists, `astra spec` largely
 suffices.
-
-## Prerequisites
-
-Everything here runs through `astra`. The plugin's hooks resolve it for you —
-the project venv first, otherwise an ephemeral, dual-pinned `uvx` run that
-installs on first use — so no hand install is needed; if `uv` itself is missing,
-install it (`curl -LsSf https://astral.sh/uv/install.sh | sh`). Saved ASTRA
-files are validated automatically; run `astra validate astra.yaml` yourself
-whenever you want to check before saving.
