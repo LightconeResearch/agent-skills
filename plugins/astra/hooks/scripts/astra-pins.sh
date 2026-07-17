@@ -4,7 +4,7 @@
 # schema pin from it when re-deriving the walkthrough. Bump both here, in one
 # place, then re-run the derivation and `npm run build`.
 #
-# Dual pin: astra-tools declares only a floating `astra-spec>=0.0.7`, so pinning
+# Dual pin: astra-tools declares only a floating `astra-spec>=0.0.11`, so pinning
 # the tools alone does not pin the schema. astra spec / astra validate must speak
 # the same schema the skill teaches, so we pin astra-spec exactly too.
 ASTRA_TOOLS_PIN="0.2.10"
