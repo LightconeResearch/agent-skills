@@ -55,14 +55,19 @@ fi
 
 msg=$(printf 'ASTRA validation FAILED for %s:\n%s' "$filename" "$result")
 
-# Map the concept types named in the errors to `astra spec` terms. Pull tokens
-# from the structured `[CODE] path:` errors and from bare section keywords, fold
-# each plural/section form to its spec term, then keep only recognised terms.
+# Map the concept types named in the errors to `astra spec` terms. Read ONLY the
+# structured field path of each error line — the `<path>:` prefix before the
+# message — never the message body: a generic "Extra inputs are not permitted"
+# would otherwise be misread as the `input` concept. Take the first path segment
+# of each error, fold plurals to the spec term, keep only recognised terms.
 terms=$(
-    {
-        grep -oE '\][[:space:]]+[a-z_]+(\.[a-z0-9_]+)*' <<<"$result" | sed -E 's/^\][[:space:]]+//' | tr '.' '\n'
-        grep -oE '(inputs|outputs|decisions|options|recipe|prior_insights|findings|evidence|analyses|universes?)' <<<"$result"
-    } | sed -E 's/^inputs$/input/; s/^outputs$/output/; s/^decisions$/decision/; s/^options$/option/; s/^prior_insights$/insight/; s/^findings$/insight/; s/^analyses$/analysis/; s/^universes?$/universe/' \
+    awk '
+        { idx = index($0, ": "); if (idx == 0) next
+          path = substr($0, 1, idx - 1)
+          sub(/^[[:space:]]*\[[^]]*\][[:space:]]*/, "", path)      # drop a leading [code] tag
+          if (match(path, /[a-z_][a-z0-9_]*(\.[a-z0-9_]+)*$/)) {   # trailing dotted path token
+              tok = substr(path, RSTART, RLENGTH); sub(/\..*$/, "", tok); print tok } }' <<<"$result" \
+      | sed -E 's/^inputs$/input/; s/^outputs$/output/; s/^decisions$/decision/; s/^options$/option/; s/^prior_insights$/insight/; s/^findings$/insight/; s/^analyses$/analysis/; s/^universes?$/universe/' \
       | grep -Ex '(input|output|decision|option|recipe|insight|evidence|analysis|universe)' \
       | awk '!seen[$0]++' | head -4
 )
