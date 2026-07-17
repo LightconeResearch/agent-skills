@@ -9,7 +9,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 |---|---|---|
 | `skills/<name>/SKILL.md` (+ `references/`, `scripts/`, `assets/`, `templates/`) | Canonical skills | ✅ |
 | `agents/*.md` | Claude subagents | ✅ |
-| `hooks/hooks.json`, `hooks/scripts/*.sh` | Plugin hooks | ✅ |
+| `hooks/<plugin>/hooks.json`, `hooks/<plugin>/scripts/*.sh` | Per-plugin hooks | ✅ |
 | `skills.config.json` | How skills compose into plugins | ✅ |
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
@@ -47,8 +47,14 @@ Edit `skills.config.json`:
   only: the user installs the required plugin separately (surfaced in the README and the
   plugin description). Nothing is added to the closure. Example:
   `lightcone-experimental` requires `lightcone`.
-- `hooks` — path to a `hooks.json` (hook commands reference the plugin root as
-  `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` so both harnesses resolve it). `agents` — Claude subagent file paths.
+- `hooks` — path to this plugin's own `hooks/<plugin>/hooks.json` (a plugin owns at
+  most one). Hook commands reference the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`
+  so both harnesses resolve it, and always spell script paths `hooks/scripts/<name>.sh`
+  — the build flattens every closure hook tree under one `hooks/scripts/` dir. When a
+  plugin bundles a dependency that also ships hooks (e.g. `lightcone` + `astra`), the
+  generator **merges** the manifests: hook groups concatenate per event, scripts copy
+  side by side (canonical script basenames must stay unique across plugins). `agents` —
+  Claude subagent file paths.
 
 Then `npm run build && npm test`.
 
