@@ -54,8 +54,8 @@ separate dependency step, identical on **Claude Code** and **Codex**.
 
 | Plugin | Skills | Bundles | Requires | Adds |
 |---|---|---|---|---|
-| **`astra`** | `astra` | — | — | standalone ASTRA spec reference |
-| **`lightcone`** *(recommended)* | `new`, `report`, `feedback`, `cli` | `astra` | — | venv-activation & validate-on-save hooks; `lc-extractor` subagent |
+| **`astra`** | `astra` | — | — | standalone ASTRA authoring skill; validate-on-save & activate-on-read hooks (self-installing via `uvx`) |
+| **`lightcone`** *(recommended)* | `new`, `report`, `feedback`, `cli` | `astra` | — | venv-activation & session-primer hooks (+ astra's validate-on-save / activate-on-read); `lc-extractor` subagent |
 | **`lightcone-experimental`** | `from-paper`, `from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | — (ships only its own skills) | **`lightcone`** (install it first) | opt-in; under active development |
 
 ## 🚀 Install
@@ -108,7 +108,7 @@ Plugin skills are namespaced by plugin name: `/lightcone:new`,
 
 | Skill | What it does |
 |---|---|
-| [`astra`](skills/astra) | Reference for the `astra.yaml` spec — decisions, options, prior insights, findings, evidence, sub-analyses, composition. |
+| [`astra`](skills/astra) | Authoring an `astra.yaml` — orientation and judgment (what deserves to be a decision, when to split a sub-analysis); the field-level grammar comes from `astra spec <term>`. |
 | [`new`](skills/new) | Scope a new ASTRA analysis from a research question — structure inputs/outputs, identify decisions through literature, land `astra.yaml`. |
 | [`report`](skills/report) | Author the project's MyST report — prose that references `astra.yaml` elements by path (via the [MySTRA](https://github.com/LightconeResearch/MySTRA) plugin), so write-ups never drift from the analysis. |
 | [`cli`](skills/cli) | The `lc` execution reference — spec–code invariant, status interpretation, failure diagnosis. |
@@ -130,9 +130,12 @@ Plugin skills are namespaced by plugin name: `/lightcone:new`,
 ```
 skills/                     Canonical skills — one dir per skill (single source of truth)
 agents/                     Claude subagents (lc-extractor)
-hooks/                      Plugin hooks.json + bash scripts (venv, validation, session primer)
+hooks/<plugin>/             Per-plugin hooks.json + bash scripts (astra: validate-on-save,
+                            activate-on-read, pins; lightcone: venv, session primer)
 skills.config.json          Source of truth for how skills compose into plugins
 scripts/build.mjs           Regenerates every per-target file from the above
+scripts/derive-walkthrough.mjs  Re-derives skills/astra/references/walkthrough.md
+                            from astra-spec docs at the pinned version (npm run derive:walkthrough)
 scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm test)
 .claude-plugin/             Generated — Claude Code marketplace manifest
 .agents/plugins/            Generated — Codex marketplace manifest
