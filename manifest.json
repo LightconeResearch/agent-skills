@@ -8,7 +8,7 @@
     {
       "name": "astra",
       "path": "skills/astra",
-      "description": "Comprehensive reference for the `astra.yaml` specification — top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke whenever reading, writing, validating, or debugging an `astra.yaml` spec; whenever working with decisions, options, prior_insights, findings, or evidence; or whenever the user asks about ASTRA schema, spec syntax, or sub-analysis composition.",
+      "description": "Orientation and judgment for authoring an ASTRA analysis (astra.yaml): what the format is for, how to write it for and with a human, what deserves to be a decision, and when to split a sub-analysis. Invoke whenever reading, writing, or restructuring an astra.yaml spec, deciding whether a methodological choice should be a decision, weighing a sub-analysis split, or when the user asks about ASTRA. The field-level grammar is not here — it comes from the installed tool via `astra spec <term>`.",
       "plugins": [
         "astra",
         "lightcone"
