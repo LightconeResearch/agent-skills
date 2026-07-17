@@ -1,7 +1,7 @@
 ---
 name: estimate
 description: >
-  Estimate CPU, memory, GPU, disk, and walltime requirements for Lightcone
+  Estimate CPU, memory, GPU, and walltime requirements for Lightcone
   outputs and record them in ASTRA recipe.resources for a specific workload and
   hardware shape. Use when resources are missing, stale, uncertain, or implicated
   in scheduling failures; for expensive simulations, training, scaling studies,
@@ -151,10 +151,9 @@ recipe:
     time_limit: "8h"
 ```
 
-Use ASTRA names (`cpus`, `memory`, `gpus`, `disk`, `time_limit`), not internal
-Snakemake names such as `mem_mb` or `gpus_per_task`. Omit `disk` when there is
-no meaningful temporary-storage requirement. Preserve unrelated spec content,
-then validate:
+Use ASTRA names (`cpus`, `memory`, `gpus`, `time_limit`), not internal Snakemake
+names such as `mem_mb` or `gpus_per_task`. Preserve unrelated spec content, then
+validate:
 
 ```bash
 astra validate astra.yaml

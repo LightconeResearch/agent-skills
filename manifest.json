@@ -24,7 +24,7 @@
     {
       "name": "estimate",
       "path": "plugins/lightcone/skills/estimate",
-      "description": "Estimate CPU, memory, GPU, disk, and walltime requirements for Lightcone outputs and record them in ASTRA recipe.resources for a specific workload and hardware shape. Use when resources are missing, stale, uncertain, or implicated in scheduling failures; for expensive simulations, training, scaling studies, and first production runs; or whenever asked to size or benchmark a Lightcone recipe. This skill estimates reusable requirements but does not choose the current run mode; use classify-run immediately before execution.",
+      "description": "Estimate CPU, memory, GPU, and walltime requirements for Lightcone outputs and record them in ASTRA recipe.resources for a specific workload and hardware shape. Use when resources are missing, stale, uncertain, or implicated in scheduling failures; for expensive simulations, training, scaling studies, and first production runs; or whenever asked to size or benchmark a Lightcone recipe. This skill estimates reusable requirements but does not choose the current run mode; use classify-run immediately before execution.",
       "plugins": [
         "lightcone"
       ]
