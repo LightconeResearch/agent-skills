@@ -86,7 +86,19 @@ genuine unit is really present:
 - **Side quests** — an independent investigation (a calibration, a simulation
   study, a diagnostic) with its own inputs, outputs, and code. That is a
   sub-analysis, not a universe; universes are different option selections on the
-  *same* pipeline.
+  *same* pipeline. A side quest's conclusions flow back through evidence:
+  reference its output as artifact evidence in a `prior_insights` entry (e.g.
+  `artifact: "build_mocks.noise_diagnostics"`) and cite that insight from the
+  decision it informs — a traceable chain from sub-analysis conclusion to
+  downstream choice.
+
+Two calibrating examples. A paper that builds mock catalogs and then trains a
+photo-z network on them splits naturally in two: the noise-model and
+selection-function decisions belong to mock-building, the architecture and
+training decisions to estimation — and someone else could reuse the mocks. A
+paper that downloads galaxies, applies quality cuts, corrects for extinction,
+and fits a Schechter function does not split: five steps, but one objective,
+shared decisions, one end product.
 
 If boundaries are unclear, **start flat and split later**, when separate stage
 outputs, explicit inherited links, and clear per-level decision ownership have
@@ -175,6 +187,11 @@ Most useful before there is a developed astra.yaml to learn from; once one
 exists, `astra spec` largely suffices.
 
 ## CLI reference
+
+`astra` validates and inspects; it never executes recipes. The separation is
+deliberate — the spec stays stable while agents and execution layers evolve,
+and the choice of runner stays yours — so don't encode runner-specific behavior
+into the spec.
 
 ```bash
 astra init [DIRECTORY]                          # Scaffold a new analysis
