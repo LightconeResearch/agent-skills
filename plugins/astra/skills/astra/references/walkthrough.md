@@ -1,10 +1,4 @@
-<!--
-  GENERATED FILE — do not edit by hand.
-  Derived from LightconeResearch/astra-spec docs/getting-started.md at v0.0.11 by scripts/derive-walkthrough.mjs.
-  Re-run `npm run derive:walkthrough && npm run build` at every pin bump.
--->
-
-> Narrative tour of the ASTRA format, derived from the [astra-spec getting-started guide](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/getting-started.md) at `v0.0.11` (the pinned schema version). For the field-level grammar, use `astra spec <term>`.
+> Narrative tour of the ASTRA format, derived from the [astra-spec getting-started guide](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/getting-started.md) at v0.0.11.
 
 # ASTRA Walkthrough
 
@@ -262,9 +256,3 @@ astra validate astra.yaml --verify-evidence
 Papers are kept in a content-addressed cache under `~/.cache/astra/papers/`. The cache is populated by the agent or pipeline that authored the citation — they have the paper in hand at write time, so nothing extra is asked of the reader. The CLI exposes lower-level commands ([`astra paper add`](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/cli.md#astra-paper), `list`, `verify-quote`, …) for manual cache management, troubleshooting, and CI integration, but the day-to-day flow doesn't require them.
 
 Artifact-backed evidence (typical for `findings:` whose output artifacts haven't been materialised yet) is reported as `SKIPPED` rather than failing the validation.
-
-## What ASTRA doesn't run
-
-The CLI validates and inspects analyses; it does **not** execute recipes. Each `recipe.command` is a POSIX shell command that an executor — an agent, a workflow runner, a notebook, or you on the command line — reads and invokes. The executor materialises the declared inputs (giving each one a concrete on-disk path), picks an output path, expands the `{inputs.<id>}` / `{inputs}` / `{decisions.<id>}` / `{output}` placeholders against the active universe, and runs the resulting command.
-
-This separation is intentional: the spec stays stable as the agent and execution layer evolves. ASTRA's job is to make every analytical choice explicit, traceable, and verifiable; the choice of *runner* is yours.

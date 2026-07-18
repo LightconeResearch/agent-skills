@@ -29,9 +29,17 @@ const tag = `v${pin}`;
 const blob = `https://github.com/${REPO}/blob/${tag}/docs`;
 
 const rawUrl = `https://raw.githubusercontent.com/${REPO}/${tag}/${SRC_DOC}`;
-const res = await fetch(rawUrl);
-if (!res.ok) throw new Error(`fetch ${rawUrl} → HTTP ${res.status}`);
-const source = await res.text();
+// WALKTHROUGH_SRC: path to a pre-fetched copy of the source doc, for
+// environments where node's fetch can't do TLS (corporate CA) — the caller
+// is responsible for fetching the doc at the pinned tag.
+let source;
+if (process.env.WALKTHROUGH_SRC) {
+  source = readFileSync(process.env.WALKTHROUGH_SRC, "utf8");
+} else {
+  const res = await fetch(rawUrl);
+  if (!res.ok) throw new Error(`fetch ${rawUrl} → HTTP ${res.status}`);
+  source = await res.text();
+}
 
 // --- deterministic transforms ---------------------------------------------
 
@@ -75,14 +83,15 @@ body = body.replace(/\]\(([a-z0-9-]+)\.md(#[^)]*)?\)/gi, (_m, name, anchor = "")
 // Retitle: this is the plugin's walkthrough, not the upstream page title.
 body = body.replace(/^# .*$/m, "# ASTRA Walkthrough");
 
+// The "What ASTRA doesn't run" section is dropped: SKILL.md already carries
+// the validates-not-executes point where it changes behavior (CLI reference).
+body = body.replace(/\n## What ASTRA doesn't run\n[\s\S]*?(?=\n## |$)/, "");
+
+// One derivation line only — no generated-file banner; the derived-from line
+// carries provenance, and scripts/validate.mjs keys its freshness guard on
+// the plain "at vX.Y.Z" it contains.
 const banner = [
-  "<!--",
-  "  GENERATED FILE — do not edit by hand.",
-  `  Derived from ${REPO} ${SRC_DOC} at ${tag} by scripts/derive-walkthrough.mjs.`,
-  "  Re-run `npm run derive:walkthrough && npm run build` at every pin bump.",
-  "-->",
-  "",
-  `> Narrative tour of the ASTRA format, derived from the [astra-spec getting-started guide](${blob}/getting-started.md) at \`${tag}\` (the pinned schema version). For the field-level grammar, use \`astra spec <term>\`.`,
+  `> Narrative tour of the ASTRA format, derived from the [astra-spec getting-started guide](${blob}/getting-started.md) at ${tag}.`,
   "",
   "",
 ].join("\n");

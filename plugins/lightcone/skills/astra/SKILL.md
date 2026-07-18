@@ -206,5 +206,6 @@ astra paper verify-quotes DOI                   # Batch-verify quotes; reads {"q
 ## References
 
 - `references/walkthrough.md` — a ground-up, tutorial-style tour of the format.
-  Read it before there is a developed astra.yaml to learn from; once one
-  exists, `astra spec` largely suffices.
+  Long, so not for every touch — but worth reading before any substantial
+  authoring or restructuring work; for small edits to a developed astra.yaml,
+  `astra spec` suffices.
