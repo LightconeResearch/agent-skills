@@ -7,7 +7,11 @@
 # Dual pin: astra-tools declares only a floating `astra-spec>=0.0.11`, so pinning
 # the tools alone does not pin the schema. astra spec / astra validate must speak
 # the same schema the skill teaches, so we pin astra-spec exactly too.
-ASTRA_TOOLS_PIN="0.2.10"
+# The tools pin may be a version ("0.2.11") or, pre-release, a pinned git
+# requirement. TEMPORARY: pointing at the `astra spec` PR branch
+# (LightconeResearch/astra-tools#94) so the triad is testable end-to-end;
+# revert to a plain version at the next astra-tools release.
+ASTRA_TOOLS_PIN="git+https://github.com/LightconeResearch/astra-tools@astra-spec-command"
 ASTRA_SPEC_PIN="0.0.11"
 
 # One-line uv installer, surfaced when neither a project astra nor uv is present.
@@ -22,7 +26,11 @@ astra_resolve() {
   if command -v astra &>/dev/null; then
     ASTRA_CMD=(astra)
   elif command -v uvx &>/dev/null; then
-    ASTRA_CMD=(uvx --from "astra-tools==${ASTRA_TOOLS_PIN}" --with "astra-spec==${ASTRA_SPEC_PIN}" astra)
+    # A pin containing "+" is already a full requirement (git ref); a bare
+    # version becomes an exact PyPI pin.
+    local tools_req="${ASTRA_TOOLS_PIN}"
+    [[ "$tools_req" != *+* ]] && tools_req="astra-tools==${tools_req}"
+    ASTRA_CMD=(uvx --from "$tools_req" --with "astra-spec==${ASTRA_SPEC_PIN}" astra)
   else
     return 1
   fi
