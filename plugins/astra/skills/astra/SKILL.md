@@ -144,12 +144,14 @@ resolve it silently.**
 
 **Write the prose as you go.** Inputs, outputs, and options carry a
 `description`; decisions carry a `rationale`. Fill them while the reasoning is
-fresh, so the next reader can reconstruct the thinking.
+fresh, so the next reader can reconstruct the thinking. Fuller write-ups —
+reports with figures, citations, multi-page structure — can be maintained
+outside ASTRA, referencing the spec's elements rather than restating them.
 
 ## Adding a paper as prior insight
 
-Found a paper through literature search? Three steps to wire it into the
-analysis:
+Always run `astra paper add <doi>` when you cite a paper. Three steps wire a
+paper into the analysis:
 
 1. **Cache the PDF** — `astra paper add <doi>` downloads it to the project's
    paper cache. Pass `--pdf PATH` if you already have a local copy, or
