@@ -39,10 +39,6 @@ relations between them — begin by calling `astra spec`:
   cross-references). The mode to reach for while authoring.
 - `astra spec --full` — the entire reference (long).
 
-`references/walkthrough.md` is a ground-up, tutorial-style tour of the format.
-Most useful before there is a developed astra.yaml to learn from; once one
-exists, `astra spec` largely suffices.
-
 ## Judgment
 
 ### What deserves to be a decision
@@ -206,3 +202,9 @@ astra paper show DOI                            # Show metadata for a cached pap
 astra paper path DOI [--version N]              # Print the cached PDF's path
 astra paper verify-quotes DOI                   # Batch-verify quotes; reads {"quotes":[...]} JSON from stdin
 ```
+
+## References
+
+- `references/walkthrough.md` — a ground-up, tutorial-style tour of the format.
+  Read it before there is a developed astra.yaml to learn from; once one
+  exists, `astra spec` largely suffices.
