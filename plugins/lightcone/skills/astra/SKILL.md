@@ -45,17 +45,37 @@ framework, file format, parallelization) are not decisions — they cannot chang
 a result. Fixed constraints with no live alternative ("use the data that
 exists") are not decisions. And *what to produce* is not a decision: decisions
 govern *how* an output is computed, not *which* outputs exist — the output set is
-fixed by the analysis structure. A decision must be parameterized in code and
-referenced from the recipe; when the code cannot yet vary a consequential
-value, that is a prompt to parameterize it into a decision, not to leave it
-out.
+fixed by the analysis structure.
+
+**Every decision must be parameterized in code — never hardcode a decision
+value.** The recipe's `command:` references it via `{decisions.<id>}`. When the
+code cannot yet vary a consequential value, that is a prompt to parameterize it
+into a decision, not to leave it out.
+
+### Tags
+
+Decisions may carry an optional `tags:` list for grouping (e.g.
+`[preprocessing]`, `[physics]`, `[stats]`). Keep the tag vocabulary **small and
+consolidated** — reuse existing tags rather than minting new ones: tags are
+mostly useful for cross-cutting views over a shared decision space, and that
+view fragments quickly when every decision invents its own label.
+
+### Recipes
+
+ASTRA is asset-centric: the **Output** declares its provenance (`inputs`,
+`decisions`) and when it's active (`when`); the recipe is pure *how*. Text
+outside `{...}` placeholders is literal command text and isn't validated —
+static constants (`--max-iter 1000`), per-output specialisations, and shell
+features (`${VAR}`, pipes, redirects) all live as plain text; there is no
+separate `params` channel.
 
 ### When to split a sub-analysis
 
-Default to a **single analysis**. A sub-analysis is a genuine unit of work —
-meaningful inputs, its own decisions, meaningful outputs — that can be
-understood and run on its own terms, and is a reasonable amount of work to
-consider at once. Split only when one is really present:
+Each ASTRA file — root or nested — represents a **unit of work**: meaningful
+inputs, its own decisions, meaningful outputs; something that can be
+understood, run, and evaluated on its own terms, and is a reasonable amount of
+work to consider at once. Default to a **single analysis**; split only when a
+genuine unit is really present:
 
 - **Decision ownership** — a stage has its own decisions that could vary,
   cleanly scoped to it. Shared decisions live at the parent and are inherited;
@@ -84,6 +104,17 @@ hierarchy is not.
 - **The silent default** — the choice made in code that should have been a
   decision. The worst one, because nothing flags it.
 
+## Universes
+
+A universe selects one option per decision — a defensible alternative analysis
+path. Bug fixes and refactors are normal commits, not universes. Universe IDs
+use `^[a-z][a-z0-9_-]*$` (hyphens allowed, unlike other ASTRA IDs).
+
+**Adding a new decision** touches every universe: (1) add it to the spec with
+options/default/rationale, (2) add the parameter to code, (3) add it to all
+existing universe files with the default, (4) create the new universe,
+(5) `astra validate`.
+
 ## The working relationship
 
 You author the spec **for and with a human** — a researcher who owns the
@@ -102,6 +133,25 @@ resolve it silently.**
 **Write the prose as you go.** Inputs, outputs, and options carry a
 `description`; decisions carry a `rationale`. Fill them while the reasoning is
 fresh, so the next reader can reconstruct the thinking.
+
+## Adding a paper as prior insight
+
+Found a paper through literature search? Three steps to wire it into the
+analysis:
+
+1. **Cache the PDF** — `astra paper add <doi>` downloads it to the project's
+   paper cache. Pass `--pdf PATH` if you already have a local copy, or
+   `--version N` for a specific arXiv version.
+2. **Add a `prior_insights:` entry** that cites the DOI (and optionally
+   `version`) under `evidence:`. The `quote.exact` text must match the PDF
+   verbatim; optional `prefix`/`suffix` (~20–100 chars on either side)
+   disambiguate when the exact string occurs more than once.
+3. **Verify** — `astra paper verify-quotes <doi>` for one paper, or
+   `astra validate astra.yaml --verify-evidence` to check every quote in the
+   spec. A wrong `exact` string fails validation.
+
+`astra paper list` shows what's cached; `astra paper path <doi>` prints the PDF
+path so you can open it for review.
 
 ## Vocabulary index
 
@@ -123,3 +173,21 @@ from `astra spec`, not here.
 `references/walkthrough.md` is a ground-up, tutorial-style tour of the format.
 Most useful before there is a developed astra.yaml to learn from; once one
 exists, `astra spec` largely suffices.
+
+## CLI reference
+
+```bash
+astra init [DIRECTORY]                          # Scaffold a new analysis
+astra validate astra.yaml                       # Validate (run after every change)
+astra validate astra.yaml --verify-evidence     # + verify insight quotes against PDFs
+astra spec [TERM|--full]                        # Schema reference (see above)
+astra info [--decisions|--inputs|--outputs]     # Analysis summary / element details
+astra universe generate -n NAME [-d "desc"]     # Generate universe from defaults
+astra universe check universes/x.yaml           # Check universe constraints
+astra viz [--fmt ascii|mermaid]                 # Visualize decision space
+astra paper add DOI [--version N] [--pdf PATH]  # Cache a paper for evidence checks
+astra paper list                                # List cached papers
+astra paper show DOI                            # Show metadata for a cached paper
+astra paper path DOI [--version N]              # Print the cached PDF's path
+astra paper verify-quotes DOI                   # Batch-verify quotes; reads {"quotes":[...]} JSON from stdin
+```
