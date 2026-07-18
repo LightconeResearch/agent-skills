@@ -25,6 +25,24 @@ An `astra.yaml` spec captures this for a single unit of work. The structure is
 **self-similar**: a top-level analysis and a nested sub-analysis have exactly
 the same shape. Everything here applies equally to both.
 
+## Orient with `astra spec`
+
+The installed `astra` CLI is the ground truth for the format: the field-level
+grammar — every concept, its fields, constraints, and cross-references — is
+served in sync with the schema that `astra validate` checks against (saved
+files are validated automatically). Do not begin writing or editing an
+astra.yaml until you have a clear understanding of the needed concepts and the
+relations between them — begin by calling `astra spec`:
+
+- `astra spec` — the concept map, one line each.
+- `astra spec <term>` — one concept in full (description, field table, rules,
+  cross-references). The mode to reach for while authoring.
+- `astra spec --full` — the entire reference (long).
+
+`references/walkthrough.md` is a ground-up, tutorial-style tour of the format.
+Most useful before there is a developed astra.yaml to learn from; once one
+exists, `astra spec` largely suffices.
+
 ## Judgment
 
 ### What deserves to be a decision
@@ -52,13 +70,11 @@ value.** The recipe's `command:` references it via `{decisions.<id>}`. When the
 code cannot yet vary a consequential value, that is a prompt to parameterize it
 into a decision, not to leave it out.
 
-### Tags
-
 Decisions may carry an optional `tags:` list for grouping (e.g.
-`[preprocessing]`, `[physics]`, `[stats]`). Keep the tag vocabulary **small and
-consolidated** — reuse existing tags rather than minting new ones: tags are
-mostly useful for cross-cutting views over a shared decision space, and that
-view fragments quickly when every decision invents its own label.
+`[preprocessing]`, `[physics]`, `[stats]`). Keep the tag vocabulary small and
+consolidated — reuse existing tags rather than minting new ones: tags exist for
+cross-cutting views over a shared decision space, and that view fragments when
+every decision invents its own label.
 
 ### Recipes
 
@@ -85,12 +101,8 @@ genuine unit is really present:
   as-is (a cleaned catalog, a trained emulator, a set of mocks).
 - **Side quests** — an independent investigation (a calibration, a simulation
   study, a diagnostic) with its own inputs, outputs, and code. That is a
-  sub-analysis, not a universe; universes are different option selections on the
-  *same* pipeline. A side quest's conclusions flow back through evidence:
-  reference its output as artifact evidence in a `prior_insights` entry (e.g.
-  `artifact: "build_mocks.noise_diagnostics"`) and cite that insight from the
-  decision it informs — a traceable chain from sub-analysis conclusion to
-  downstream choice.
+  sub-analysis, not a universe; universes are different option selections on
+  the *same* pipeline.
 
 Two calibrating examples. A paper that builds mock catalogs and then trains a
 photo-z network on them splits naturally in two: the noise-model and
@@ -99,6 +111,12 @@ training decisions to estimation — and someone else could reuse the mocks. A
 paper that downloads galaxies, applies quality cuts, corrects for extinction,
 and fits a Schechter function does not split: five steps, but one objective,
 shared decisions, one end product.
+
+A side quest's conclusions flow back through evidence: reference its output as
+artifact evidence in a `prior_insights` entry (e.g.
+`artifact: "build_mocks.noise_diagnostics"`) and cite that insight from the
+decision it informs — a traceable chain from sub-analysis conclusion to
+downstream choice.
 
 If boundaries are unclear, **start flat and split later**, when separate stage
 outputs, explicit inherited links, and clear per-level decision ownership have
@@ -137,10 +155,9 @@ When you hit a fork that could move a result — an estimator, a cut, a prior, a
 calibration — do not quietly pick the one you'd default to. Make it a
 `decision` with real `options`, set a `default`, and say why in the
 `rationale`. The human can then see it, agree or override, and the sweep can
-explore it later. Even apparently defensible choices must be recorded in ASTRA.
-
-**When you are unsure whether a choice matters, encode it in ASTRA rather than
-resolve it silently.**
+explore it later. Even apparently defensible choices must be recorded in
+ASTRA; when you are unsure whether a choice matters, encode it rather than
+resolve it silently.
 
 **Write the prose as you go.** Inputs, outputs, and options carry a
 `description`; decisions carry a `rationale`. Fill them while the reasoning is
@@ -166,27 +183,6 @@ paper into the analysis:
 
 `astra paper list` shows what's cached; `astra paper path <doi>` prints the PDF
 path so you can open it for review.
-
-## Vocabulary index
-
-The installed `astra` CLI is the ground truth for the format: the field-level
-grammar — every concept, its fields, constraints, and cross-references — is
-served in sync with the schema that `astra validate` checks against (saved
-files are validated automatically). Do not begin writing or editing an
-astra.yaml until you have a clear understanding of the needed concepts and the
-relations between them — begin by calling `astra spec`:
-
-- `astra spec` — the concept map, one line each.
-- `astra spec <term>` — one concept in full (description, field table, rules,
-  cross-references). The mode to reach for while authoring.
-- `astra spec --full` — the entire reference (long).
-
-Concepts fall into three families — analysis, universe, insight — but read them
-from `astra spec`, not here.
-
-`references/walkthrough.md` is a ground-up, tutorial-style tour of the format.
-Most useful before there is a developed astra.yaml to learn from; once one
-exists, `astra spec` largely suffices.
 
 ## CLI reference
 
