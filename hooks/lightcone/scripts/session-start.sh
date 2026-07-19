@@ -1,12 +1,16 @@
 #!/bin/bash
 # SessionStart hook: surface a terse project status to the agent.
 #
-# Reports validation status, materialization counts, and a tight CLI
-# primer so the agent knows what substrate commands exist and which
-# reference skills carry the depth. Project name / decision count /
-# universe count are intentionally omitted -- they are trivia the agent
-# reads from astra.yaml and project docs when needed, and they cost against
-# the 10k additionalContext budget.
+# Reports materialization counts and a tight CLI primer so the agent
+# knows what substrate commands exist. Deliberately NOT here:
+#   - skill listing -- the harness already advertises installed skills;
+#     repeating them costs context and duplicates the skill system.
+#   - astra validate -- validation is an opinion about the work, not
+#     session state; it belongs to validate-on-save, which fires at the
+#     moment an ASTRA file actually changes.
+#   - project name / decision count / universe count -- trivia the agent
+#     reads from astra.yaml when needed; costs against the 10k
+#     additionalContext budget.
 
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.cwd // empty')
@@ -15,14 +19,10 @@ cwd=$(echo "$input" | jq -r '.cwd // empty')
 cd "$cwd" 2>/dev/null || exit 0
 [ -f "astra.yaml" ] || exit 0
 
-# astra and lc both come from the project venv (prepended to PATH by
-# activate-venv.sh). If neither resolved, the venv setup is broken and
-# there is nothing useful we can report.
-command -v astra &>/dev/null || exit 0
+# lc comes from the project venv (prepended to PATH by activate-venv.sh).
+# If it didn't resolve, the venv setup is broken and there is nothing
+# useful we can report.
 command -v lc &>/dev/null || exit 0
-
-validation_output=$(astra validate astra.yaml 2>&1)
-validation_ok=$?
 
 status_json=$(lc status --json 2>/dev/null)
 counts=$(echo "$status_json" | jq -r '
@@ -40,36 +40,12 @@ stale_count=${stale_count:-0}
 missing_count=${missing_count:-0}
 alias_count=${alias_count:-0}
 
-if [ "$validation_ok" -eq 0 ]; then
-    summary="ASTRA project — validation: valid"
-else
-    summary="ASTRA project — validation: has errors"
-fi
-
-summary="$summary
+summary="ASTRA project.
 Materialization: ok=$ok_count stale=$stale_count missing=$missing_count alias=$alias_count
 
 Substrate CLIs (use --help on any):
   lc init / lc run / lc status / lc verify / lc build / lc export wrroc
-  astra validate / astra paper add / astra universe generate
-
-Reference skills (invoke when the surface above isn't enough):
-  /astra   — astra.yaml spec: decisions, prior_insights, findings, evidence, sub-analyses, composition
-  /cli  — lc workflow: spec-code invariant, status interpretation, failure diagnosis
-
-Report authoring:
-  /report — draft/extend the MyST report (index.md): references spec elements by path, never hard-types results"
-
-if [ "$validation_ok" -ne 0 ]; then
-    # tail rather than head -- the leading lines are success markers
-    # ("✓ Schema validation passed" etc.) and the actual error block is
-    # at the bottom.
-    error_preview=$(echo "$validation_output" | tail -20)
-    summary="$summary
-
-Validation errors (run 'astra validate astra.yaml' for full output):
-$error_preview"
-fi
+  astra validate / astra paper add / astra universe generate"
 
 needs_run=$((missing_count + stale_count))
 if [ "$needs_run" -gt 0 ]; then
