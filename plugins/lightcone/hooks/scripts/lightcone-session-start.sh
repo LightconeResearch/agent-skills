@@ -1,16 +1,15 @@
 #!/bin/bash
-# SessionStart hook: surface a terse project status to the agent.
+# SessionStart hook (lightcone plugin): surface execution-layer status.
 #
-# Reports materialization counts and a tight CLI primer so the agent
-# knows what substrate commands exist. Deliberately NOT here:
-#   - skill listing -- the harness already advertises installed skills;
-#     repeating them costs context and duplicates the skill system.
-#   - astra validate -- validation is an opinion about the work, not
-#     session state; it belongs to validate-on-save, which fires at the
-#     moment an ASTRA file actually changes.
-#   - project name / decision count / universe count -- trivia the agent
-#     reads from astra.yaml when needed; costs against the 10k
-#     additionalContext budget.
+# The bundled astra plugin's own SessionStart hook (astra-session-start.sh)
+# already orients the agent in the spec — project location, analysis shape,
+# skill pointer. This hook adds only what the lc toolchain knows:
+# materialization state and the substrate CLI surface.
+#
+# Deliberately NOT here:
+#   - skill listing -- the harness already advertises installed skills.
+#   - astra validate -- validation belongs to validate-on-save, which
+#     fires when an ASTRA file actually changes.
 
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.cwd // empty')
@@ -40,12 +39,10 @@ stale_count=${stale_count:-0}
 missing_count=${missing_count:-0}
 alias_count=${alias_count:-0}
 
-summary="ASTRA project.
-Materialization: ok=$ok_count stale=$stale_count missing=$missing_count alias=$alias_count
+summary="Materialization: ok=$ok_count stale=$stale_count missing=$missing_count alias=$alias_count
 
 Substrate CLIs (use --help on any):
-  lc init / lc run / lc status / lc verify / lc build / lc export wrroc
-  astra validate / astra paper add / astra universe generate"
+  lc init / lc run / lc status / lc verify / lc build / lc export wrroc"
 
 needs_run=$((missing_count + stale_count))
 if [ "$needs_run" -gt 0 ]; then
