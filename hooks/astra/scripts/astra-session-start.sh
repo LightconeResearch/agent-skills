@@ -25,7 +25,7 @@ cwd=$(echo "$input" | jq -r '.cwd // empty')
 cd "$cwd" 2>/dev/null || exit 0
 [ -f "astra.yaml" ] || exit 0
 
-summary="ASTRA project — spec at $cwd/astra.yaml"
+summary="ASTRA project — spec at ./astra.yaml"
 
 # Shape of the analysis, straight from the spec: `astra info` opens with
 # name, version, and "Inputs: N | Outputs: M | Decisions: K" before the
