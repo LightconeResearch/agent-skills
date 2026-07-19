@@ -32,8 +32,13 @@ summary="ASTRA project — spec at $cwd/astra.yaml"
 # detail tables; keep just that header.
 if astra_resolve; then
     shape=$("${ASTRA_CMD[@]}" info 2>/dev/null | awk '/^Inputs:/ { print; exit } NF { print }')
-    [ -n "$shape" ] && summary="$summary
+    if [ -z "$shape" ] || [ "$(echo "$shape" | head -1)" = "Unknown" ]; then
+        summary="$summary
+Could not read the analysis shape — the spec is likely malformed. Run \`astra validate astra.yaml\` to see why."
+    else
+        summary="$summary
 $shape"
+    fi
 fi
 
 # Layout: sub-analysis specs and universe files, counted from disk.
