@@ -31,8 +31,15 @@ summary="ASTRA project — spec at ./astra.yaml"
 # name, version, and "Inputs: N | Outputs: M | Decisions: K" before the
 # detail tables; keep just that header.
 if astra_resolve; then
-    shape=$("${ASTRA_CMD[@]}" info 2>/dev/null | awk '/^Inputs:/ { print; exit } NF { print }')
-    if [ -z "$shape" ] || [ "$(echo "$shape" | head -1)" = "Unknown" ]; then
+    info_out=$("${ASTRA_CMD[@]}" info 2>/dev/null)
+    info_rc=$?
+    shape=$(echo "$info_out" | awk '/^Inputs:/ { print; exit } NF { print }')
+    if [ "$info_rc" -ne 0 ] || [ -z "$shape" ]; then
+        # astra itself failed (uvx resolution, network, version mismatch) —
+        # an environment problem, not a statement about the spec.
+        summary="$summary
+Could not run \`astra info\` (exit $info_rc) — toolchain problem, not necessarily the spec."
+    elif [ "$(echo "$shape" | head -1)" = "Unknown" ]; then
         summary="$summary
 Could not read the analysis shape — the spec is likely malformed. Run \`astra validate astra.yaml\` to see why."
     else
