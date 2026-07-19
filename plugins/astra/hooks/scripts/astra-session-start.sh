@@ -46,11 +46,11 @@ fi
 # how many there are and the agent still knows where to look.
 subs=$(find . -mindepth 2 -name astra.yaml -not -path "./universes/*" 2>/dev/null | sed 's|^\./||')
 sub_count=$(echo "$subs" | grep -c . )
-sub_dirs=$(echo "$subs" | sed 's|/[^/]*/astra.yaml$||' | sort -u | awk 'NR > 1 { printf ", " } { printf "%s/", $0 } END { print "" }')
+sub_dirs=$(echo "$subs" | sed 's|/[^/]*/astra.yaml$||' | sort -u | awk 'NR > 1 { printf ", " } { printf "./%s/", $0 } END { print "" }')
 universe_count=$(find universes -maxdepth 1 -name "*.yaml" 2>/dev/null | grep -c .)
 layout=""
 [ "$sub_count" -gt 0 ] && layout="$sub_count sub-analys$( [ "$sub_count" -eq 1 ] && echo is || echo es) in $sub_dirs"
-[ "$universe_count" -gt 0 ] && layout="${layout:+$layout, }$universe_count universe$( [ "$universe_count" -ne 1 ] && echo s) in universes/"
+[ "$universe_count" -gt 0 ] && layout="${layout:+$layout, }$universe_count universe$( [ "$universe_count" -ne 1 ] && echo s) in ./universes/"
 [ -n "$layout" ] && summary="$summary
 Layout: $layout"
 
@@ -58,5 +58,5 @@ summary="$summary
 
 Activate the astra skill when working with ASTRA analyses."
 
-jq -n --arg ctx "$summary" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
+jq -n --arg ctx "$summary" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: ($ctx + "\n")}}'
 exit 0

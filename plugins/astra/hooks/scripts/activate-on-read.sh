@@ -30,5 +30,5 @@ a decision, when to split a sub-analysis — and use `astra spec <term>` for the
 field-level grammar. Saved ASTRA files are validated automatically.
 EOF
 
-jq -n --arg ctx "$ctx" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
+jq -n --arg ctx "$ctx" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
 exit 0

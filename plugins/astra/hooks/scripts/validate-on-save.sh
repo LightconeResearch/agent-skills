@@ -34,7 +34,7 @@ fi
 # one-line installer rather than failing silently.
 if ! astra_resolve; then
     jq -n --arg ctx "ASTRA file saved ($filename) but not validated: no \`astra\` on PATH and \`uv\` is not installed. Install uv to enable validation: $ASTRA_UV_INSTALL" \
-        '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
+        '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
     exit 0
 fi
 
@@ -49,7 +49,7 @@ exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
     jq -n --arg ctx "ASTRA validation passed for $filename" \
-        '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
+        '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
     exit 0
 fi
 
@@ -94,5 +94,5 @@ if [ -n "$terms" ] && "${ASTRA_CMD[@]}" spec --help &>/dev/null; then
     done <<<"$terms"
 fi
 
-jq -n --arg ctx "$msg" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
+jq -n --arg ctx "$msg" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
 exit 0

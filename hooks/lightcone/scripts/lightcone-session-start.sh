@@ -4,9 +4,11 @@
 # The bundled astra plugin's own SessionStart hook (astra-session-start.sh)
 # already orients the agent in the spec — project location, analysis shape,
 # skill pointer. This hook adds only what the lc toolchain knows:
-# materialization state and the substrate CLI surface.
+# materialization state from `lc status`.
 #
 # Deliberately NOT here:
+#   - CLI cheat-sheet -- the lightcone cli skill carries the lc surface;
+#     teaching commands is skill territory, not hook territory.
 #   - skill listing -- the harness already advertises installed skills.
 #   - astra validate -- validation belongs to validate-on-save, which
 #     fires when an ASTRA file actually changes.
@@ -39,17 +41,14 @@ stale_count=${stale_count:-0}
 missing_count=${missing_count:-0}
 alias_count=${alias_count:-0}
 
-summary="Materialization: ok=$ok_count stale=$stale_count missing=$missing_count alias=$alias_count
-
-Substrate CLIs (use --help on any):
-  lc init / lc run / lc status / lc verify / lc build / lc export wrroc"
+summary="This is a Lightcone project — activate the lightcone skills appropriate for the current work.
+lc run materialization: ok=$ok_count stale=$stale_count missing=$missing_count alias=$alias_count"
 
 needs_run=$((missing_count + stale_count))
 if [ "$needs_run" -gt 0 ]; then
     summary="$summary
-
 ACTION REQUIRED: $needs_run output(s) need \`lc run\` ($missing_count missing, $stale_count stale)."
 fi
 
-jq -n --arg ctx "$summary" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
+jq -n --arg ctx "$summary" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: ($ctx + "\n")}}'
 exit 0
