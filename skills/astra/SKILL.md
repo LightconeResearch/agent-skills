@@ -6,8 +6,7 @@ description: >
   sub-analysis, and how to write it for and with a human. Invoke whenever
   reading, writing, or restructuring an astra.yaml spec, deciding whether a
   methodological choice should be a decision, weighing a sub-analysis split, or
-  when the user asks about ASTRA. The field-level grammar is not here — it
-  comes from the installed tool via `astra spec <term>`.
+  when the user asks about ASTRA.
 ---
 
 # Authoring ASTRA
