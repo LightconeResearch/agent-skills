@@ -41,22 +41,18 @@ $shape"
     fi
 fi
 
-# Layout: sub-analysis specs and universe files, found on disk. Paths, not
-# counts — the agent can go read a path. Capped so a many-universe project
-# doesn't flood the primer.
-list_capped() {  # list_capped <label> <path>... : "label: a, b, c (+N more)"
-    local label="$1"; shift
-    local cap=6 total=$# shown
-    [ "$total" -eq 0 ] && return
-    shown=$(printf '%s\n' "$@" | head -$cap | awk 'NR > 1 { printf ", " } { printf "%s", $0 } END { print "" }')
-    [ "$total" -gt "$cap" ] && shown="$shown (+$((total - cap)) more)"
-    echo "$label: $shown"
-}
-subs=$(find . -mindepth 2 -name astra.yaml -not -path "./universes/*" 2>/dev/null | sed 's|^\./||' | sort)
-universes=$(find universes -maxdepth 1 -name "*.yaml" 2>/dev/null | sort)
-layout=$( { [ -n "$subs" ] && list_capped "Sub-analyses" $subs; [ -n "$universes" ] && list_capped "Universes" $universes; } )
+# Layout: sub-analysis specs and universe files, found on disk — a count
+# plus the directory holding them, so the primer stays one line no matter
+# how many there are and the agent still knows where to look.
+subs=$(find . -mindepth 2 -name astra.yaml -not -path "./universes/*" 2>/dev/null | sed 's|^\./||')
+sub_count=$(echo "$subs" | grep -c . )
+sub_dirs=$(echo "$subs" | sed 's|/[^/]*/astra.yaml$||' | sort -u | awk 'NR > 1 { printf ", " } { printf "%s/", $0 } END { print "" }')
+universe_count=$(find universes -maxdepth 1 -name "*.yaml" 2>/dev/null | grep -c .)
+layout=""
+[ "$sub_count" -gt 0 ] && layout="$sub_count sub-analys$( [ "$sub_count" -eq 1 ] && echo is || echo es) in $sub_dirs"
+[ "$universe_count" -gt 0 ] && layout="${layout:+$layout, }$universe_count universe$( [ "$universe_count" -ne 1 ] && echo s) in universes/"
 [ -n "$layout" ] && summary="$summary
-$layout"
+Layout: $layout"
 
 summary="$summary
 
