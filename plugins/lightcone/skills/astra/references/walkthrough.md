@@ -1,41 +1,8 @@
-> Narrative tour of the ASTRA format, derived from the [astra-spec getting-started guide](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/getting-started.md) at v0.0.11.
-
 # ASTRA Walkthrough
 
-This walk-through gets you from zero to a validated ASTRA analysis in about ten minutes. You will install the CLI, scaffold a project, edit the analysis, and validate it.
+A narrative tour of the ASTRA format: scaffold a project, edit the analysis, validate it, define universes, and attach evidence. Based on the [astra-spec getting-started guide](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/getting-started.md).
 
 If you'd rather see the schema first, jump to the [specification](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/specification.md).
-
-## Install
-
-We recommend installing with [**uv**](https://docs.astral.sh/uv/) — Astral's fast Python package and project manager. If you don't have uv yet, follow the [official installation instructions](https://docs.astral.sh/uv/getting-started/installation/) (one-line install on macOS, Linux, and Windows).
-
-**uv (recommended)**
-
-```bash
-uv tool install astra-tools
-```
-
-**pip**
-
-```bash
-pip install astra-tools
-```
-
-**From source**
-
-```bash
-git clone https://github.com/LightconeResearch/ASTRA.git
-cd ASTRA
-uv pip install -e ".[dev]"
-```
-
-Verify the install:
-
-```bash
-astra --version
-astra --help
-```
 
 ## Scaffold a project
 

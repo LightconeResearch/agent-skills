@@ -134,8 +134,6 @@ hooks/<plugin>/             Per-plugin hooks.json + bash scripts (astra: validat
                             activate-on-read, pins; lightcone: venv, session primer)
 skills.config.json          Source of truth for how skills compose into plugins
 scripts/build.mjs           Regenerates every per-target file from the above
-scripts/derive-walkthrough.mjs  Re-derives skills/astra/references/walkthrough.md
-                            from astra-spec docs at the pinned version (npm run derive:walkthrough)
 scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm test)
 .claude-plugin/             Generated — Claude Code marketplace manifest
 .agents/plugins/            Generated — Codex marketplace manifest

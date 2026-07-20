@@ -51,6 +51,8 @@ fi
 # Layout: sub-analysis specs and universe files, found on disk — a count
 # plus the directory holding them, so the primer stays one line no matter
 # how many there are and the agent still knows where to look.
+# TODO(upstream): this could move into `astra info` itself; drop this block
+# once it does.
 subs=$(find . -mindepth 2 -name astra.yaml -not -path "./universes/*" 2>/dev/null | sed 's|^\./||')
 sub_count=$(echo "$subs" | grep -c . )
 sub_dirs=$(echo "$subs" | sed 's|/[^/]*/astra.yaml$||' | sort -u | awk 'NR > 1 { printf ", " } { printf "./%s/", $0 } END { print "" }')

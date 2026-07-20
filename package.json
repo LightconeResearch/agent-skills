@@ -12,7 +12,6 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "derive:walkthrough": "node scripts/derive-walkthrough.mjs",
     "validate": "node scripts/validate.mjs",
     "test": "node scripts/validate.mjs",
     "smoke": "node scripts/smoke.mjs"

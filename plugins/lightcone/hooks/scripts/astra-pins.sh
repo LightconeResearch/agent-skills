@@ -1,27 +1,24 @@
 #!/bin/bash
 # Single source of truth for the astra toolchain pins used across the astra
-# plugin — both hooks source this, and scripts/derive-walkthrough.mjs reads the
-# schema pin from it when re-deriving the walkthrough. Bump both here, in one
-# place, then re-run the derivation and `npm run build`.
+# plugin — both hooks source this. Bump both here, in one place.
 #
 # Dual pin: astra-tools declares only a floating `astra-spec>=0.0.11`, so pinning
-# the tools alone does not pin the schema. astra spec / astra validate must speak
-# the same schema the skill teaches, so we pin astra-spec exactly too.
-# The tools pin may be a version ("0.2.11") or, pre-release, a pinned git
-# requirement. TEMPORARY: pointing at the `astra spec` PR branch
-# (LightconeResearch/astra-tools#94) so the triad is testable end-to-end;
-# revert to a plain version at the next astra-tools release.
-ASTRA_TOOLS_PIN="git+https://github.com/LightconeResearch/astra-tools@astra-spec-command"
+# the tools alone does not pin the schema. astra validate must speak the same
+# schema the skill teaches, so we pin astra-spec exactly too. The tools pin may
+# be a version ("0.2.10") or, exceptionally, a pinned git requirement.
+ASTRA_TOOLS_PIN="0.2.10"
 ASTRA_SPEC_PIN="0.0.11"
 
-# One-line uv installer, surfaced when neither a project astra nor uv is present.
-ASTRA_UV_INSTALL="curl -LsSf https://astral.sh/uv/install.sh | sh"
+# Where to send the user when uv is missing. The hooks NEVER install uv
+# themselves — installing software is the user's call, not the agent's.
+ASTRA_UV_INSTALL="https://docs.astral.sh/uv/getting-started/installation/"
 
 # Resolve an astra runner into the ASTRA_CMD array:
 #   project venv `astra` (on PATH) first — respects a project's own toolchain;
 #   else an ephemeral, dual-pinned `uvx` run that installs on first use.
 # Returns 1 (with ASTRA_CMD unset) when neither astra nor uv is available; the
-# caller degrades to a message pointing at ASTRA_UV_INSTALL.
+# caller degrades to a message asking the user to install uv (ASTRA_UV_INSTALL).
+# Never install uv (or anything else) from a hook.
 astra_resolve() {
   if command -v astra &>/dev/null; then
     ASTRA_CMD=(astra)

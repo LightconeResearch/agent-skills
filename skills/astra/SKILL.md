@@ -165,9 +165,10 @@ outside ASTRA, referencing the spec's elements rather than restating them.
 Always run `astra paper add <doi>` when you cite a paper. Three steps wire a
 paper into the analysis:
 
-1. **Cache the PDF** — `astra paper add <doi>` downloads it to the project's
-   paper cache. Pass `--pdf PATH` if you already have a local copy, or
-   `--version N` for a specific arXiv version.
+1. **Cache the PDF** — `astra paper add <doi>` resolves the DOI and downloads
+   the paper to the project's paper cache. Pass `--version N` for a specific
+   arXiv version. Every cached paper comes from its DOI — do not attach
+   arbitrary local PDFs.
 2. **Add a `prior_insights:` entry** that cites the DOI (and optionally
    `version`) under `evidence:`. The `quote.exact` text must match the PDF
    verbatim; optional `prefix`/`suffix` (~20–100 chars on either side)
@@ -195,7 +196,7 @@ astra info [--decisions|--inputs|--outputs]     # Analysis summary / element det
 astra universe generate -n NAME [-d "desc"]     # Generate universe from defaults
 astra universe check universes/x.yaml           # Check universe constraints
 astra viz [--fmt ascii|mermaid]                 # Visualize decision space
-astra paper add DOI [--version N] [--pdf PATH]  # Cache a paper for evidence checks
+astra paper add DOI [--version N]               # Cache a paper (resolved from its DOI)
 astra paper list                                # List cached papers
 astra paper show DOI                            # Show metadata for a cached paper
 astra paper path DOI [--version N]              # Print the cached PDF's path
