@@ -1,12 +1,12 @@
-# ASTRA Walkthrough
+# Getting started
 
-A narrative tour of the ASTRA format: scaffold a project, edit the analysis, validate it, define universes, and attach evidence. Based on the [astra-spec getting-started guide](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/getting-started.md).
+A self-contained tour of the ASTRA format: scaffold a project, edit the analysis, validate it, inspect it, define universes, and attach evidence. It assumes the `astra` CLI is already installed — see [installation](https://astra-spec.org/latest/installation/).
 
-If you'd rather see the schema first, jump to the [specification](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/specification.md).
+If you'd rather see the schema first, jump to the [specification](https://astra-spec.org/latest/specification/).
 
 ## Scaffold a project
 
-Use [`astra init`](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/cli.md#astra-init) to create a minimal project layout:
+Use [`astra init`](https://astra-spec.org/latest/cli/#astra-init) to create a minimal project layout:
 
 ```bash
 astra init my-analysis
@@ -26,9 +26,7 @@ my-analysis/
 
 The scaffolded `astra.yaml` is a complete, valid analysis with `TODO:` markers in the prose. It includes a `description`, a `container:` default (`python:3.12-slim`), one example decision (`example_method` with options `option_a` and `option_b`), and two outputs (`main_result` chained into a `conclusion` report). It compiles as-is — you can edit incrementally rather than rewriting from scratch.
 
-> **Tip: Skip git initialisation**
-
-> By default `astra init` runs `git init` in the new directory and makes an initial commit. Pass `--no-git` to skip both.
+> **Tip:** By default `astra init` runs `git init` in the new directory and makes an initial commit. Pass `--no-git` to skip both.
 
 ## Edit the analysis
 
@@ -73,7 +71,7 @@ A few things worth noting:
 
 ## Validate
 
-Run [`astra validate`](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/cli.md#astra-validate) to check the file:
+Run [`astra validate`](https://astra-spec.org/latest/cli/#astra-validate) to check the file:
 
 ```bash
 astra validate astra.yaml
@@ -110,14 +108,14 @@ Non-blocking warnings print in yellow: the validator still returns success but s
 
 ## Inspect
 
-[`astra info`](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/cli.md#astra-info) prints a Rich-rendered summary: the analysis name, version, description, and tables for inputs, outputs, and decisions. By default everything renders; pass `--decisions`, `--inputs`, or `--outputs` to focus.
+[`astra info`](https://astra-spec.org/latest/cli/#astra-info) prints a Rich-rendered summary: the analysis name, version, description, and tables for inputs, outputs, and decisions. By default everything renders; pass `--decisions`, `--inputs`, or `--outputs` to focus.
 
 ```bash
 astra info
 astra info --decisions
 ```
 
-[`astra viz`](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/cli.md#astra-viz) draws the decision space. The default ASCII tree groups options under each decision, marks the default with `[default]`, and renders `incompatible_with` / `requires` constraints as glyphs (`✗` and `→`):
+[`astra viz`](https://astra-spec.org/latest/cli/#astra-viz) draws the decision space. The default ASCII tree groups options under each decision, marks the default with `[default]`, and renders `incompatible_with` / `requires` constraints as glyphs (`✗` and `→`):
 
 ```text
 └── My Analysis
@@ -220,6 +218,12 @@ When you re-validate with verification turned on, the validator reads each `prio
 astra validate astra.yaml --verify-evidence
 ```
 
-Papers are kept in a content-addressed cache under `~/.cache/astra/papers/`. The cache is populated by the agent or pipeline that authored the citation — they have the paper in hand at write time, so nothing extra is asked of the reader. The CLI exposes lower-level commands ([`astra paper add`](https://github.com/LightconeResearch/astra-spec/blob/v0.0.11/docs/cli.md#astra-paper), `list`, `verify-quote`, …) for manual cache management, troubleshooting, and CI integration, but the day-to-day flow doesn't require them.
+Papers are kept in a content-addressed cache under `~/.cache/astra/papers/`. The cache is populated by the agent or pipeline that authored the citation — they have the paper in hand at write time, so nothing extra is asked of the reader. The CLI exposes lower-level commands ([`astra paper add`](https://astra-spec.org/latest/cli/#astra-paper), `list`, `verify-quote`, …) for manual cache management, troubleshooting, and CI integration, but the day-to-day flow doesn't require them.
 
 Artifact-backed evidence (typical for `findings:` whose output artifacts haven't been materialised yet) is reported as `SKIPPED` rather than failing the validation.
+
+## What ASTRA doesn't run
+
+The CLI validates and inspects analyses; it does **not** execute recipes. Each `recipe.command` is a POSIX shell command that an executor — an agent, a workflow runner, a notebook, or you on the command line — reads and invokes. The executor materialises the declared inputs (giving each one a concrete on-disk path), picks an output path, expands the `{inputs.<id>}` / `{inputs}` / `{decisions.<id>}` / `{output}` placeholders against the active universe, and runs the resulting command.
+
+This separation is intentional: the spec stays stable as the agent and execution layer evolves. ASTRA's job is to make every analytical choice explicit, traceable, and verifiable; the choice of *runner* is yours.
