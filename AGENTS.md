@@ -37,11 +37,11 @@ Commit the regenerated files alongside your source change. CI runs `npm test` an
 fails if the generated files are out of sync. The generator is zero-dependency
 (Node ≥ 18 built-ins only) — no `npm install` is required.
 
-## The astra walkthrough reference
+## The astra getting-started reference
 
-`skills/astra/references/walkthrough.md` is a verbatim copy of astra-spec's
-`docs/walkthrough.md` at the pinned version. Don't hand-edit it — when the
-schema pin bumps, run `npm run fetch-walkthrough` and commit the result.
+`skills/astra/references/getting-started.md` is a verbatim copy of astra-spec's
+`docs/getting-started.md` at the pinned version. Don't hand-edit it — when the
+schema pin bumps, run `npm run fetch-getting-started` and commit the result.
 (While the pinned release predates the upstream page, the fetch is a no-op
 and the checked-in copy stands.) The astra toolchain pins live in one place —
 `hooks/astra/scripts/astra-pins.sh` (`ASTRA_TOOLS_PIN` / `ASTRA_SPEC_PIN`) —
