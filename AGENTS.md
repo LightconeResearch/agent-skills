@@ -39,11 +39,11 @@ fails if the generated files are out of sync. The generator is zero-dependency
 
 ## The astra walkthrough reference
 
-`skills/astra/references/walkthrough.md` is a hand-maintained tour of the ASTRA
-format, based on the astra-spec `docs/getting-started.md`. Edit it directly like
-any other skill file; keep it in step with the upstream docs when the schema pin
-bumps. (Longer term it will be replaced by pulling an agent-friendly `.md` page
-directly from astra-spec.) The astra toolchain pins live in one place —
+`skills/astra/references/walkthrough.md` is a verbatim copy of astra-spec's
+`docs/walkthrough.md` at the pinned version. Don't hand-edit it — when the
+schema pin bumps, run `npm run fetch-walkthrough` and commit the result.
+(While the pinned release predates the upstream page, the fetch is a no-op
+and the checked-in copy stands.) The astra toolchain pins live in one place —
 `hooks/astra/scripts/astra-pins.sh` (`ASTRA_TOOLS_PIN` / `ASTRA_SPEC_PIN`) —
 sourced by the astra hooks.
 

@@ -13,6 +13,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
+    "fetch-walkthrough": "node scripts/fetch-walkthrough.mjs",
     "test": "node scripts/validate.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
