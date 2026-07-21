@@ -11,7 +11,12 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const pins = readFileSync(join(ROOT, "hooks/astra/scripts/astra-pins.sh"), "utf8");
 const pin = pins.match(/^ASTRA_SPEC_PIN="([^"]+)"/m)[1];
-const url = `https://raw.githubusercontent.com/LightconeResearch/astra-spec/v${pin}/docs/getting-started.md`;
+// TEMP: the pinned release predates the standalone getting-started page
+// (astra-spec#50). Fetch from the PR branch until a release contains it,
+// then delete DOCS_REF so the pin takes over.
+const DOCS_REF = "cail/agent-walkthrough"; // ← delete when ASTRA_SPEC_PIN >= the release with astra-spec#50
+const ref = DOCS_REF || `v${pin}`;
+const url = `https://raw.githubusercontent.com/LightconeResearch/astra-spec/${ref}/docs/getting-started.md`;
 
 const res = await fetch(url).catch((err) => {
   console.error(`Could not reach ${url}: ${err.cause ?? err}`);
@@ -22,4 +27,4 @@ if (!res.ok) {
   process.exit(0);
 }
 writeFileSync(join(ROOT, "skills/astra/references/getting-started.md"), await res.text());
-console.log(`Wrote skills/astra/references/getting-started.md verbatim from astra-spec v${pin}.`);
+console.log(`Wrote skills/astra/references/getting-started.md verbatim from astra-spec ${ref}.`);
