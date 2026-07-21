@@ -24,10 +24,8 @@ marker="${TMPDIR:-/tmp}/astra-activate-${session_id}"
 : >"$marker" 2>/dev/null
 
 read -r -d '' ctx <<'EOF'
-You just read an ASTRA file (astra.yaml / universes/*.yaml). If you'll author or
-edit the spec, load the astra skill for orientation and judgment — what belongs in
-a decision, when to split a sub-analysis — and use `astra spec <term>` for the
-field-level grammar. Saved ASTRA files are validated automatically.
+You just read an ASTRA file. If you'll author or
+edit the spec, load the astra skill if it's not already loaded.
 EOF
 
 jq -n --arg ctx "$ctx" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
