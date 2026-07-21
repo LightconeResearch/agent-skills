@@ -31,7 +31,7 @@ fi
 # Resolve an astra runner; if neither astra nor uv is present, ask the USER to
 # install uv rather than failing silently. Never install uv from here.
 if ! astra_resolve; then
-    jq -n --arg ctx "ASTRA file saved ($filename) but not validated: no \`astra\` on PATH and \`uv\` is not installed. Do NOT install uv yourself — ask the user to install it ($ASTRA_UV_INSTALL) to enable validation." \
+    jq -n --arg ctx "ASTRA file saved ($filename) but not validated: \`uv\` is not installed. Ask the user if they'd like to install it ($ASTRA_UV_INSTALL) to enable validation." \
         '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
     exit 0
 fi
