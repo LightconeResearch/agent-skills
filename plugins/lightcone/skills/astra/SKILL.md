@@ -167,8 +167,7 @@ paper into the analysis:
 
 1. **Cache the PDF** — `astra paper add <doi>` resolves the DOI and downloads
    the paper to the project's paper cache. Pass `--version N` for a specific
-   arXiv version. Every cached paper comes from its DOI — do not attach
-   arbitrary local PDFs.
+   arXiv version.
 2. **Add a `prior_insights:` entry** that cites the DOI (and optionally
    `version`) under `evidence:`. The `quote.exact` text must match the PDF
    verbatim; optional `prefix`/`suffix` (~20–100 chars on either side)
