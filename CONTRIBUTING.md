@@ -49,8 +49,9 @@ Edit `skills.config.json`:
   plugin description). Nothing is added to the closure. Example:
   `lightcone-experimental` requires `lightcone`.
 - `hooks` — path to this plugin's own `hooks/<plugin>/hooks.json` (a plugin owns at
-  most one). Hook commands reference the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`
-  so both harnesses resolve it, and always spell script paths `hooks/scripts/<name>.sh`
+  most one). Hook commands reference the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
+  `CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines (the `$PLUGIN_ROOT`
+  fallback covers older harness versions) — and always spell script paths `hooks/scripts/<name>.sh`
   — the build flattens every closure hook tree under one `hooks/scripts/` dir. When a
   plugin bundles a dependency that also ships hooks (e.g. `lightcone` + `astra`), the
   generator **merges** the manifests: hook groups concatenate per event, scripts copy

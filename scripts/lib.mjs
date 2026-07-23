@@ -180,11 +180,16 @@ export function buildArtifacts(model) {
   // auto-discover skills/, agents/, and hooks/hooks.json under the plugin root.
   //
   // Hooks: Codex reads the same hooks.json protocol (SessionStart/PostToolUse
-  // with hookSpecificOutput.additionalContext); commands reference the plugin
-  // root harness-neutrally as ${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT} (Claude Code
-  // sets the former, Codex the latter), so one hooks.json + one scripts tree
-  // serves both. Neither plugin manifest declares dependencies — the closure
-  // is already bundled.
+  // with hookSpecificOutput.additionalContext); commands locate the plugin root
+  // as ${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}, so one hooks.json + one scripts tree
+  // serves both. CLAUDE_PLUGIN_ROOT is the one plugin-root variable both
+  // harnesses define: Claude Code sets only this name; Codex sets its native
+  // PLUGIN_ROOT and also CLAUDE_PLUGIN_ROOT as a compatibility alias (see the
+  // OpenAI hooks docs). The $PLUGIN_ROOT fallback covers Codex versions that
+  // predate the alias. The fallback is inline because the root is what locates
+  // the script — it cannot be hoisted into a script that hasn't been found yet.
+  // Neither plugin manifest declares dependencies — the closure is already
+  // bundled.
   for (const p of config.plugins) {
     const closureSkills = closure(p.name, byName);
     const closAgents = closureAgents(p.name, byName);

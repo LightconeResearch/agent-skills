@@ -58,9 +58,11 @@ tree (Claude uses one `marketplace.json` with `source: "./"` + `skills: [...]` a
 no per-plugin dirs). **Codex** (OpenAI Codex CLI) wants the opposite:
 `.agents/plugins/marketplace.json` plus a `plugins/<name>/.codex-plugin/plugin.json`
 *with its own `skills/` directory* per plugin — and, for a plugin that ships hooks,
-its own `hooks/` directory too (Codex reads the same `hooks.json`
-protocol; hook commands use `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`, so the generator declares the same
-`hooks` file and symlinks the canonical `hooks/` tree under the plugin root).
+its own `hooks/` directory too (every harness reads the same `hooks.json`
+protocol; hook commands locate the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
+`CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines, the fallback covers
+older versions — so the generator declares the same `hooks` file and packages the canonical
+`hooks/` tree under the plugin root).
 Maintaining both against one set of skills by hand is exactly what drifts
 silently. So `skills.config.json` + `skills/` is the single source, and everything
 per-target is generated and drift-checked. **Do not edit a generated file to fix a
