@@ -15,6 +15,11 @@
 # NOTE: 0.0.0 is a placeholder. The real floor is the first de-bundled
 # lightcone-cli release; the value is still under discussion. The mechanism is
 # what lands now, not the number.
+#
+# LC_VERSION_MAX is compared against the full installed X.Y.Z (not a minor-series
+# prefix). Policy: once the first de-bundled release has a version number, cap
+# MAX at the current minor series so the plugin warns on the next minor. Both
+# bounds are set together at release time.
 LC_VERSION_MIN="0.0.0"
 LC_VERSION_MAX=""
 
@@ -38,11 +43,11 @@ lc_version_warning() {
   [ -z "$cur" ] && return 0
 
   if lc_version_lt "$cur" "$LC_VERSION_MIN"; then
-    echo "WARNING: lc $cur is older than this plugin's minimum (${LC_VERSION_MIN}). Update lightcone-cli; some skills may misbehave."
+    echo "WARNING: lc $cur is older than this plugin's minimum (${LC_VERSION_MIN}). lightcone-cli is behind the plugin; some skills may misbehave. Please suggest upgrading lightcone-cli to the user."
     return 0
   fi
   if [ -n "$LC_VERSION_MAX" ] && lc_version_lt "$LC_VERSION_MAX" "$cur"; then
-    echo "WARNING: lc $cur is newer than this plugin's tested maximum (${LC_VERSION_MAX}). Behavior may differ from what the skills expect."
+    echo "WARNING: lc $cur is newer than this plugin's tested maximum (${LC_VERSION_MAX}). The plugin is behind lightcone-cli; behavior may differ from what the skills expect. Please suggest updating the lightcone plugin to the user (plugin marketplace update)."
     return 0
   fi
 }
