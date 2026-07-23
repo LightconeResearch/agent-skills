@@ -13,6 +13,10 @@
 #   - astra validate -- validation belongs to validate-on-save, which
 #     fires when an ASTRA file actually changes.
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./lc-version.sh
+. "$SCRIPT_DIR/lc-version.sh"
+
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.cwd // empty')
 
@@ -48,6 +52,14 @@ needs_run=$((missing_count + stale_count))
 if [ "$needs_run" -gt 0 ]; then
     summary="$summary
 ACTION REQUIRED: $needs_run output(s) need \`lc run\` ($missing_count missing, $stale_count stale)."
+fi
+
+# Warn (never block) when the installed lc drifts outside the range this plugin
+# was built against. Empty when lc is in range or its version is unparseable.
+lc_warning=$(lc_version_warning)
+if [ -n "$lc_warning" ]; then
+    summary="$summary
+$lc_warning"
 fi
 
 jq -n --arg ctx "$summary" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: ($ctx + "\n")}}'
