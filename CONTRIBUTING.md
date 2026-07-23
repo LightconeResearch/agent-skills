@@ -14,7 +14,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
 | `.agents/plugins/marketplace.json` | Codex marketplace manifest | ⚙️ generated |
-| `plugins/**` | Codex per-plugin dirs (symlinked skills) | ⚙️ generated |
+| `plugins/**` | Per-plugin dirs — self-contained byte-copies, for any non-Claude harness | ⚙️ generated |
 | `manifest.json` | Skill/plugin registry | ⚙️ generated |
 
 ## Add a skill
@@ -40,7 +40,7 @@ Edit `skills.config.json`:
 
 - `skills` — directly-owned skills (Claude exposes exactly these).
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
-  transitive closure (own + dependency skills, hooks, agents) as symlinks under
+  transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers archive the dir and don't follow outward symlinks, so copies are required) under
   `plugins/<name>/`, so the plugin is self-contained and installs identically on both
   harnesses. Example: `lightcone` bundles `astra`.
 - `requires` — other plugins this one **depends on but does not bundle**. Documented
@@ -65,7 +65,7 @@ Then `npm run build && npm test`.
 - every skill's `name` is lowercase-hyphen and matches its directory;
 - `description` is present and ≤ 1024 chars;
 - plugins reference only skills/agents/hooks/deps that exist;
-- the generated manifests and `plugins/` symlinks match what the current source
+- the generated manifests and `plugins/` byte-copies match what the current source
   would produce (drift check).
 
 ## Local testing of the install paths
