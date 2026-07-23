@@ -11,11 +11,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const pins = readFileSync(join(ROOT, "hooks/astra/scripts/astra-pins.sh"), "utf8");
 const pin = pins.match(/^ASTRA_SPEC_PIN="([^"]+)"/m)[1];
-// TEMP: the pinned release predates the standalone getting-started page
-// (astra-spec#50). Fetch from the PR branch until a release contains it,
-// then delete DOCS_REF so the pin takes over.
-const DOCS_REF = "main"; // ← delete when ASTRA_SPEC_PIN >= the release with astra-spec#50
-const ref = DOCS_REF || `v${pin}`;
+const ref = `v${pin}`;
 const url = `https://raw.githubusercontent.com/LightconeResearch/astra-spec/${ref}/docs/getting-started.md`;
 
 const res = await fetch(url).catch((err) => {

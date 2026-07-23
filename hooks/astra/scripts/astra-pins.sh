@@ -7,7 +7,7 @@
 # schema the skill teaches, so we pin astra-spec exactly too. The tools pin may
 # be a version ("0.2.10") or, exceptionally, a pinned git requirement.
 ASTRA_TOOLS_PIN="0.2.11"
-ASTRA_SPEC_PIN="0.0.11"
+ASTRA_SPEC_PIN="0.0.12"
 
 # Where to send the user when uv is missing. The hooks NEVER install uv
 # themselves — installing software is the user's call, not the agent's.
