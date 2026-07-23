@@ -6,7 +6,7 @@
 # the tools alone does not pin the schema. astra validate must speak the same
 # schema the skill teaches, so we pin astra-spec exactly too. The tools pin may
 # be a version ("0.2.10") or, exceptionally, a pinned git requirement.
-ASTRA_TOOLS_PIN="0.2.10"
+ASTRA_TOOLS_PIN="0.2.11"
 ASTRA_SPEC_PIN="0.0.11"
 
 # Where to send the user when uv is missing. The hooks NEVER install uv
