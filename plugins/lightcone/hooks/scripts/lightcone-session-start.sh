@@ -24,9 +24,9 @@ cwd=$(echo "$input" | jq -r '.cwd // empty')
 cd "$cwd" 2>/dev/null || exit 0
 [ -f "astra.yaml" ] || exit 0
 
-# lc comes from the project venv (prepended to PATH by activate-venv.sh).
-# If it didn't resolve, the venv setup is broken and there is nothing
-# useful we can report.
+# lc is a global tool (installed alongside astra from the lightcone-cli
+# wheel). If it isn't on PATH, the toolchain isn't installed and there is
+# nothing useful we can report.
 command -v lc &>/dev/null || exit 0
 
 status_json=$(lc status --json 2>/dev/null)

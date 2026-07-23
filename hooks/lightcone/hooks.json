@@ -5,11 +5,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/scripts/activate-venv.sh\"",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/scripts/lightcone-session-start.sh\"",
             "timeout": 15
           }

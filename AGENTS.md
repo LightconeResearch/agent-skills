@@ -15,7 +15,7 @@ name (e.g. `/lightcone:new`, `/astra:astra`).
   skill; the directory name must equal the `name:` in the frontmatter.
 - `agents/` — Claude subagents (`lc-extractor`, used by the `start` skill). `hooks/<plugin>/`
   — per-plugin `hooks.json` + bash scripts (`astra/` validates on save and reminds the
-  agent to load the skill; `lightcone/` activates the venv and prints the session primer).
+  agent to load the skill; `lightcone/` prints the session primer).
 - `skills.config.json` — declares how skills compose into the plugins
   (`astra`, `lightcone`, `lightcone-experimental`). A plugin composes with others
   two ways: `dependencies` (bundled build-time closure) and `requires`

@@ -5,9 +5,9 @@
 # The hook surfaces astra validate's output verbatim — no parsing. Pointers to
 # the relevant schema docs belong in astra-tools' own error messages (upstream).
 #
-# astra is resolved project-venv-first (activate-venv.sh prepends the venv to
-# PATH at SessionStart), falling back to an ephemeral, dual-pinned `uvx` run when
-# there is no project install. Validation is stateless, so uvx is a safe fallback.
+# astra is resolved global-first (the astra on PATH, installed from the
+# lightcone-cli wheel), falling back to an ephemeral, dual-pinned `uvx` run when
+# there is no global install. Validation is stateless, so uvx is a safe fallback.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/astra-pins.sh"

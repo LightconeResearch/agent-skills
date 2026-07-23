@@ -14,7 +14,7 @@ ASTRA_SPEC_PIN="0.0.12"
 ASTRA_UV_INSTALL="https://docs.astral.sh/uv/getting-started/installation/"
 
 # Resolve an astra runner into the ASTRA_CMD array:
-#   project venv `astra` (on PATH) first — respects a project's own toolchain;
+#   a global `astra` (on PATH) first — respects the installed toolchain;
 #   else an ephemeral, dual-pinned `uvx` run that installs on first use.
 # Returns 1 (with ASTRA_CMD unset) when neither astra nor uv is available; the
 # caller degrades to a message asking the user to install uv (ASTRA_UV_INSTALL).
