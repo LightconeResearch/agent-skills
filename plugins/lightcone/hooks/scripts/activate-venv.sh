@@ -20,6 +20,17 @@
 # Gated on .lightcone/ (created by `lc init`), not astra.yaml -- astra.yaml
 # marks any ASTRA project including astra-only ones with no lc execution
 # layer, and only lc-managed projects have a project venv to activate.
+#
+#   SessionStart ──▶ cwd known? ──no──▶ exit silent
+#                       │yes
+#                       ▼
+#                  ./.lightcone/ exists? ──no──▶ exit silent (not lc-managed)
+#                       │yes
+#                       ▼
+#                  ./.venv/bin exists & CLAUDE_ENV_FILE set? ──no──▶ exit silent
+#                       │yes
+#                       ▼
+#                  append VIRTUAL_ENV + PATH exports to CLAUDE_ENV_FILE
 
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.cwd // empty')

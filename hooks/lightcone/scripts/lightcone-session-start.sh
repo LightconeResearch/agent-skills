@@ -12,6 +12,23 @@
 #   - skill listing -- the harness already advertises installed skills.
 #   - astra validate -- validation belongs to validate-on-save, which
 #     fires when an ASTRA file actually changes.
+#
+#   SessionStart ──▶ cwd + ./.lightcone/ present? ──no──▶ exit silent
+#                          │yes
+#                          ▼
+#                     `lc` on PATH? ──no──▶ exit silent (toolchain missing)
+#                          │yes
+#                          ▼
+#                     `lc status --json` ──▶ tally ok/stale/missing/alias
+#                          │
+#                          ▼
+#                     stale+missing > 0? ──yes──▶ append "ACTION REQUIRED: lc run"
+#                          │no
+#                          ▼
+#                     lc version outside plugin's pinned range? ──yes──▶ append warning
+#                          │
+#                          ▼
+#                     inject summary
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./lc-version.sh
