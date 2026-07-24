@@ -10,18 +10,16 @@
 # uvx, so it is self-consistent by construction.
 #
 # LC_VERSION_MIN — lowest `lc` this plugin supports (inclusive).
-# LC_VERSION_MAX — highest supported `lc` (inclusive); empty means open-ended.
+# LC_VERSION_MAX — exclusive upper bound; empty means open-ended.
 #
-# NOTE: 0.0.0 is a placeholder. The real floor is the first de-bundled
-# lightcone-cli release; the value is still under discussion. The mechanism is
-# what lands now, not the number.
-#
-# LC_VERSION_MAX is compared against the full installed X.Y.Z (not a minor-series
-# prefix). Policy: once the first de-bundled release has a version number, cap
-# MAX at the current minor series so the plugin warns on the next minor. Both
-# bounds are set together at release time.
-LC_VERSION_MIN="0.0.0"
-LC_VERSION_MAX=""
+# Range: 0.4.0 <= lc < 0.5.0 (agreed 2026-07-24, pending confirmation with
+# Francois and Alexandre). 0.4.0 is the first de-bundled lightcone-cli release:
+# older CLIs bundle their own copy of the skills, so running them next to the
+# marketplace plugin double-ships every skill. The exclusive ceiling means the
+# whole 0.4 series is in range; a future 0.5 warns until a plugin release
+# blesses it. Both bounds move together at each contract-changing release.
+LC_VERSION_MIN="0.4.0"
+LC_VERSION_MAX="0.5.0"
 
 # True when semver $1 is strictly less than semver $2 (sort -V ordering).
 lc_version_lt() {
@@ -46,8 +44,8 @@ lc_version_warning() {
     echo "WARNING: lc $cur is older than this plugin's minimum (${LC_VERSION_MIN}). lightcone-cli is behind the plugin; some skills may misbehave. Please suggest upgrading lightcone-cli to the user."
     return 0
   fi
-  if [ -n "$LC_VERSION_MAX" ] && lc_version_lt "$LC_VERSION_MAX" "$cur"; then
-    echo "WARNING: lc $cur is newer than this plugin's tested maximum (${LC_VERSION_MAX}). The plugin is behind lightcone-cli; behavior may differ from what the skills expect. Please suggest updating the lightcone plugin to the user (plugin marketplace update)."
+  if [ -n "$LC_VERSION_MAX" ] && ! lc_version_lt "$cur" "$LC_VERSION_MAX"; then
+    echo "WARNING: lc $cur is at or beyond this plugin's tested ceiling (${LC_VERSION_MAX}, exclusive). The plugin is behind lightcone-cli; behavior may differ from what the skills expect. Please suggest updating the lightcone plugin to the user (plugin marketplace update)."
     return 0
   fi
 }
