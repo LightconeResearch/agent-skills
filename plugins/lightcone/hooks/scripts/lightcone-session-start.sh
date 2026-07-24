@@ -22,7 +22,11 @@ cwd=$(echo "$input" | jq -r '.cwd // empty')
 
 [ -z "$cwd" ] && exit 0
 cd "$cwd" 2>/dev/null || exit 0
-[ -f "astra.yaml" ] || exit 0
+# .lightcone/ is created by `lc init` and marks an lc-managed project. Gate
+# on it rather than astra.yaml -- astra.yaml marks any ASTRA project,
+# including astra-only ones with no lc execution layer, and this is an
+# execution-layer hook.
+[ -d ".lightcone" ] || exit 0
 
 # lc is a global tool (installed alongside astra from the lightcone-cli
 # wheel). If it isn't on PATH, the toolchain isn't installed and there is
