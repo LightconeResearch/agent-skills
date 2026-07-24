@@ -8,6 +8,17 @@
 # astra is resolved global-first (the astra on PATH, installed from the
 # lightcone-cli wheel), falling back to an ephemeral, dual-pinned `uvx` run when
 # there is no global install. Validation is stateless, so uvx is a safe fallback.
+#
+#   Write/Edit ──▶ astra.yaml or universes/*.yaml? ──no──▶ exit silent
+#                     │yes
+#                     ▼
+#                astra resolves? ──no──▶ inject "saved but NOT validated; ask user to install uv"
+#                     │yes
+#                     ▼
+#                astra validate ──pass──▶ inject "validation passed"
+#                     │fail
+#                     ▼
+#                inject verbatim validate output
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/astra-pins.sh"

@@ -14,6 +14,17 @@
 #     session state; it belongs to validate-on-save, which fires at the
 #     moment an ASTRA file actually changes.
 #   - skill listing -- the harness already advertises installed skills.
+#
+#   SessionStart ──▶ cwd + astra.yaml present? ──no──▶ exit silent
+#                          │yes
+#                          ▼
+#                     astra resolves? ──no──▶ inject "could not run astra info — toolchain problem"
+#                          │yes
+#                          ▼
+#                     astra info shape = "Unknown"? ──yes──▶ inject "spec likely malformed; run astra validate"
+#                          │no
+#                          ▼
+#                     inject spec path + shape + on-disk layout (subs, universes)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/astra-pins.sh"

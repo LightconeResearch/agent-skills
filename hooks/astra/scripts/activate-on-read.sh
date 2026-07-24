@@ -4,6 +4,14 @@
 # active, so the reminder is deliberately gentle and fires at most once per
 # session (a per-session marker suppresses the repeats) — enough to catch an agent
 # that wandered into an astra.yaml cold, without nagging one already oriented.
+#
+#   Read ──▶ ASTRA file? ──no──▶ exit silent
+#              │yes
+#              ▼
+#         marker for this session_id exists? ──yes──▶ exit silent (already nudged)
+#              │no
+#              ▼
+#         create marker, inject "load the astra skill" reminder
 
 input=$(cat)
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_response.filePath // empty')
