@@ -41,7 +41,7 @@ Edit `skills.config.json`:
 - `skills` — directly-owned skills (Claude exposes exactly these).
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
   transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers
-  archive the plugin dir, so files are copied in) under `plugins/<name>/`, so the plugin
+  archive the dir and don't follow outward symlinks, so copies are required) under `plugins/<name>/`, so the plugin
   is self-contained and installs identically on both harnesses. Example: `lightcone`
   bundles `astra`.
 - `requires` — other plugins this one **depends on but does not bundle**. Documented

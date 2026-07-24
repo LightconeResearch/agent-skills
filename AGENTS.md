@@ -74,7 +74,7 @@ each `SKILL.md` frontmatter, computes the transitive skill closure per plugin (o
 `dependencies` skills — a plugin's generated dir bundles its whole closure so it
 installs identically on both harnesses; `requires` prerequisites are deliberately
 NOT in the closure, so `lightcone-experimental` ships only its own six skills and
-the user installs `lightcone` separately), and returns the exact files + symlinks
+the user installs `lightcone` separately), and returns the exact files + byte-copies
 every target needs. `build.mjs` writes
 them; `validate.mjs` regenerates in memory and diffs against disk. Both import `lib.mjs`
 so the generator and the checker agree by construction.
@@ -88,9 +88,10 @@ so the generator and the checker agree by construction.
   If you add a dependency, you give that up. The parser only needs to handle `name` and
   `description` — if a skill ever needs richer frontmatter parsing, that's the tradeoff
   to weigh.
-- **Generated plugin contents are real files, not symlinks.** Codex installs a
-  plugin by archiving its directory and does not follow symlinks that point back
-  to canonical `skills/`, `agents/`, or `hooks/`. The generator therefore copies
+- **Generated plugin contents are real files, not symlinks.** A plugin installer
+  archives the plugin directory and does not follow symlinks that point back
+  to canonical `skills/`, `agents/`, or `hooks/` — this holds for every harness,
+  not just one. The generator therefore copies
   the complete closure into `plugins/<name>/`, while canonical files remain the
   only authoring source. `validate.mjs` compares every packaged file byte-for-byte
   with that source and checks executable permissions, so generated copies cannot
