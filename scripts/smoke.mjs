@@ -34,6 +34,7 @@ const CODEX_PROBE_SKILLS = {
 // so their presence in the cache is what makes them load — probe the plugins that
 // ship them. Same silent-omission risk as skills; keep the assertions symmetric.
 const CODEX_PROBE_HOOKS = {
+  astra: "hooks/hooks.json",
   lightcone: "hooks/hooks.json",
 };
 

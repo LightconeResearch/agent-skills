@@ -11,12 +11,12 @@
   "plugins": [
     {
       "name": "astra",
-      "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition.",
+      "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
       "source": "./plugins/astra"
     },
     {
       "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `report` authors the MyST report that references astra.yaml elements by path, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships SessionStart/PostToolUse hooks that activate the project venv and validate astra.yaml on save, plus the lc-extractor subagent for literature extraction. Bundles the astra reference, so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
+      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `report` authors the MyST report that references astra.yaml elements by path, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships the lc-extractor subagent for literature extraction. Bundles the astra reference — and with it the astra hooks (session primer, validate-on-save, activate-on-read) — so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
       "source": "./plugins/lightcone"
     },
     {
