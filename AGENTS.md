@@ -13,8 +13,9 @@ name (e.g. `/lightcone:new`, `/astra:astra`).
 
 - `skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per
   skill; the directory name must equal the `name:` in the frontmatter.
-- `agents/` — Claude subagents (`lc-extractor`, used by the `start` skill). `hooks/` —
-  plugin `hooks.json` + bash scripts.
+- `agents/` — Claude subagents (`lc-extractor`, used by the `start` skill). `hooks/<plugin>/`
+  — per-plugin `hooks.json` + bash scripts (`astra/` validates on save and reminds the
+  agent to load the skill; `lightcone/` prints the session primer).
 - `skills.config.json` — declares how skills compose into the plugins
   (`astra`, `lightcone`, `lightcone-experimental`). A plugin composes with others
   two ways: `dependencies` (bundled build-time closure) and `requires`
@@ -36,6 +37,16 @@ Commit the regenerated files alongside your source change. CI runs `npm test` an
 fails if the generated files are out of sync. The generator is zero-dependency
 (Node ≥ 18 built-ins only) — no `npm install` is required.
 
+## The astra getting-started reference
+
+`skills/astra/references/getting-started.md` is a verbatim copy of astra-spec's
+`docs/getting-started.md` at the pinned version. Don't hand-edit it — when the
+schema pin bumps, run `npm run fetch-getting-started` and commit the result.
+(While the pinned release predates the upstream page, the fetch is a no-op
+and the checked-in copy stands.) The astra toolchain pins live in one place —
+`hooks/astra/scripts/astra-pins.sh` (`ASTRA_TOOLS_PIN` / `ASTRA_SPEC_PIN`) —
+sourced by the astra hooks.
+
 ## Build tooling — design & rationale
 
 If you arrived expecting a plain skills folder and found a generator, here's why it
@@ -47,9 +58,11 @@ tree (Claude uses one `marketplace.json` with `source: "./"` + `skills: [...]` a
 no per-plugin dirs). **Codex** (OpenAI Codex CLI) wants the opposite:
 `.agents/plugins/marketplace.json` plus a `plugins/<name>/.codex-plugin/plugin.json`
 *with its own `skills/` directory* per plugin — and, for a plugin that ships hooks,
-its own `hooks/` directory too (Codex reads the same `hooks.json`
-protocol; hook commands use `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`, so the generator declares the same
-`hooks` file and symlinks the canonical `hooks/` tree under the plugin root).
+its own `hooks/` directory too (every harness reads the same `hooks.json`
+protocol; hook commands locate the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
+`CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines, the fallback covers
+older versions — so the generator declares the same `hooks` file and packages the canonical
+`hooks/` tree under the plugin root).
 Maintaining both against one set of skills by hand is exactly what drifts
 silently. So `skills.config.json` + `skills/` is the single source, and everything
 per-target is generated and drift-checked. **Do not edit a generated file to fix a
@@ -61,7 +74,7 @@ each `SKILL.md` frontmatter, computes the transitive skill closure per plugin (o
 `dependencies` skills — a plugin's generated dir bundles its whole closure so it
 installs identically on both harnesses; `requires` prerequisites are deliberately
 NOT in the closure, so `lightcone-experimental` ships only its own six skills and
-the user installs `lightcone` separately), and returns the exact files + symlinks
+the user installs `lightcone` separately), and returns the exact files + byte-copies
 every target needs. `build.mjs` writes
 them; `validate.mjs` regenerates in memory and diffs against disk. Both import `lib.mjs`
 so the generator and the checker agree by construction.
@@ -75,9 +88,10 @@ so the generator and the checker agree by construction.
   If you add a dependency, you give that up. The parser only needs to handle `name` and
   `description` — if a skill ever needs richer frontmatter parsing, that's the tradeoff
   to weigh.
-- **Generated plugin contents are real files, not symlinks.** Codex installs a
-  plugin by archiving its directory and does not follow symlinks that point back
-  to canonical `skills/`, `agents/`, or `hooks/`. The generator therefore copies
+- **Generated plugin contents are real files, not symlinks.** A plugin installer
+  archives the plugin directory and does not follow symlinks that point back
+  to canonical `skills/`, `agents/`, or `hooks/` — this holds for every harness,
+  not just one. The generator therefore copies
   the complete closure into `plugins/<name>/`, while canonical files remain the
   only authoring source. `validate.mjs` compares every packaged file byte-for-byte
   with that source and checks executable permissions, so generated copies cannot
