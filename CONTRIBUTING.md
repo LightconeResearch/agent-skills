@@ -9,12 +9,12 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 |---|---|---|
 | `skills/<name>/SKILL.md` (+ `references/`, `scripts/`, `assets/`, `templates/`) | Canonical skills | ✅ |
 | `agents/*.md` | Claude subagents | ✅ |
-| `hooks/hooks.json`, `hooks/scripts/*.sh` | Plugin hooks | ✅ |
+| `hooks/<plugin>/hooks.json`, `hooks/<plugin>/scripts/*.sh` | Per-plugin hooks | ✅ |
 | `skills.config.json` | How skills compose into plugins | ✅ |
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
 | `.agents/plugins/marketplace.json` | Codex marketplace manifest | ⚙️ generated |
-| `plugins/**` | Codex per-plugin dirs (symlinked skills) | ⚙️ generated |
+| `plugins/**` | Per-plugin dirs — self-contained byte-copies | ⚙️ generated |
 | `manifest.json` | Skill/plugin registry | ⚙️ generated |
 
 ## Add a skill
@@ -40,15 +40,23 @@ Edit `skills.config.json`:
 
 - `skills` — directly-owned skills (Claude exposes exactly these).
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
-  transitive closure (own + dependency skills, hooks, agents) as symlinks under
-  `plugins/<name>/`, so the plugin is self-contained and installs identically on both
-  harnesses. Example: `lightcone` bundles `astra`.
+  transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers
+  archive the dir and don't follow outward symlinks, so copies are required) under `plugins/<name>/`, so the plugin
+  is self-contained and installs identically on both harnesses. Example: `lightcone`
+  bundles `astra`.
 - `requires` — other plugins this one **depends on but does not bundle**. Documented
   only: the user installs the required plugin separately (surfaced in the README and the
   plugin description). Nothing is added to the closure. Example:
   `lightcone-experimental` requires `lightcone`.
-- `hooks` — path to a `hooks.json` (hook commands reference the plugin root as
-  `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` so both harnesses resolve it). `agents` — Claude subagent file paths.
+- `hooks` — path to this plugin's own `hooks/<plugin>/hooks.json` (a plugin owns at
+  most one). Hook commands reference the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
+  `CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines (the `$PLUGIN_ROOT`
+  fallback covers older harness versions) — and always spell script paths `hooks/scripts/<name>.sh`
+  — the build flattens every closure hook tree under one `hooks/scripts/` dir. When a
+  plugin bundles a dependency that also ships hooks (e.g. `lightcone` + `astra`), the
+  generator **merges** the manifests: hook groups concatenate per event, scripts copy
+  side by side (canonical script basenames must stay unique across plugins). `agents` —
+  Claude subagent file paths.
 
 Then `npm run build && npm test`.
 
@@ -59,7 +67,7 @@ Then `npm run build && npm test`.
 - every skill's `name` is lowercase-hyphen and matches its directory;
 - `description` is present and ≤ 1024 chars;
 - plugins reference only skills/agents/hooks/deps that exist;
-- the generated manifests and `plugins/` symlinks match what the current source
+- the generated manifests and `plugins/` byte-copies match what the current source
   would produce (drift check).
 
 ## Local testing of the install paths

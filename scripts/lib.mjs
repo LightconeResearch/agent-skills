@@ -105,18 +105,28 @@ export function closureAgents(pluginName, byName) {
   return [...new Set(out)];
 }
 
-/** Transitive hooks closure — the distinct hooks.json paths across the closure.
- *  Only one canonical hooks tree exists today; more than one distinct source
- *  would need a merge step, so we assert the single-source invariant here. */
+/** Transitive hooks closure — the distinct hooks.json paths across the closure,
+ *  in dependency-first order (a dependency's hooks precede the plugin's own).
+ *  A plugin owns at most one hooks.json, but its closure can bundle several
+ *  (e.g. `lightcone` inherits `astra`'s), so the list is merged at build time by
+ *  mergeHooks() — hook groups concatenate per event, and the shared scripts tree
+ *  flattens under one `hooks/scripts/` dir (canonical script basenames are unique
+ *  across plugins, which mergeHooks asserts). */
 export function closureHooks(pluginName, byName) {
-  const out = [...new Set(closurePlugins(pluginName, byName).flatMap((p) => (p.hooks ? [p.hooks] : [])))];
-  if (out.length > 1) {
-    throw new Error(
-      `plugin "${pluginName}": closure bundles ${out.length} distinct hooks.json sources ` +
-        `(${out.join(", ")}); merging hooks across dependencies is not implemented.`,
-    );
+  return [...new Set(closurePlugins(pluginName, byName).flatMap((p) => (p.hooks ? [p.hooks] : [])))];
+}
+
+/** Merge several canonical hooks.json files into one manifest string. Each source
+ *  is `{ hooks: { <Event>: [group, ...] } }`; the merge concatenates groups per
+ *  event in source order, so a dependency's hooks fire alongside the plugin's own.
+ *  Emitted through jsonl() for byte-stable, drift-checkable output. */
+export function mergeHooks(hookPaths) {
+  const merged = {};
+  for (const rel of hookPaths) {
+    const { hooks } = JSON.parse(readFileSync(join(ROOT, rel), "utf8"));
+    for (const [event, groups] of Object.entries(hooks || {})) (merged[event] ||= []).push(...groups);
   }
-  return out;
+  return jsonl({ hooks: merged });
 }
 
 /** Produce every generated artifact. Returns:
@@ -170,16 +180,20 @@ export function buildArtifacts(model) {
   // auto-discover skills/, agents/, and hooks/hooks.json under the plugin root.
   //
   // Hooks: Codex reads the same hooks.json protocol (SessionStart/PostToolUse
-  // with hookSpecificOutput.additionalContext); commands reference the plugin
-  // root harness-neutrally as ${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT} (Claude Code
-  // sets the former, Codex the latter), so one hooks.json + one scripts tree
-  // serves both. Neither plugin manifest declares dependencies — the closure
-  // is already bundled.
+  // with hookSpecificOutput.additionalContext); commands locate the plugin root
+  // as ${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}, so one hooks.json + one scripts tree
+  // serves both. CLAUDE_PLUGIN_ROOT is the one plugin-root variable both
+  // harnesses define: Claude Code sets only this name; Codex sets its native
+  // PLUGIN_ROOT and also CLAUDE_PLUGIN_ROOT as a compatibility alias (see the
+  // OpenAI hooks docs). The $PLUGIN_ROOT fallback covers Codex versions that
+  // predate the alias. The fallback is inline because the root is what locates
+  // the script — it cannot be hoisted into a script that hasn't been found yet.
+  // Neither plugin manifest declares dependencies — the closure is already
+  // bundled.
   for (const p of config.plugins) {
     const closureSkills = closure(p.name, byName);
     const closAgents = closureAgents(p.name, byName);
-    const closHooks = closureHooks(p.name, byName); // 0 or 1 entry
-    const hooksPath = closHooks[0]; // repo-relative, e.g. "hooks/hooks.json"
+    const closHooks = closureHooks(p.name, byName); // repo-relative hooks.json paths
 
     // Shared metadata for both harnesses' manifests.
     const base = {
@@ -238,16 +252,32 @@ export function buildArtifacts(model) {
       });
     }
 
-    // hooks/ — materialize the whole canonical hooks tree (hooks.json + scripts)
-    // when the closure includes hooks. The destination is derived from the
-    // canonical manifest path so the generated tree cannot drift if it is renamed.
-    if (hooksPath) {
-      const hooksDir = dirname(hooksPath); // e.g. "hooks"
-      for (const source of filesUnder(hooksDir)) copies.push({
-        kind: "hook",
-        source,
-        dest: `plugins/${p.name}/${hooksDir}/${source.slice(hooksDir.length + 1)}`,
-      });
+    // hooks/ — flatten every canonical hooks tree in the closure under one
+    // plugins/<name>/hooks/ dir. Scripts (and any non-manifest files) copy
+    // byte-for-byte from hooks/<plugin>/scripts/* into hooks/scripts/*, which is
+    // where each hooks.json command resolves them (${CLAUDE_PLUGIN_ROOT}/hooks/
+    // scripts/…). The manifest itself is a single byte-copy when the closure has
+    // one source, or a generated merge when it inherits more (e.g. lightcone +
+    // astra); the merged file is drift-checked like any other generated output.
+    if (closHooks.length) {
+      dirs.push(`plugins/${p.name}/hooks`);
+      const seenDest = new Map();
+      for (const hp of closHooks) {
+        const srcDir = dirname(hp); // e.g. "hooks/astra"
+        for (const source of filesUnder(srcDir)) {
+          const rel = source.slice(srcDir.length + 1); // "hooks.json" | "scripts/x.sh"
+          if (rel === "hooks.json") continue; // manifest handled below
+          const dest = `plugins/${p.name}/hooks/${rel}`;
+          const prior = seenDest.get(dest);
+          if (prior && prior !== source)
+            throw new Error(`plugin "${p.name}": hook file collision at ${dest} (${prior} vs ${source})`);
+          seenDest.set(dest, source);
+          copies.push({ kind: "hook", source, dest });
+        }
+      }
+      const manifestDest = `plugins/${p.name}/hooks/hooks.json`;
+      if (closHooks.length === 1) copies.push({ kind: "hook", source: closHooks[0], dest: manifestDest });
+      else files[manifestDest] = mergeHooks(closHooks);
     }
   }
 
