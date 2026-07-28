@@ -3,13 +3,11 @@
 This repository is the **source of truth for the Lightcone Research agent skills**.
 It is not an application — it packages `SKILL.md`-based skills for three install
 targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
-from a single canonical source. Four plugins: `astra` (spec reference);
+from a single canonical source. Three plugins: `astra` (spec reference);
 `lightcone` (the `lc` project workflow + hooks), which bundles `astra`;
 `reproduction` (replication assessment, execution, and review), which also bundles
-`astra`; and `lightcone-experimental` (opt-in advanced skills), which *requires*
-the `lightcone` and `reproduction` plugins but does not bundle them. Plugin skills
-are namespaced by plugin name (e.g. `/lightcone:new`, `/reproduction:reproduce`,
-`/astra:astra`).
+`astra`. Plugin skills are namespaced by plugin name (e.g. `/lightcone:new`,
+`/reproduction:reproduce`, `/astra:astra`).
 
 ## Where things live
 
@@ -19,9 +17,9 @@ are namespaced by plugin name (e.g. `/lightcone:new`, `/reproduction:reproduce`,
   — per-plugin `hooks.json` + bash scripts (`astra/` validates on save and reminds the
   agent to load the skill; `lightcone/` prints the session primer).
 - `skills.config.json` — declares how skills compose into the plugins
-  (`astra`, `lightcone`, `reproduction`, `lightcone-experimental`). A plugin
-  composes with others two ways: `dependencies` (bundled build-time closure) and `requires`
-  (documented-only prerequisite the user installs — not bundled).
+  (`astra`, `lightcone`, `reproduction`). A plugin composes with others two ways:
+  `dependencies` (bundled build-time closure) and `requires` (documented-only
+  prerequisite the user installs — not bundled).
 - `scripts/build.mjs`, `scripts/validate.mjs` — the generator and the validator.
 
 ## Generated — do not hand-edit
@@ -75,9 +73,8 @@ target — change the source and rebuild.** If a manifest looks wrong, the bug i
 each `SKILL.md` frontmatter, computes the transitive skill closure per plugin (own +
 `dependencies` skills — a plugin's generated dir bundles its whole closure so it
 installs identically on both harnesses; `requires` prerequisites are deliberately
-NOT in the closure, so `lightcone-experimental` ships only its own four skills and
-the user installs `lightcone` and `reproduction` separately), and returns the exact
-files + byte-copies every target needs. `build.mjs` writes
+NOT in the closure), and returns the exact files + byte-copies every target needs.
+`build.mjs` writes
 them; `validate.mjs` regenerates in memory and diffs against disk. Both import `lib.mjs`
 so the generator and the checker agree by construction.
 

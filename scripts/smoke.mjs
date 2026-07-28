@@ -23,13 +23,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
-const PLUGINS = ["astra", "lightcone", "reproduction", "lightcone-experimental"];
+const PLUGINS = ["astra", "lightcone", "reproduction"];
 const MARKET = "lightcone-research";
 const CODEX_PROBE_SKILLS = {
   astra: "astra",
   lightcone: "new",
   reproduction: "reproduce",
-  "lightcone-experimental": "from-paper",
 };
 // Hooks auto-discover from a packaged hooks/hooks.json (no manifest declaration),
 // so their presence in the cache is what makes them load — probe the plugins that

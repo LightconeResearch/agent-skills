@@ -42,19 +42,6 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Development"
-    },
-    {
-      "name": "lightcone-experimental",
-      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Includes staged paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), and autonomous iteration (`ralph`). Requires the `lightcone` and `reproduction` plugins (install both first) because these workflows build on the core lc project workflow and the reproduction review skills, but do not bundle either plugin.",
-      "source": {
-        "source": "local",
-        "path": "./plugins/lightcone-experimental"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Development"
     }
   ]
 }

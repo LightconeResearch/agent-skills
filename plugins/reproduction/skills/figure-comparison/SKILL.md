@@ -2,8 +2,8 @@
 name: figure-comparison
 description: >
   Build a self-contained HTML report comparing the figures, tables, and
-  numerical results in from-paper's `work/reference/` paper substrate
-  against artifacts produced under `results/<universe>/`. When
+  numerical results in a standardized `work/reference/` paper substrate
+  against artifacts produced under `results/{universe}/`. When
   `comparison-report.yaml` or `targets/targets.md` exists, use that scoped
   target set first; otherwise fall back to paper-driven inventory from arXiv
   TeX or Docling/Pandoc artifacts under `work/reference/`. Images are
@@ -11,7 +11,6 @@ description: >
   "compare results", "side-by-side comparison", "build comparison HTML", or
   "did we reproduce the paper". Run from the project folder containing
   astra.yaml.
-argument-hint: "[path to paper reference dir, e.g. work/reference/]"
 ---
 
 # /figure-comparison
@@ -54,22 +53,22 @@ results.
    2. If the argument is an arXiv source directory containing `.tex` files,
       use it as `source_root`, and use its parent `work/reference/` as the
       paper reference root when that parent exists.
-   3. If no argument was supplied, prefer from-paper's layout:
+   3. If no argument was supplied, prefer the standard layout:
       - `work/reference/source/` when arXiv TeX source exists. Use the TeX
         files there for labels/captions and the parsed artifacts under
         `work/reference/{figures,tables,metadata.json}` for renderable
         reference files.
       - `work/reference/document.md` plus
         `work/reference/{figures,tables,metadata.json}` when no TeX source
-        exists. This is the PDF + Docling fallback from from-paper.
-   4. Only after from-paper paths fail, look for a legacy unzipped arXiv
+        exists. This is the PDF + Docling fallback.
+   4. Only after the standard paths fail, look for a legacy unzipped arXiv
       dir in cwd: a directory containing both a `*.tex` file and figure
       files (`*.pdf`, `*.png`, `*.eps`). Common names: `paper_source/`,
       `arxiv_source/`, `*_Original_Paper/`.
 
    If no usable reference substrate is found, ask:
 
-   > "Where is the paper reference directory? In a from-paper project this
+   > "Where is the paper reference directory? In a reproduction project this
    > should usually be `work/reference/`, containing `document.md`,
    > `metadata.json`, and extracted `figures/` / `tables/`."
 
@@ -83,7 +82,7 @@ Read, in this order:
 
 1. **Scoped comparison artifacts, if present.**
    - If `comparison-report.yaml` exists, treat it as the highest-priority
-     scope because it records what from-paper actually compared. Use its
+     scope because it records what the reproduction actually compared. Use its
      `outputs:` entries, including `type`, `priority`, `paper_value`,
      `reproduced_value`, `reference_file`, `reproduced_file`, `match`, and
      `notes` when present.

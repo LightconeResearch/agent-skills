@@ -31,13 +31,6 @@
       "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
       "skills": ["assess-reproducibility", "reproduce", "figure-comparison"],
       "dependencies": ["astra"]
-    },
-    {
-      "name": "lightcone-experimental",
-      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Includes staged paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), and autonomous iteration (`ralph`). Requires the `lightcone` and `reproduction` plugins (install both first) because these workflows build on the core lc project workflow and the reproduction review skills, but do not bundle either plugin.",
-      "skills": ["from-code", "from-paper", "paper-extraction", "ralph"],
-      "dependencies": [],
-      "requires": ["lightcone", "reproduction"]
     }
   ]
 }

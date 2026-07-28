@@ -6,7 +6,7 @@ Read the main SKILL.md and `craft.md` first. This file adds what's specific to r
 
 ## Where the source text lives
 
-Expect `work/reference/` — the standardized output of `/paper-extraction`:
+Expect the standardized paper substrate under `work/reference/`:
 
 - `work/reference/paper.tex` (arXiv source) **or** `work/reference/document.md` (Docling fallback)
 - `work/reference/index.json` — section outline with line numbers, figures, tables, citations
