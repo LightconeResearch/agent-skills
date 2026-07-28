@@ -16,15 +16,15 @@ codex plugin add astra@lightcone-research
 
 [View the `astra` skill on GitHub](https://github.com/LightconeResearch/agent-skills/tree/main/skills/astra).
 
-## Tutorial: measure dark energy in twenty minutes
+## Tutorial: measure dark energy
 
 This is a quick ASTRA tutorial applied to a classic cosmology problem: using the
-relation between the brightness and redshifts of supernovae to estimate the
-dark energy content of the universe. We will fit the standard ΛCDM model of
-cosmology
+relation between the brightness and redshifts of supernovae to estimate the dark
+energy content of the universe. We will fit the standard ΛCDM model of cosmology
 to 580 Type Ia supernovae from
 [Suzuki et al. 2012](https://arxiv.org/abs/1105.3470), varying a single
-parameter Ω_Λ.
+parameter Ω_Λ. Mechanically, this is a relatively straightforward linear
+regression problem.
 
 ### What you need
 
