@@ -48,6 +48,8 @@ instead if you want the full reproduction toolkit.
     codex plugin add astra@lightcone-research
     ```
 
+    Then invoke the skill in Codex, for example `$astra:astra`.
+
 === "Codex App"
 
     Click the arrow beside **Create** and open **Plugins**. Install the

@@ -79,6 +79,8 @@ codex plugin marketplace add LightconeResearch/agent-skills
 codex plugin add astra@lightcone-research
 ```
 
+Then invoke the skill in Codex, for example `$astra:astra`.
+
 ### Codex App
 
 Open **Plugins** from the arrow beside **Create**, add the
