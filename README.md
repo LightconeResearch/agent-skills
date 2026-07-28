@@ -53,47 +53,38 @@ separate ASTRA dependency step.
 
 ## 🚀 Install
 
-### Claude Code
+Choose one plugin to install. `astra` provides the ASTRA authoring and
+validation skill, while `reproduction` adds paper assessment, reproduction,
+and figure comparison and includes ASTRA. You do not need to install both.
+The examples below install `astra`; substitute
+`reproduction@lightcone-research` for the full reproduction toolkit.
 
-**From the terminal:**
+### Claude Code
 
 ```bash
 claude plugin marketplace add LightconeResearch/agent-skills
-claude plugin install reproduction@lightcone-research
+claude plugin install astra@lightcone-research
 ```
 
-**From inside a Claude Code session:**
+### Claude App
 
-```
-/plugin marketplace add LightconeResearch/agent-skills
-/plugin install reproduction@lightcone-research
-```
+Open **Customize → Plugins → Add → Add marketplace → Add from repo**, paste
+`https://github.com/LightconeResearch/agent-skills`, choose `astra` or
+`reproduction`, then invoke `/astra:astra` or `/reproduction:reproduce`.
 
-(`/plugin install` opens a details pane; pick a scope — user / project / local —
-to confirm.)
-
-### Codex
-
-**From the terminal:**
+### Codex CLI
 
 ```bash
 codex plugin marketplace add LightconeResearch/agent-skills
-codex plugin add reproduction@lightcone-research
+codex plugin add astra@lightcone-research
 ```
 
-**From inside a Codex session:**
+### Codex App
 
-```
-/plugins        # browse astra / reproduction
-```
-
-### After installing
-
-Plugin skills are namespaced by plugin name. The reproduction plugin provides
-`/reproduction:assess-reproducibility`, `/reproduction:reproduce`,
-`/reproduction:figure-comparison`, and the bundled `/reproduction:astra`.
-Swap `reproduction` for `astra` in any command above to install only the
-standalone ASTRA plugin.
+Open **Plugins** from the arrow beside **Create**, add the
+`LightconeResearch/agent-skills` marketplace, then search for and install
+`astra` or `reproduction`. Invoke `/astra:astra` or
+`/reproduction:reproduce`.
 
 ## ✨ Skills
 
