@@ -14,7 +14,7 @@
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
     "fetch-getting-started": "node scripts/fetch-getting-started.mjs",
-    "test": "node scripts/validate.mjs",
+    "test": "node scripts/validate.mjs && node scripts/test-hooks.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "engines": {

@@ -27,8 +27,9 @@ source "$SCRIPT_DIR/astra-pins.sh"
 input=$(cat)
 
 # Claude Code's Write/Edit payload carries a file_path object. Codex's
-# apply_patch payload carries the raw patch text instead, so extract paths from
-# its Add/Update/Move headers. Keep both paths at this boundary; the
+# apply_patch payload carries patch text in tool_input.command; retain the raw
+# string and tool_input.patch forms for older harnesses. Extract paths from the
+# patch's Add/Update/Move headers. Keep both paths at this boundary; the
 # validation policy below is shared across harnesses.
 file_paths=$(echo "$input" | jq -r '
     if (.tool_input | type) == "object" then
@@ -55,7 +56,9 @@ patch_text=$(echo "$input" | jq -r '
     if (.tool_input | type) == "string" then
         .tool_input
     elif (.tool_input | type) == "object" then
-        if (.tool_input.patch | type) == "string" then
+        if (.tool_input.command | type) == "string" then
+            .tool_input.command
+        elif (.tool_input.patch | type) == "string" then
             .tool_input.patch
         else
             empty
