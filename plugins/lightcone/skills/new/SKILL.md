@@ -7,6 +7,10 @@ description: Use this skill whenever the user starts a new ASTRA analysis from a
 
 Create a new ASTRA analysis project through conversation. Build the spec iteratively -- write to `astra.yaml` after each phase so the user sees progress. Literature search and decision identification happen in distinct phases -- talk first, then extract papers, then identify decisions informed by both conversation and literature.
 
+## Prerequisites
+
+Start from a project created by `lc init`. Run `lc --version` and `astra --version`, and inspect a command's `--help` before relying on its flags.
+
 ## Setup
 
 1. Read `astra.yaml` if it exists (to understand context or avoid overwriting)
@@ -34,11 +38,11 @@ Stage banner: ANALYSIS STRUCTURE
 
 > "Walk me through your analysis step by step. What goes in, what comes out at the end?"
 
-**Guidance on sub-analyses:** Analyses should only be split into multiple sub-analyses if each sub analysis genuinely has materially different inputs and outputs, and if the scope may be too broad if there is just one analysis; we overall want a sub-analysis to feel like it should genuinely be a self-contained product. For example, training + evaluation would typically be one analysis, because the product would be the trained and validated neural network estimator. When in doubt, opt for a single analysis at this stage. If it does need to be multi-stage, ask the user for confirmation and how to split it. For multi-stage analyses, make sure you confirm stage boundaries. Invoke `/astra` for YAML structure and sub-analysis guidance.
+**Guidance on sub-analyses:** Analyses should only be split into multiple sub-analyses if each sub analysis genuinely has materially different inputs and outputs, and if the scope may be too broad if there is just one analysis; we overall want a sub-analysis to feel like it should genuinely be a self-contained product. For example, training + evaluation would typically be one analysis, because the product would be the trained and validated neural network estimator. When in doubt, opt for a single analysis at this stage. If it does need to be multi-stage, ask the user for confirmation and how to split it. For multi-stage analyses, make sure you confirm stage boundaries. Lightcone currently supports the root plus one direct sub-analysis level; do not nest sub-analyses inside a child spec. Invoke `/astra` for YAML structure and the `cli` skill's "Creating Sub-Analyses" section for the required path-rooted files and universe wiring.
 
 **One output per output.** Each output should be a single metric, a single plot, or a single artifact. Do not bundle multiple metrics into one output (e.g., "performance_metrics" containing accuracy, F1, and AUC). Each of those is its own output. Same for plots -- one figure per output.
 
-**Update astra.yaml** with `inputs` and `outputs` (extending the spec from Phase 1).
+**Update the analysis specs** with `inputs` and `outputs` (extending the root `astra.yaml` from Phase 1 and writing each confirmed path-rooted child to `analyses/<id>/astra.yaml`).
 
 ---
 
@@ -69,7 +73,7 @@ Spawn all in a single message (parallel). Show progress as results come in:
   ○ Wu & He 2018 (reading...)
 ```
 
-Write extracted prior insights to astra.yaml immediately. Synthesize them by topic for the user.
+Write extracted prior insights to the owning analysis spec immediately. Synthesize them by topic for the user.
 
 ### Decision Identification
 
@@ -79,7 +83,7 @@ Use the conversation and literature to identify decisions. Apply the decision cr
 - Where did papers disagree or compare alternatives?
 - Where did the user express uncertainty?
 
-Write candidate decisions to astra.yaml as a batch for user review. Keep chat output concise (summary + decision IDs), and avoid dumping full decision details in chat.
+Write candidate decisions to the owning analysis spec as a batch for user review. Keep chat output concise (summary + decision IDs), and avoid dumping full decision details in chat.
 
 **Probe for blind spots** -- analysts over-focus on methods and neglect data handling. Probe 1-3 areas: data exclusion, variable operationalization, inference criteria.
 
@@ -93,7 +97,7 @@ During review, confirm or set each decision's `default`, keep option structure a
 
 > "Anything else that should inform this analysis?"
 
-Review the spec with the user. Update astra.yaml with any additions.
+Review the root and child specs with the user. Update the owning analysis spec with any additions.
 
 ---
 
@@ -103,8 +107,10 @@ Stage banner: FINALIZING
 
 ### Validate
 
-1. `astra validate astra.yaml` -- fix errors, iterate until clean
-2. If prior insights exist: `astra validate astra.yaml --verify-evidence`
+For the root and every path-rooted child:
+
+1. `astra validate <analysis-spec>` -- fix errors, iterate until clean
+2. If that spec has prior insights: `astra validate <analysis-spec> --verify-evidence`
 
 ### Generate Baseline Universe
 
@@ -112,15 +118,31 @@ Stage banner: FINALIZING
 astra universe generate -n baseline
 ```
 
-Generate only `baseline` unless the user explicitly asks for additional universes.
+Generate only `baseline` unless the user explicitly asks for additional universes. For each path-rooted child, also run:
+
+```bash
+astra universe generate -n baseline \
+  --analysis analyses/<id>/astra.yaml \
+  --output analyses/<id>/universes/baseline.yaml
+```
+
+Then ensure the root `universes/baseline.yaml` selects it under `analyses: { <id>: { universe: baseline } }`.
+
+Validate the generated root and child universe files against their corresponding analysis specs:
+
+```bash
+astra validate universes/baseline.yaml --analysis astra.yaml
+astra validate analyses/<id>/universes/baseline.yaml \
+  --analysis analyses/<id>/astra.yaml
+```
 
 ### Populate Description
 
-Replace the TODO `description:` in `astra.yaml` with a short one-or-two-paragraph orientation now that structure is stable — what the analysis is and how its pieces fit together. Keep it brief; per-element prose lives on each Input/Output/Decision/Option via `description`/`rationale`.
+Replace the TODO `description:` in the root and each child `astra.yaml` with a short one-or-two-paragraph orientation now that structure is stable — what that analysis is and how its pieces fit together. Keep it brief; per-element prose lives on each Input/Output/Decision/Option via `description`/`rationale`.
 
 ### Populate CLAUDE.md
 
-Read the existing `CLAUDE.md` (created by `lc init`). Fill the `## Project Notes` section per the inline guidance there — context from the conversation that's not in `astra.yaml` and would be lost after `/clear`. The spec is the source of truth for structure, decisions, and evidence.
+Read the existing `CLAUDE.md` (created by `lc init`). Replace its stale "just scaffolded / has not been scoped" orientation beneath `# Project Notes for Claude` with durable project context, without deleting the scaffolded workflow or report guidance. Capture only conversation context that is not in the analysis specs and would be lost after `/clear`; the specs remain the source of truth for structure, decisions, and evidence.
 
 ### Review with User
 
@@ -155,9 +177,9 @@ Also mention the report: `lc init` scaffolded a template MyST report (`index.md`
 
 You MUST NOT write Python, R, or other implementation code.
 
-You MUST ONLY create/modify: `astra.yaml`, `universes/*.yaml`, `CLAUDE.md` (Finalize only).
+You MUST ONLY create/modify: `astra.yaml`, `universes/*.yaml`, path-rooted child `analyses/<id>/astra.yaml` and `analyses/<id>/universes/*.yaml`, and `CLAUDE.md` (Finalize only).
 
-You MUST NOT fabricate quotes -- all evidence must pass `astra validate --verify-evidence`.
+You MUST NOT fabricate quotes -- all evidence must pass `astra validate <analysis-spec> --verify-evidence` in the spec that owns it.
 
 You MUST spawn `lc-extractor` agents for paper processing. One paper per agent. Never read a PDF in the main agent context.
 
@@ -173,4 +195,4 @@ You MUST spawn `lc-extractor` agents for paper processing. One paper per agent. 
 - **Background interruptions** -- Never spawn search or extraction subagents during conversation phases. Collect candidates first, then process them during Phase 3 Extraction
 - **Reading PDFs in main context** -- Always delegate to subagents; PDFs consume too much context
 - **Chat dump of decisions** -- Do not dump full candidate decision content in chat; write decisions to astra.yaml for review
-- **Skipping verification** -- If quotes were extracted, always run `astra validate --verify-evidence`
+- **Skipping verification** -- If quotes were extracted, always run `astra validate <analysis-spec> --verify-evidence`
