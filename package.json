@@ -12,6 +12,8 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "docs:build": "uvx --from zensical zensical build",
+    "docs:serve": "uvx --from zensical zensical serve",
     "validate": "node scripts/validate.mjs",
     "fetch-getting-started": "node scripts/fetch-getting-started.mjs",
     "test": "node scripts/validate.mjs",
