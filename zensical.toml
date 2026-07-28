@@ -13,7 +13,6 @@ nav = [
   { "Documentation" = [
       { "Home" = "index.md" },
       { "ASTRA" = "astra.md" },
-      { "Tutorial: supernova cosmology" = "tutorial-supernova.md" },
       { "Reproduction" = "reproduction.md" },
   ] },
 ]
