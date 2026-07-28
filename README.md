@@ -2,39 +2,35 @@
 
 # 🔭 Lightcone Research — Agent Skills
 
-**Portable, open-standard skills that teach coding agents the [Lightcone Research](https://github.com/LightconeResearch) stack — the [`ASTRA`](skills/astra) spec and the `lc` project workflow.**
+**Portable, open-standard skills that teach coding agents the [Lightcone Research](https://github.com/LightconeResearch) stack: [`ASTRA`](skills/astra) and scientific paper reproduction.**
 
 [![Agent Skills standard](https://img.shields.io/badge/standard-Agent%20Skills-7c3aed?style=for-the-badge)](https://agentskills.io)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.0.1-success?style=for-the-badge)](skills.config.json)
+[![Version](https://img.shields.io/badge/version-0.0.2-success?style=for-the-badge)](skills.config.json)
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-11-7c3aed?style=flat-square)](#-skills)
-[![Plugins](https://img.shields.io/badge/plugins-3-7c3aed?style=flat-square)](#-plugins)
+[![Skills](https://img.shields.io/badge/skills-4-7c3aed?style=flat-square)](#-skills)
+[![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
 
 </div>
 
 ---
 
-Agent skills for the [Lightcone Research](https://github.com/LightconeResearch) stack:
-the **ASTRA** specification and the **lightcone-cli** (`lc`) project workflow. The
-skills follow the open [Agent Skills standard](https://agentskills.io) (a `SKILL.md`
-plus optional `references/`, `scripts/`, and `assets/`), so they work across Claude
-Code, Codex, and other compatible agents — and are also packaged as Claude
-Code and Codex **plugins** for the capabilities (hooks, subagents) that plain skills
-can't carry.
+Agent skills for the [Lightcone Research](https://github.com/LightconeResearch)
+stack: the **ASTRA** specification and scientific paper reproduction. The skills follow the open
+[Agent Skills standard](https://agentskills.io) (a `SKILL.md` plus optional
+`references/`, `scripts/`, and `assets/`), so they work across Claude Code, Codex,
+and other compatible agents — and are also packaged as Claude Code and Codex
+**plugins** for hooks that plain skills can't carry.
 
 > [!TIP]
-> **New here?** Install the [toolchain](#-prerequisites), then `claude plugin marketplace add LightconeResearch/agent-skills && claude plugin install lightcone@lightcone-research` and ask your agent to `/lightcone:new`.
-
-> [!NOTE]
-> **Skill content is mid-migration.** These skills were just moved out of `lightcone-cli` into this repo; their packaging is settled but their bodies are being raised to high quality one at a time. Expect rough edges — especially in the `lightcone-experimental` plugin.
+> **New here?** Install the [toolchain](#-prerequisites), then `claude plugin marketplace add LightconeResearch/agent-skills && claude plugin install reproduction@lightcone-research` and ask your agent to reproduce a paper.
 
 ## 📦 Prerequisites
 
-Most of these skills drive the `lc` and `astra` command-line tools, which are **not
-bundled** with the skills — they ship the playbook, not the binaries. Install the
+The ASTRA and reproduction skills drive the `astra` command-line tool, which is **not
+bundled** with the skills — the skills ship the playbook, not the binary. Install the
 toolchain (one package ships both):
 
 ```bash
@@ -46,99 +42,80 @@ needs itself.
 
 ## 🧩 Plugins
 
-The `lightcone` plugin is **self-contained**: it bundles the full closure of its
-dependencies (skills, hooks, and subagents), so installing it is all you need — no
-separate dependency step, identical on **Claude Code** and **Codex**.
-`lightcone-experimental` is the exception: it ships only its own six skills and
-**requires the `lightcone` plugin** — install `lightcone` first.
+The `reproduction` plugin is **self-contained**: it bundles the `astra` skill and
+hooks, so it installs identically on **Claude Code** and **Codex** without a
+separate ASTRA dependency step.
 
 | Plugin | Skills | Bundles | Requires | Adds |
 |---|---|---|---|---|
 | **`astra`** | `astra` | — | — | standalone ASTRA authoring skill; validate-on-save & activate-on-read hooks (self-installing via `uvx`) |
-| **`lightcone`** *(recommended)* | `new`, `report`, `feedback`, `cli` | `astra` | — | session-primer hook (+ astra's validate-on-save / activate-on-read); `lc-extractor` subagent |
-| **`lightcone-experimental`** | `from-paper`, `from-code`, `paper-extraction`, `ralph`, `check-sentence-by-sentence`, `figure-comparison` | — (ships only its own skills) | **`lightcone`** (install it first) | opt-in; under active development |
+| **`reproduction`** | `assess-reproducibility`, `reproduce`, `figure-comparison` | `astra` | — | feasibility triage, end-to-end replication, independent verification, and result comparison |
 
 ## 🚀 Install
 
-### Claude Code
+Choose one plugin to install. `astra` provides the ASTRA authoring and
+validation skill, while `reproduction` adds paper assessment, reproduction,
+and figure comparison and includes ASTRA. You do not need to install both.
+The examples below install `astra`; substitute
+`reproduction@lightcone-research` for the full reproduction toolkit.
 
-**From the terminal:**
+### Claude Code
 
 ```bash
 claude plugin marketplace add LightconeResearch/agent-skills
-claude plugin install lightcone@lightcone-research
+claude plugin install astra@lightcone-research
 ```
 
-**From inside a Claude Code session:**
+### Claude App
 
-```
-/plugin marketplace add LightconeResearch/agent-skills
-/plugin install lightcone@lightcone-research
-```
+Open **Customize → Plugins → Add → Add marketplace → Add from repo**, paste
+`https://github.com/LightconeResearch/agent-skills`, choose `astra` or
+`reproduction`, then invoke `/astra:astra` or `/reproduction:reproduce`.
 
-(`/plugin install` opens a details pane; pick a scope — user / project / local —
-to confirm.)
-
-### Codex
-
-**From the terminal:**
+### Codex CLI
 
 ```bash
 codex plugin marketplace add LightconeResearch/agent-skills
-codex plugin add lightcone@lightcone-research
+codex plugin add astra@lightcone-research
 ```
 
-**From inside a Codex session:**
+Then invoke the skill in Codex, for example `$astra:astra`.
 
-```
-/plugins        # browse the marketplace, then install astra / lightcone / lightcone-experimental
-```
+### Codex App
 
-### After installing
-
-Plugin skills are namespaced by plugin name: `/lightcone:new`,
-`/lightcone:report`, `/lightcone:feedback`, `/lightcone:cli`, and (from the bundled `astra`)
-`/lightcone:astra`. The session-primer/validation **hooks** and the `lc-extractor`
-**subagent** ride along inside the `lightcone` plugin automatically. Swap
-`lightcone` for `astra` or `lightcone-experimental` in any command above.
+Open **Plugins** from the arrow beside **Create**, add the
+`LightconeResearch/agent-skills` marketplace, then search for and install
+`astra` or `reproduction`. Invoke `/astra:astra` or
+`/reproduction:reproduce`.
 
 ## ✨ Skills
 
-### Core
+### ASTRA
 
 | Skill | What it does |
 |---|---|
 | [`astra`](skills/astra) | Authoring an `astra.yaml` — orientation and judgment (what deserves to be a decision, when to split a sub-analysis); the field-level grammar comes from `astra spec <term>`. |
-| [`new`](skills/new) | Scope a new ASTRA analysis from a research question — structure inputs/outputs, identify decisions through literature, land `astra.yaml`. |
-| [`report`](skills/report) | Author the project's MyST report — prose that references `astra.yaml` elements by path (via the [MySTRA](https://github.com/LightconeResearch/MySTRA) plugin), so write-ups never drift from the analysis. |
-| [`cli`](skills/cli) | The `lc` execution reference — spec–code invariant, status interpretation, failure diagnosis. |
-| [`feedback`](skills/feedback) | File a bug report against the right Lightcone repo with version/error context. |
 
-### Experimental
+### Reproduction
 
 | Skill | What it does |
 |---|---|
-| [`from-paper`](skills/from-paper) | Reproduce a paper end-to-end into an ASTRA analysis (staged reproduction workflow). |
-| [`from-code`](skills/from-code) | Import an existing code repository into an ASTRA analysis. |
-| [`paper-extraction`](skills/paper-extraction) | Extract literature substrate — claims and verbatim quotes — from a paper's source. |
-| [`ralph`](skills/ralph) | Autonomous constitution-driven iteration loop for long-running reproduction work. |
-| [`check-sentence-by-sentence`](skills/check-sentence-by-sentence) | Verify a manuscript sentence by sentence against its sources. |
-| [`figure-comparison`](skills/figure-comparison) | Compare reproduced figures against the paper's originals. |
+| [`assess-reproducibility`](skills/assess-reproducibility) | Assess and rank papers by full-replication feasibility, public inputs, and compute requirements. |
+| [`reproduce`](skills/reproduce) | Reproduce a scientific paper end to end in ASTRA, including independent verification. |
+| [`figure-comparison`](skills/figure-comparison) | Compare reproduced figures, tables, and values against the paper's originals. |
 
 ## 🗂️ Repository layout
 
 ```
 skills/                     Canonical skills — one dir per skill (single source of truth)
-agents/                     Claude subagents (lc-extractor)
-hooks/<plugin>/             Per-plugin hooks.json + bash scripts (astra: validate-on-save,
-                            activate-on-read, pins; lightcone: session primer)
+hooks/astra/                ASTRA validate-on-save and activate-on-read hooks
 skills.config.json          Source of truth for how skills compose into plugins
 scripts/build.mjs           Regenerates every per-target file from the above
 scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm test)
 .claude-plugin/             Generated — Claude Code marketplace manifest
 .agents/plugins/            Generated — Codex marketplace manifest
 plugins/                    Generated — self-contained per-plugin dirs both harnesses
-                            install (full skills+hooks+agents closure, symlinked to source)
+                            install (full skills+hooks closure copied from source)
 manifest.json               Generated — registry of all skills/plugins
 scripts/smoke.mjs           Install smoke tests — real claude/codex + tmux (npm run smoke)
 ```

@@ -1,0 +1,56 @@
+[project]
+
+site_name = "Lightcone Research Agent Skills"
+site_description = "Portable agent skills for ASTRA and scientific reproduction."
+site_author = "Lightcone Research"
+site_url = "https://lightconeresearch.github.io/agent-skills/"
+copyright = "&copy; 2026 Lightcone Research"
+
+repo_url = "https://github.com/LightconeResearch/agent-skills"
+repo_name = "LightconeResearch/agent-skills"
+
+nav = [
+  { "Documentation" = [
+      { "Home" = "index.md" },
+      { "ASTRA" = "astra.md" },
+      { "Reproduction" = "reproduction.md" },
+  ] },
+]
+
+# Match astra-spec's versioned GitHub Pages layout.
+[project.extra.version]
+provider = "mike"
+
+[project.theme]
+
+variant = "modern"
+favicon = "assets/favicon.svg"
+
+features = [
+  "content.code.copy",
+  "content.tabs.link",
+  "navigation.footer",
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.instant.progress",
+  "navigation.sections",
+  "navigation.tabs",
+  "navigation.tabs.sticky",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "search.suggest",
+]
+
+[project.theme.icon]
+logo = "lucide/blocks"
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to light mode"

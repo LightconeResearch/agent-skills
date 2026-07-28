@@ -1,8 +1,8 @@
 {
   "name": "@lightcone/agent-skills",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
-  "description": "Agent skills for Lightcone Research — ASTRA specs, lightcone-cli workflows, and paper reproduction.",
+  "description": "Agent skills for Lightcone Research — ASTRA specs and paper reproduction.",
   "type": "module",
   "license": "BSD-3-Clause",
   "author": "Lightcone Research",
@@ -12,6 +12,8 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "docs:build": "uvx --from zensical zensical build",
+    "docs:serve": "uvx --from zensical zensical serve",
     "validate": "node scripts/validate.mjs",
     "fetch-getting-started": "node scripts/fetch-getting-started.mjs",
     "test": "node scripts/validate.mjs && node scripts/test-hooks.mjs",
