@@ -1,97 +1,41 @@
 {
   "name": "lightcone-research",
-  "version": "0.0.1",
-  "description": "Agent skills for Lightcone Research — the ASTRA spec and lightcone-cli project workflows.",
+  "version": "0.0.2",
+  "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction.",
   "repository": "https://github.com/LightconeResearch/agent-skills",
   "generated": "Run `npm run build` to regenerate. Do not edit by hand.",
   "skills": [
+    {
+      "name": "assess-reproducibility",
+      "path": "skills/assess-reproducibility",
+      "description": "Assess how reproducible a scientific paper is by checking full-replication feasibility, public code and data, compute requirements, and access blockers. Use for one arXiv link or DOI by default, or optionally for multiple papers or a bibliography that should also be ranked by feasibility.",
+      "plugins": [
+        "reproduction"
+      ]
+    },
     {
       "name": "astra",
       "path": "skills/astra",
       "description": "Orientation and judgment for authoring an ASTRA analysis (astra.yaml): what the format is for, what deserves to be a decision, when to split a sub-analysis, and how to write it for and with a human. Invoke whenever reading, writing, or restructuring an astra.yaml spec, deciding whether a methodological choice should be a decision, weighing a sub-analysis split, or when the user asks about ASTRA.",
       "plugins": [
         "astra",
-        "lightcone"
-      ]
-    },
-    {
-      "name": "check-sentence-by-sentence",
-      "path": "skills/check-sentence-by-sentence",
-      "description": "Sentence-by-sentence audit of a paper against an ASTRA project's code. For every claim about implementation or results in the methodology, results, discussion, and appendices, locate the corresponding code (file:line) or mark NOT FOUND. Only the user can invoke this skill, though this skill can be suggested for the user to invoke during paper reproduction. Other skills may mention this skill as an optional follow-up, but should not invoke it themselves. Run from the project folder containing astra.yaml. In from-paper projects, read paper sources from work/reference/: prefer arXiv TeX under work/reference/source/, fall back to Docling/Pandoc markdown at work/reference/document.md.",
-      "plugins": [
-        "lightcone-experimental"
-      ]
-    },
-    {
-      "name": "cli",
-      "path": "skills/cli",
-      "description": "Reference for `lc` CLI execution: commands (init/run/status/verify/build/export), the Spec-Code Invariant (`astra.yaml` and code never diverge), status interpretation (ok/stale/missing/alias), failure diagnosis, multiverse runs, scratch overrides for HPC, sub-analysis scaffolding, publishing via WRROC. Invoke whenever running, debugging, or diagnosing `lc` workflows; whenever interpreting `lc status` / `lc verify` output; or whenever the user asks about the development workflow surrounding `astra.yaml`.",
-      "plugins": [
-        "lightcone"
-      ]
-    },
-    {
-      "name": "feedback",
-      "path": "skills/feedback",
-      "description": "File a bug report from the current session. Use when something breaks: /feedback <description of what went wrong>",
-      "plugins": [
-        "lightcone"
+        "reproduction"
       ]
     },
     {
       "name": "figure-comparison",
       "path": "skills/figure-comparison",
-      "description": "Build a self-contained HTML report comparing the figures, tables, and numerical results in from-paper's `work/reference/` paper substrate against artifacts produced under `results/<universe>/`. When `comparison-report.yaml` or `targets/targets.md` exists, use that scoped target set first; otherwise fall back to paper-driven inventory from arXiv TeX or Docling/Pandoc artifacts under `work/reference/`. Images are base64-embedded; missing matches are flagged. Use when the user says \"compare results\", \"side-by-side comparison\", \"build comparison HTML\", or \"did we reproduce the paper\". Run from the project folder containing astra.yaml.",
+      "description": "Build a self-contained HTML report comparing original paper figures, tables, and reported values against reproduced artifacts in any project layout. Accept explicit reference and reproduction paths or discover common folders, pair artifacts using manifests, labels, captions, and filenames, embed images for portability, and flag missing or divergent results. Use when the user asks to compare results, build a side-by-side report, inspect reproduction fidelity, or determine whether a paper was reproduced.",
       "plugins": [
-        "lightcone-experimental"
+        "reproduction"
       ]
     },
     {
-      "name": "from-code",
-      "path": "skills/from-code",
-      "description": "Bring an existing project into ASTRA / lightcone-cli, starting from the code. Scans the codebase, drafts or augments astra.yaml, parameterizes decisions, and runs until outputs materialize. Triggers on \"migrate\", \"convert\", \"existing project\", \"wrap this code\", \"start from code\".",
+      "name": "reproduce",
+      "path": "skills/reproduce",
+      "description": "Fully reproduce a scientific paper from its source and any available code, regenerate all figures and key scientific results with executable code, describe the work in a validated ASTRA specification, build a figure comparison report, and iterate through independent verification until the replication is broadly successful. Use when Codex is asked to reproduce or replicate an academic paper end to end.",
       "plugins": [
-        "lightcone-experimental"
-      ]
-    },
-    {
-      "name": "from-paper",
-      "path": "skills/from-paper",
-      "description": "This skill should be used when the user wants to reproduce a published scientific paper in ASTRA — has a DOI, arXiv ID, or PDF — or asks to \"reproduce <paper>\", \"set up reproduction\", or \"import a paper\". Also use when continuing or resuming an existing reproduction workdir. The skill instructs Claude to run ORIENT in the user's main session (paper-extraction + interview + code scan, all grounded), then hand the reproduction off to a ralph loop whose iterations carry the remaining phases (ARCHITECT → SPECIFY → LITERATURE → IMPLEMENT → RUN → COMPARE) until the constitution closes, at which point REVIEW close-out runs back in the user's main session.",
-      "plugins": [
-        "lightcone-experimental"
-      ]
-    },
-    {
-      "name": "new",
-      "path": "skills/new",
-      "description": "Use this skill whenever the user starts a new ASTRA analysis from a research question — scoping the question, structuring inputs and outputs, identifying decisions through literature, and landing astra.yaml + project CLAUDE.md. Triggers on verbs (`new`, `start`, `scope`) combined with nouns (`analysis`, `project`, `question`, `research`) — e.g. \"new analysis\", \"start project\", \"scope research question\" — even if the user doesn't say \"project\" explicitly. Don't use this for working inside an existing ASTRA project; this is for fresh scoping only.",
-      "plugins": [
-        "lightcone"
-      ]
-    },
-    {
-      "name": "paper-extraction",
-      "path": "skills/paper-extraction",
-      "description": "Turn an arXiv ID or DOI into a standardized `work/reference/` directory: paper substrate (arXiv LaTeX source primary, PDF + Docling fallback), copied figure files, per-table `.tex` files, section outline with line numbers, deduplicated citation keys with every location they appear plus each cited paper's full citation text and resolved DOI, abstract, embedded bibliography (when present in source), and a valid `astra.yaml` representing the paper as an ASTRA artifact (with the paper's claimed numerical findings as ASTRA `findings:`). Emits a top-level `index.json` for the structural surface plus the `astra.yaml` for the semantic surface. Triggers on: \"read paper\", \"prep paper\", \"ingest paper\", \"extract paper\", \"set up paper\", \"fetch arxiv\", \"arxiv id\", \"DOI\", \"find paper\", or `/paper-extraction <id>`.",
-      "plugins": [
-        "lightcone-experimental"
-      ]
-    },
-    {
-      "name": "ralph",
-      "path": "skills/ralph",
-      "description": "Author a constitution — a markdown document describing a desired state for autonomous iteration — and run a ralph loop against it. The skill covers three modes: drafting a constitution (Study → Draft → Refine → Launch), launching a loop via the bundled tmux runner, and executing a single iteration from inside an active loop (survey → work → update → exit). Use for any work where adaptation matters more than a fixed plan: science, refactoring, exploration, long-running reproductions. Triggers: \"ralph\", \"ralph loop\", \"constitution\", \"constitute\", \"draft a constitution\", \"launch ralph\", \"run ralph on <constitution>\", \"set up a ralph loop\".",
-      "plugins": [
-        "lightcone-experimental"
-      ]
-    },
-    {
-      "name": "report",
-      "path": "skills/report",
-      "description": "Authors and extends the project's MyST report — the external write-up (`index.md` + `myst.yml`, scaffolded by `lc init`) that references `astra.yaml` elements by tree-path through the MySTRA plugin instead of restating them. Use whenever the user wants to write up an analysis: \"draft the report\", \"write up the results\", \"document the analysis\", \"draft the introduction/methods/results\", \"turn this into a paper\", or when results have materialized and a write-up is the natural next step. Also use to fix or extend an existing report page. Not for per-element spec prose (`description:`/`rationale:` live in `astra.yaml` — see the astra reference skill) and not for the HTML figure side-by-side (figure-comparison).",
-      "plugins": [
-        "lightcone"
+        "reproduction"
       ]
     }
   ],
@@ -108,38 +52,19 @@
       "hasAgents": false
     },
     {
-      "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `report` authors the MyST report that references astra.yaml elements by path, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships the lc-extractor subagent for literature extraction. Bundles the astra reference — and with it the astra hooks (session primer, validate-on-save, activate-on-read) — so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
+      "name": "reproduction",
+      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
       "skills": [
+        "assess-reproducibility",
         "astra",
-        "cli",
-        "feedback",
-        "new",
-        "report"
+        "figure-comparison",
+        "reproduce"
       ],
       "dependencies": [
         "astra"
       ],
       "requires": [],
       "hasHooks": true,
-      "hasAgents": true
-    },
-    {
-      "name": "lightcone-experimental",
-      "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Requires the `lightcone` plugin (install it first) — these skills build on the core lc workflow, hooks, and lc-extractor subagent but do NOT bundle them. Install when you need capabilities beyond the core analysis workflow.",
-      "skills": [
-        "check-sentence-by-sentence",
-        "figure-comparison",
-        "from-code",
-        "from-paper",
-        "paper-extraction",
-        "ralph"
-      ],
-      "dependencies": [],
-      "requires": [
-        "lightcone"
-      ],
-      "hasHooks": false,
       "hasAgents": false
     }
   ]
