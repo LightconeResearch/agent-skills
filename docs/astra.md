@@ -22,9 +22,8 @@ This is a quick ASTRA tutorial applied to a classic cosmology problem: using the
 relation between the brightness and redshifts of supernovae to estimate the dark
 energy content of the universe. We will fit the standard ΛCDM model of cosmology
 to 580 Type Ia supernovae from
-[Suzuki et al. 2012](https://arxiv.org/abs/1105.3470), varying a single
-parameter Ω_Λ. Mechanically, this is a relatively straightforward linear
-regression problem.
+[Suzuki et al. 2012](https://arxiv.org/abs/1105.3470). Mechanically, this is a
+straightforward least-squares fit with a single free parameter, Ω_Λ.
 
 ### What you need
 
