@@ -8,7 +8,7 @@ description: Fully reproduce a scientific paper from its source and any availabl
 ## Prerequisites
 
 Run `astra --help` silently to confirm the CLI resolves. If it is missing, tell
-the user to run `uv tool install lightcone-cli`, then stop until `astra --help`
+the user to run `uv tool install astra-tools`, then stop until `astra --help`
 succeeds. Use `astra --help` to confirm current command syntax rather than
 guessing.
 
