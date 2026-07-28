@@ -1,11 +1,13 @@
 ---
 name: assess-reproducibility
-description: Assess scientific papers for full-replication feasibility and rank the easiest candidates. Use when given arXiv links, DOIs, or a bibliography and asked to check reproducibility, find code and data, estimate compute requirements, detect access blockers, or select papers an autonomous agent can reproduce.
+description: Assess how reproducible a scientific paper is by checking full-replication feasibility, public code and data, compute requirements, and access blockers. Use for one arXiv link or DOI by default, or optionally for multiple papers or a bibliography that should also be ranked by feasibility.
 ---
 
 # Assess Reproducibility
 
-Judge whether an agent could fully replicate each paper today on a modest machine. For a batch, surface the easiest astronomy science papers first.
+Judge whether an agent could fully replicate a paper today on a modest machine.
+If given multiple papers or a bibliography, assess each one and surface the
+easiest astronomy science papers first.
 
 ## Target machine
 

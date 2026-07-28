@@ -10,15 +10,15 @@ Your agent will download the paper source, look for the original code, and
 attempt to fully reproduce every key result and figure in the paper. This can
 require significant compute and storage.
 
-The agent is instructed not to stop until a fresh, independent verifier
-subagent can confirm that the reproduction is broadly successful. We wrote a
+The agent is instructed not to stop until an independent subagent can confirm
+that the reproduction is broadly successful. We wrote a
 dedicated prompt for the verifier with best practices for spotting major,
 minor, and stylistic issues in the reproduction compared with the original
 paper.
 
-The plugin also includes `/assess-reproducibility`, which checks papers for
-public code and data, estimates compute requirements, identifies blockers, and
-ranks the best candidates to reproduce. `/figure-comparison` builds a portable
+The plugin also includes `/assess-reproducibility`, which assesses how
+reproducible a paper is by looking for public code and data and estimating
+compute requirements and blockers. `/figure-comparison` builds a portable
 side-by-side HTML report comparing the original and reproduced figures, tables,
 and reported values.
 
