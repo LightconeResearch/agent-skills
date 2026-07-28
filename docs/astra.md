@@ -14,4 +14,6 @@ when it is saved.
 codex plugin add astra@lightcone-research
 ```
 
+For a worked example, see the [supernova cosmology tutorial](tutorial-supernova.md).
+
 [View the `astra` skill on GitHub](https://github.com/LightconeResearch/agent-skills/tree/main/skills/astra).
