@@ -611,21 +611,40 @@ included.</p>
 </tbody>
 </table>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Claude Code</label><label for="__tabbed_1_2">Codex</label></div>
+<p>First, pick a plugin:</p>
+<ul>
+<li><code>astra</code> if you want to write and validate ASTRA analyses.</li>
+<li><code>reproduction</code> if you want to assess and reproduce papers and compare the
+  results. It already includes ASTRA.</li>
+</ul>
+<p>The commands below install <code>astra</code>. Use <code>reproduction@lightcone-research</code>
+instead if you want the full reproduction toolkit.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Claude Code</label><label for="__tabbed_1_2">Claude App</label><label for="__tabbed_1_3">Codex CLI</label><label for="__tabbed_1_4">Codex App</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>claude<span class="w"> </span>plugin<span class="w"> </span>marketplace<span class="w"> </span>add<span class="w"> </span>LightconeResearch/agent-skills
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>claude<span class="w"> </span>plugin<span class="w"> </span>install<span class="w"> </span>reproduction@lightcone-research
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>claude<span class="w"> </span>plugin<span class="w"> </span>install<span class="w"> </span>astra@lightcone-research
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
+<p>Go to <strong>Customize → Plugins</strong>, click <strong>Add</strong>, then choose
+<strong>Add marketplace → Add from repo</strong>. Paste
+<code>https://github.com/LightconeResearch/agent-skills</code>, pick a plugin, and call
+it with <code>/astra:astra</code> or <code>/reproduction:reproduce</code>.</p>
+</div>
+<div class="tabbed-block">
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>codex<span class="w"> </span>plugin<span class="w"> </span>marketplace<span class="w"> </span>add<span class="w"> </span>LightconeResearch/agent-skills
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>codex<span class="w"> </span>plugin<span class="w"> </span>add<span class="w"> </span>reproduction@lightcone-research
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>codex<span class="w"> </span>plugin<span class="w"> </span>add<span class="w"> </span>astra@lightcone-research
 </span></code></pre></div>
 </div>
+<div class="tabbed-block">
+<p>Click the arrow beside <strong>Create</strong> and open <strong>Plugins</strong>. Install the
+<code>LightconeResearch/agent-skills</code> marketplace, search for <code>astra</code> or
+<code>reproduction</code>, and install one. Then call <code>/astra:astra</code> or
+<code>/reproduction:reproduce</code>.</p>
 </div>
 </div>
-<p>Replace <code>reproduction</code> with <code>astra</code> to install the standalone ASTRA plugin.</p>
+</div>
 <h2 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>ASTRA:</strong> <a href="https://github.com/LightconeResearch/agent-skills/tree/main/skills/astra"><code>astra</code></a></li>
