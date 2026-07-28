@@ -42,7 +42,7 @@
     {
       "name": "figure-comparison",
       "path": "skills/figure-comparison",
-      "description": "Build a self-contained HTML report comparing the figures, tables, and numerical results in a standardized `work/reference/` paper substrate against artifacts produced under `results/{universe}/`. When `comparison-report.yaml` or `targets/targets.md` exists, use that scoped target set first; otherwise fall back to paper-driven inventory from arXiv TeX or Docling/Pandoc artifacts under `work/reference/`. Images are base64-embedded; missing matches are flagged. Use when the user says \"compare results\", \"side-by-side comparison\", \"build comparison HTML\", or \"did we reproduce the paper\". Run from the project folder containing astra.yaml.",
+      "description": "Build a self-contained HTML report comparing original paper figures, tables, and reported values against reproduced artifacts in any project layout. Accept explicit reference and reproduction paths or discover common folders, pair artifacts using manifests, labels, captions, and filenames, embed images for portability, and flag missing or divergent results. Use when the user asks to compare results, build a side-by-side report, inspect reproduction fidelity, or determine whether a paper was reproduced.",
       "plugins": [
         "reproduction"
       ]

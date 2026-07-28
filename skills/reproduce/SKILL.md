@@ -32,7 +32,7 @@ recomputed. Regenerate every claimed output from the implemented analysis and
 declared inputs.
 
 When the replication appears complete, follow the bundled
-`figure-comparison` skill to create `.lightcone/comparison.html`. Include every
+`figure-comparison` skill to create `comparison.html`. Include every
 reproduced figure and key result so a human can verify that they were replicated
 successfully and not copied.
 
