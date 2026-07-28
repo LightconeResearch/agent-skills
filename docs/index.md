@@ -18,21 +18,42 @@ included.
 
 ## Install
 
+First, pick a plugin:
+
+- `astra` if you want to write and validate ASTRA analyses.
+- `reproduction` if you want to assess and reproduce papers and compare the
+  results. It already includes ASTRA.
+
+The commands below install `astra`. Use `reproduction@lightcone-research`
+instead if you want the full reproduction toolkit.
+
 === "Claude Code"
 
     ```bash
     claude plugin marketplace add LightconeResearch/agent-skills
-    claude plugin install reproduction@lightcone-research
+    claude plugin install astra@lightcone-research
     ```
 
-=== "Codex"
+=== "Claude App"
+
+    Go to **Customize → Plugins**, click **Add**, then choose
+    **Add marketplace → Add from repo**. Paste
+    `https://github.com/LightconeResearch/agent-skills`, pick a plugin, and call
+    it with `/astra:astra` or `/reproduction:reproduce`.
+
+=== "Codex CLI"
 
     ```bash
     codex plugin marketplace add LightconeResearch/agent-skills
-    codex plugin add reproduction@lightcone-research
+    codex plugin add astra@lightcone-research
     ```
 
-Replace `reproduction` with `astra` to install the standalone ASTRA plugin.
+=== "Codex App"
+
+    Click the arrow beside **Create** and open **Plugins**. Install the
+    `LightconeResearch/agent-skills` marketplace, search for `astra` or
+    `reproduction`, and install one. Then call `/astra:astra` or
+    `/reproduction:reproduce`.
 
 ## Skills
 
