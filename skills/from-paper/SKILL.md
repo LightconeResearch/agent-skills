@@ -3,7 +3,7 @@ name: from-paper
 description: >
   This skill should be used when the user wants to reproduce a published
   scientific paper in ASTRA — has a DOI, arXiv ID, or PDF — or asks to
-  "reproduce <paper>", "set up reproduction", or "import a paper". Also
+  "reproduce this paper", "set up reproduction", or "import a paper". Also
   use when continuing or resuming an existing reproduction workdir. The
   skill instructs Claude to run ORIENT in the user's main session
   (paper-extraction + interview + code scan, all grounded), then hand
@@ -120,9 +120,9 @@ Each iteration's survey reads the workdir to determine what phase is next. File 
 
 ## REVIEW close-out (after the loop)
 
-When the loop closes (the user reports back that the tmux session has exited, or `constitution.md`'s `status:` is `closed`), run REVIEW from the user's main session. See [`references/review.md`](references/review.md) for the full close-out: invoke `/figure-comparison` (mandatory) and optionally `/check-sentence-by-sentence`, walk `open-questions.md` with the user, draft `REPRODUCTION-SUMMARY.md`, author the MyST report via `/report`, propagate un-acted opportunities into CLAUDE.md, commit.
+When the loop closes (the user reports back that the tmux session has exited, or `constitution.md`'s `status:` is `closed`), run REVIEW from the user's main session. See [`references/review.md`](references/review.md) for the full close-out: invoke `/figure-comparison`, walk `open-questions.md` with the user, draft `REPRODUCTION-SUMMARY.md`, author the MyST report via `/report`, propagate un-acted opportunities into CLAUDE.md, commit.
 
-REVIEW runs in your main session because `/figure-comparison` and `/check-sentence-by-sentence` both use `AskUserQuestion`, which isn't available inside ralph iterations.
+REVIEW runs in your main session because `/figure-comparison` uses `AskUserQuestion`, which isn't available inside ralph iterations.
 
 ## Disciplines
 

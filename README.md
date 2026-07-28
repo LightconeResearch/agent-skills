@@ -10,7 +10,7 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-13-7c3aed?style=flat-square)](#-skills)
+[![Skills](https://img.shields.io/badge/skills-12-7c3aed?style=flat-square)](#-skills)
 [![Plugins](https://img.shields.io/badge/plugins-4-7c3aed?style=flat-square)](#-plugins)
 
 </div>
@@ -57,7 +57,7 @@ two first.
 |---|---|---|---|---|
 | **`astra`** | `astra` | — | — | standalone ASTRA authoring skill; validate-on-save & activate-on-read hooks (self-installing via `uvx`) |
 | **`lightcone`** *(recommended)* | `new`, `report`, `feedback`, `cli` | `astra` | — | session-primer hook (+ astra's validate-on-save / activate-on-read); `lc-extractor` subagent |
-| **`reproduction`** | `assess-reproducibility`, `reproduce`, `check-sentence-by-sentence`, `figure-comparison` | `astra` | — | feasibility triage, end-to-end replication, independent verification, and result comparison |
+| **`reproduction`** | `assess-reproducibility`, `reproduce`, `figure-comparison` | `astra` | — | feasibility triage, end-to-end replication, independent verification, and result comparison |
 | **`lightcone-experimental`** | `from-paper`, `from-code`, `paper-extraction`, `ralph` | — (ships only its own skills) | **`lightcone` + `reproduction`** (install both first) | opt-in staged Lightcone reproduction workflow; under active development |
 
 ## 🚀 Install
@@ -123,7 +123,6 @@ above.
 |---|---|
 | [`assess-reproducibility`](skills/assess-reproducibility) | Assess and rank papers by full-replication feasibility, public inputs, and compute requirements. |
 | [`reproduce`](skills/reproduce) | Reproduce a scientific paper end to end in ASTRA, including independent verification. |
-| [`check-sentence-by-sentence`](skills/check-sentence-by-sentence) | Verify a manuscript sentence by sentence against the project's code. |
 | [`figure-comparison`](skills/figure-comparison) | Compare reproduced figures, tables, and values against the paper's originals. |
 
 ### Experimental

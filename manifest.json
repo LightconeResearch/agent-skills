@@ -24,14 +24,6 @@
       ]
     },
     {
-      "name": "check-sentence-by-sentence",
-      "path": "skills/check-sentence-by-sentence",
-      "description": "Sentence-by-sentence audit of a paper against an ASTRA project's code. For every claim about implementation or results in the methodology, results, discussion, and appendices, locate the corresponding code (file:line) or mark NOT FOUND. Only the user can invoke this skill, though this skill can be suggested for the user to invoke during paper reproduction. Other skills may mention this skill as an optional follow-up, but should not invoke it themselves. Run from the project folder containing astra.yaml. In from-paper projects, read paper sources from work/reference/: prefer arXiv TeX under work/reference/source/, fall back to Docling/Pandoc markdown at work/reference/document.md.",
-      "plugins": [
-        "reproduction"
-      ]
-    },
-    {
       "name": "cli",
       "path": "skills/cli",
       "description": "Reference for `lc` CLI execution: commands (init/run/status/verify/build/export), the Spec-Code Invariant (`astra.yaml` and code never diverge), status interpretation (ok/stale/missing/alias), failure diagnosis, multiverse runs, scratch overrides for HPC, sub-analysis scaffolding, publishing via WRROC. Invoke whenever running, debugging, or diagnosing `lc` workflows; whenever interpreting `lc status` / `lc verify` output; or whenever the user asks about the development workflow surrounding `astra.yaml`.",
@@ -66,7 +58,7 @@
     {
       "name": "from-paper",
       "path": "skills/from-paper",
-      "description": "This skill should be used when the user wants to reproduce a published scientific paper in ASTRA — has a DOI, arXiv ID, or PDF — or asks to \"reproduce <paper>\", \"set up reproduction\", or \"import a paper\". Also use when continuing or resuming an existing reproduction workdir. The skill instructs Claude to run ORIENT in the user's main session (paper-extraction + interview + code scan, all grounded), then hand the reproduction off to a ralph loop whose iterations carry the remaining phases (ARCHITECT → SPECIFY → LITERATURE → IMPLEMENT → RUN → COMPARE) until the constitution closes, at which point REVIEW close-out runs back in the user's main session.",
+      "description": "This skill should be used when the user wants to reproduce a published scientific paper in ASTRA — has a DOI, arXiv ID, or PDF — or asks to \"reproduce this paper\", \"set up reproduction\", or \"import a paper\". Also use when continuing or resuming an existing reproduction workdir. The skill instructs Claude to run ORIENT in the user's main session (paper-extraction + interview + code scan, all grounded), then hand the reproduction off to a ralph loop whose iterations carry the remaining phases (ARCHITECT → SPECIFY → LITERATURE → IMPLEMENT → RUN → COMPARE) until the constitution closes, at which point REVIEW close-out runs back in the user's main session.",
       "plugins": [
         "lightcone-experimental"
       ]
@@ -143,11 +135,10 @@
     },
     {
       "name": "reproduction",
-      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), audit manuscript claims against code (`check-sentence-by-sentence`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
+      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
       "skills": [
         "assess-reproducibility",
         "astra",
-        "check-sentence-by-sentence",
         "figure-comparison",
         "reproduce"
       ],

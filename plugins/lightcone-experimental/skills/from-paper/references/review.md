@@ -1,6 +1,6 @@
 # REVIEW — close-out in the user's main session
 
-The reproduction has converged: the constitution's `status:` is `closed` (after COMPARE returned `pass`, or `partial` with the un-acted opportunities logged, and the next cold-survey iteration found nothing left to do). The ralph loop's tmux session has exited. REVIEW runs back in the user's main session — the second of two interactive bookends, the first being ORIENT. It runs in the user's main session (not as an iteration) because both `/figure-comparison` and `/check-sentence-by-sentence` use `AskUserQuestion`, which isn't available inside detached ralph iterations.
+The reproduction has converged: the constitution's `status:` is `closed` (after COMPARE returned `pass`, or `partial` with the un-acted opportunities logged, and the next cold-survey iteration found nothing left to do). The ralph loop's tmux session has exited. REVIEW runs back in the user's main session — the second of two interactive bookends, the first being ORIENT. It runs in the user's main session (not as an iteration) because `/figure-comparison` uses `AskUserQuestion`, which isn't available inside detached ralph iterations.
 
 Its job is to render the validation surfaces, walk the user through the accumulated open questions, land the resolutions, and draft the final summary and MyST report — in one interactive arc. The Open opportunities list in CLAUDE.md already carries un-acted-on opportunities from the latest COMPARE (those iterations logged them directly); REVIEW just reads them.
 
@@ -21,7 +21,6 @@ The phase name **REVIEW** is freed by the old pre-implement REVIEW phase folding
 ## Outputs
 
 - `.lightcone/comparison.html` — `/figure-comparison`'s portable side-by-side report (paper artifacts vs reproduced)
-- (Optional) `.lightcone/check-sentence-by-sentence.md` — `/check-sentence-by-sentence`'s claim audit (file:line or NOT FOUND per sentence)
 - `open-questions.md` — same file, but with `## Resolutions` section appended capturing what the user said for each entry
 - Edits to `astra.yaml` / `implementation-notes.md` / `universes/baseline.yaml` if any open-question resolution warrants a spec change
 - `REPRODUCTION-SUMMARY.md` — final summary; concise (~1–2 pages); the canonical record of what the reproduction landed on
@@ -38,14 +37,6 @@ Invoke the `/figure-comparison` skill from the user's main session. It builds a 
 Output lands at `.lightcone/comparison.html`. Show the user the path and offer to open it (`open` on macOS, `xdg-open` on Linux, or just print the path so they click in their terminal).
 
 **Do not spawn `/figure-comparison` under the `Task` tool or inside a ralph iteration.** It has `AskUserQuestion` in its `allowed-tools`; sub-agents and detached iterations have no user-reach, so the prompt fires into nothing.
-
-### `/check-sentence-by-sentence` (opt-in)
-
-Ask the user via `AskUserQuestion` whether they want the claim audit. It's optional because for many reproductions the figure-comparison already settles "did it match?"; the sentence-by-sentence audit earns its keep when the paper makes many specific quantitative claims and the user wants each one anchored to a code location.
-
-If yes, invoke `/check-sentence-by-sentence`. Same discipline as `/figure-comparison` — it can prompt the user; do not spawn under `Task` or inside a ralph iteration.
-
-Output lands at `.lightcone/check-sentence-by-sentence.md` (or wherever the skill writes it). Show the user the path.
 
 ## Step 2: walk `open-questions.md` with the user
 
@@ -110,7 +101,7 @@ This commit is the durable mark that the reproduction has reached close-out. Fut
 ## Notes
 
 - **This phase runs in the user's main session.** Do not invoke it from inside a ralph iteration. The whole point of REVIEW is that the user is reachable — every step uses `AskUserQuestion` (directly, or via the sibling skills it invokes), and iterations are detached.
-- **`/figure-comparison` and `/check-sentence-by-sentence` use `AskUserQuestion`.** That's why REVIEW runs in the user's main session and they live here, not in any iteration. Invoking either inside an iteration fires prompts into nothing.
+- **`/figure-comparison` uses `AskUserQuestion`.** That's why REVIEW runs in the user's main session rather than inside an iteration. Invoking it inside an iteration fires prompts into nothing.
 - **The user owns the verdict-acceptance decision.** REVIEW's purpose is to let the user see what the loop's iterations did and decide whether they accept it. The skill renders surfaces and asks; it does not unilaterally close.
 - **Don't confuse with the per-phase reviews inside the loop.** ARCHITECT, SPECIFY, LITERATURE, and IMPLEMENT each have their own fresh-context review discipline that happens by iteration boundary. Those are unrelated to this close-out — same word, different jobs. The phase boundary makes them unambiguous: per-phase reviews live inside their host phase's reference; this one is the post-loop close-out in the user's main session.
 - **Open-question resolutions are durable.** Append to `open-questions.md`'s `## Resolutions` section so the next re-run / future session sees what was decided. Do not delete the original questions.

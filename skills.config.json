@@ -28,8 +28,8 @@
     },
     {
       "name": "reproduction",
-      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), audit manuscript claims against code (`check-sentence-by-sentence`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
-      "skills": ["assess-reproducibility", "reproduce", "check-sentence-by-sentence", "figure-comparison"],
+      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
+      "skills": ["assess-reproducibility", "reproduce", "figure-comparison"],
       "dependencies": ["astra"]
     },
     {
