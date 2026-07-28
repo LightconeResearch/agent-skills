@@ -1,7 +1,7 @@
 {
   "name": "lightcone-experimental",
-  "version": "0.0.1",
-  "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Requires the `lightcone` plugin (install it first) — these skills build on the core lc workflow, hooks, and lc-extractor subagent but do NOT bundle them. Install when you need capabilities beyond the core analysis workflow.",
+  "version": "0.0.2",
+  "description": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Includes staged paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), and autonomous iteration (`ralph`). Requires the `lightcone` and `reproduction` plugins (install both first) because these workflows build on the core lc project workflow and the reproduction review skills, but do not bundle either plugin.",
   "author": {
     "name": "Lightcone Research",
     "email": "info@lightconeresearch.org"
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "Lightcone Experimental",
     "shortDescription": "Use Lightcone Experimental in Codex.",
-    "longDescription": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), autonomous iteration (`ralph`), and manuscript verification (`check-sentence-by-sentence`, `figure-comparison`). Requires the `lightcone` plugin (install it first) — these skills build on the core lc workflow, hooks, and lc-extractor subagent but do NOT bundle them. Install when you need capabilities beyond the core analysis workflow.",
+    "longDescription": "Opt-in, experimental skills for advanced Lightcone workflows — under active development, expect rough edges. Includes staged paper reproduction (`from-paper`), code import (`from-code`), literature substrate extraction (`paper-extraction`), and autonomous iteration (`ralph`). Requires the `lightcone` and `reproduction` plugins (install both first) because these workflows build on the core lc project workflow and the reproduction review skills, but do not bundle either plugin.",
     "developerName": "Lightcone Research",
     "category": "Development",
     "capabilities": [],

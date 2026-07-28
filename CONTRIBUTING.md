@@ -47,7 +47,7 @@ Edit `skills.config.json`:
 - `requires` — other plugins this one **depends on but does not bundle**. Documented
   only: the user installs the required plugin separately (surfaced in the README and the
   plugin description). Nothing is added to the closure. Example:
-  `lightcone-experimental` requires `lightcone`.
+  `lightcone-experimental` requires `lightcone` and `reproduction`.
 - `hooks` — path to this plugin's own `hooks/<plugin>/hooks.json` (a plugin owns at
   most one). Hook commands reference the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
   `CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines (the `$PLUGIN_ROOT`

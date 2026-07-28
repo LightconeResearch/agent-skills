@@ -1,6 +1,6 @@
 {
   "name": "@lightcone/agent-skills",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Agent skills for Lightcone Research — ASTRA specs, lightcone-cli workflows, and paper reproduction.",
   "type": "module",

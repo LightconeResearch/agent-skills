@@ -23,11 +23,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
-const PLUGINS = ["astra", "lightcone", "lightcone-experimental"];
+const PLUGINS = ["astra", "lightcone", "reproduction", "lightcone-experimental"];
 const MARKET = "lightcone-research";
 const CODEX_PROBE_SKILLS = {
   astra: "astra",
   lightcone: "new",
+  reproduction: "reproduce",
   "lightcone-experimental": "from-paper",
 };
 // Hooks auto-discover from a packaged hooks/hooks.json (no manifest declaration),
@@ -36,6 +37,7 @@ const CODEX_PROBE_SKILLS = {
 const CODEX_PROBE_HOOKS = {
   astra: "hooks/hooks.json",
   lightcone: "hooks/hooks.json",
+  reproduction: "hooks/hooks.json",
 };
 
 const args = process.argv.slice(2);
