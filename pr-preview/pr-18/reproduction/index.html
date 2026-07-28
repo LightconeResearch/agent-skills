@@ -475,14 +475,14 @@
 <p>Your agent will download the paper source, look for the original code, and
 attempt to fully reproduce every key result and figure in the paper. This can
 require significant compute and storage.</p>
-<p>The agent is instructed not to stop until a fresh, independent verifier
-subagent can confirm that the reproduction is broadly successful. We wrote a
+<p>The agent is instructed not to stop until an independent subagent can confirm
+that the reproduction is broadly successful. We wrote a
 dedicated prompt for the verifier with best practices for spotting major,
 minor, and stylistic issues in the reproduction compared with the original
 paper.</p>
-<p>The plugin also includes <code>/assess-reproducibility</code>, which checks papers for
-public code and data, estimates compute requirements, identifies blockers, and
-ranks the best candidates to reproduce. <code>/figure-comparison</code> builds a portable
+<p>The plugin also includes <code>/assess-reproducibility</code>, which assesses how
+reproducible a paper is by looking for public code and data and estimating
+compute requirements and blockers. <code>/figure-comparison</code> builds a portable
 side-by-side HTML report comparing the original and reproduced figures, tables,
 and reported values.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>codex<span class="w"> </span>plugin<span class="w"> </span>add<span class="w"> </span>reproduction@lightcone-research
