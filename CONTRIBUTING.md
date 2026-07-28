@@ -42,7 +42,7 @@ Edit `skills.config.json`:
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
   transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers
   archive the dir and don't follow outward symlinks, so copies are required) under `plugins/<name>/`, so the plugin
-  is self-contained and installs identically on both harnesses. Example: `lightcone`
+  is self-contained and installs identically on both harnesses. Example: `reproduction`
   bundles `astra`.
 - `requires` — other plugins this one **depends on but does not bundle**. Documented
   only: the user installs the required plugin separately (surfaced in the README and the
@@ -52,7 +52,7 @@ Edit `skills.config.json`:
   `CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines (the `$PLUGIN_ROOT`
   fallback covers older harness versions) — and always spell script paths `hooks/scripts/<name>.sh`
   — the build flattens every closure hook tree under one `hooks/scripts/` dir. When a
-  plugin bundles a dependency that also ships hooks (e.g. `lightcone` + `astra`), the
+  plugin bundles a dependency that also ships hooks (e.g. `reproduction` + `astra`), the
   generator **merges** the manifests: hook groups concatenate per event, scripts copy
   side by side (canonical script basenames must stay unique across plugins). `agents` —
   Claude subagent file paths.
@@ -74,11 +74,11 @@ Then `npm run build && npm test`.
 ```bash
 # Claude Code, against your local checkout:
 claude plugin marketplace add ./           # or: /plugin marketplace add ./ in-session
-claude plugin install lightcone@lightcone-research
+claude plugin install reproduction@lightcone-research
 
 # Validate the Claude plugin/marketplace manifests:
 claude plugin validate .
-claude plugin validate ./plugins/lightcone   # (Codex plugin.json layout)
+claude plugin validate ./plugins/reproduction   # (Codex plugin.json layout)
 
 # npx skills, from the repo:
 npx skills add ./ --list

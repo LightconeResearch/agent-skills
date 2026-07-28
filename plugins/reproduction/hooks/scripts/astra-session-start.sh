@@ -7,9 +7,7 @@
 # sub-analysis file counts). The one static line is the skill pointer.
 #
 # Deliberately NOT here:
-#   - lc / lightcone-cli anything -- this plugin is about the ASTRA spec;
-#     execution-layer status belongs to the lightcone plugin's own
-#     SessionStart hook (lightcone-session-start.sh).
+#   - execution-layer status -- this plugin is about the ASTRA spec.
 #   - astra validate -- validation is an opinion about the work, not
 #     session state; it belongs to validate-on-save, which fires at the
 #     moment an ASTRA file actually changes.

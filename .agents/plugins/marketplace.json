@@ -18,19 +18,6 @@
       "category": "Development"
     },
     {
-      "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `report` authors the MyST report that references astra.yaml elements by path, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships the lc-extractor subagent for literature extraction. Bundles the astra reference — and with it the astra hooks (session primer, validate-on-save, activate-on-read) — so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
-      "source": {
-        "source": "local",
-        "path": "./plugins/lightcone"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Development"
-    },
-    {
       "name": "reproduction",
       "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
       "source": {

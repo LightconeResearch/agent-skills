@@ -3,21 +3,19 @@
 This repository is the **source of truth for the Lightcone Research agent skills**.
 It is not an application — it packages `SKILL.md`-based skills for three install
 targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
-from a single canonical source. Three plugins: `astra` (spec reference);
-`lightcone` (the `lc` project workflow + hooks), which bundles `astra`;
-`reproduction` (replication assessment, execution, and review), which also bundles
-`astra`. Plugin skills are namespaced by plugin name (e.g. `/lightcone:new`,
+from a single canonical source. Two plugins: `astra` (spec reference) and
+`reproduction` (replication assessment, execution, and review), which bundles
+`astra`. Plugin skills are namespaced by plugin name (e.g.
 `/reproduction:reproduce`, `/astra:astra`).
 
 ## Where things live
 
 - `skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per
   skill; the directory name must equal the `name:` in the frontmatter.
-- `agents/` — Claude subagents (`lc-extractor`, used by the `start` skill). `hooks/<plugin>/`
-  — per-plugin `hooks.json` + bash scripts (`astra/` validates on save and reminds the
-  agent to load the skill; `lightcone/` prints the session primer).
+- `hooks/<plugin>/` — per-plugin `hooks.json` + bash scripts (`astra/` validates
+  on save and reminds the agent to load the skill).
 - `skills.config.json` — declares how skills compose into the plugins
-  (`astra`, `lightcone`, `reproduction`). A plugin composes with others two ways:
+  (`astra`, `reproduction`). A plugin composes with others two ways:
   `dependencies` (bundled build-time closure) and `requires` (documented-only
   prerequisite the user installs — not bundled).
 - `scripts/build.mjs`, `scripts/validate.mjs` — the generator and the validator.
@@ -108,7 +106,7 @@ zero-dep and reconciled them to the three-target need.
 - `description`: ≤ 1024 chars; say *what it does* and *when to use it*, with trigger
   keywords (this is what an agent reads to decide whether to load the skill).
 - Keep `SKILL.md` under ~500 lines; push depth into `references/` and load it on demand.
-- Any skill that shells out to `lc`/`astra` must open with the **Prerequisites**
+- Any skill that shells out to `astra` must open with the **Prerequisites**
   preflight: confirm the CLI resolves, point to `uv tool install lightcone-cli` if not,
   and discover command syntax with `--help` rather than guessing.
 

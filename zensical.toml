@@ -1,7 +1,7 @@
 [project]
 
 site_name = "Lightcone Research Agent Skills"
-site_description = "Portable agent skills for ASTRA, Lightcone, and scientific reproduction."
+site_description = "Portable agent skills for ASTRA and scientific reproduction."
 site_author = "Lightcone Research"
 site_url = "https://lightconeresearch.github.io/agent-skills/"
 copyright = "&copy; 2026 Lightcone Research"
@@ -13,7 +13,6 @@ nav = [
   { "Documentation" = [
       { "Home" = "index.md" },
       { "ASTRA" = "astra.md" },
-      { "Lightcone" = "lightcone.md" },
       { "Reproduction" = "reproduction.md" },
   ] },
 ]

@@ -3,7 +3,7 @@
   "marketplace": {
     "name": "lightcone-research",
     "displayName": "Lightcone Research Skills",
-    "description": "Agent skills for Lightcone Research — ASTRA, lightcone-cli project workflows, and scientific paper reproduction.",
+    "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction.",
     "version": "0.0.2",
     "repo": "LightconeResearch/agent-skills",
     "owner": {
@@ -18,13 +18,6 @@
       "skills": ["astra"],
       "hooks": "hooks/astra/hooks.json",
       "dependencies": []
-    },
-    {
-      "name": "lightcone",
-      "description": "Core workflow for a Lightcone / ASTRA analysis with the lightcone-cli (lc) toolchain: `new` scopes a new analysis from a research question, `report` authors the MyST report that references astra.yaml elements by path, `cli` carries the lc execution reference (spec–code invariant, status interpretation, failure diagnosis), and `feedback` files bug reports. Ships the lc-extractor subagent for literature extraction. Bundles the astra reference — and with it the astra hooks (session primer, validate-on-save, activate-on-read) — so this one plugin is all you need for interactive work inside an lc / ASTRA project.",
-      "skills": ["new", "report", "feedback", "cli"],
-      "agents": ["agents/lc-extractor.md"],
-      "dependencies": ["astra"]
     },
     {
       "name": "reproduction",
