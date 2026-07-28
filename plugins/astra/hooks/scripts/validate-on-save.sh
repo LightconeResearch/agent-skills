@@ -26,75 +26,31 @@ source "$SCRIPT_DIR/astra-pins.sh"
 
 input=$(cat)
 
-# Claude Code's Write/Edit payload carries a file_path object. Codex's
-# apply_patch payload carries patch text in tool_input.command; retain the raw
-# string and tool_input.patch forms for older harnesses. Extract paths from the
-# patch's Add/Update/Move headers. Keep both paths at this boundary; the
-# validation policy below is shared across harnesses.
-file_paths=$(echo "$input" | jq -r '
-    if (.tool_input | type) == "object" then
-        if (.tool_input.file_path | type) == "string" then
-            .tool_input.file_path
-        else
-            empty
-        end
-    else
-        empty
-    end,
-    if (.tool_response | type) == "object" then
-        if (.tool_response.filePath | type) == "string" then
-            .tool_response.filePath
-        else
-            empty
-        end
-    else
-        empty
-    end
-')
+# Claude Code's Write/Edit payload carries a file_path string. Codex's
+# apply_patch payload carries patch text in tool_input.command; take the paths
+# from the patch's Add/Update/Move headers. The two are mutually exclusive.
+file_paths=$(echo "$input" | jq -r '.tool_input.file_path // .tool_response.filePath // empty')
+patch_text=$(echo "$input" | jq -r '.tool_input.command // empty')
 
-patch_text=$(echo "$input" | jq -r '
-    if (.tool_input | type) == "string" then
-        .tool_input
-    elif (.tool_input | type) == "object" then
-        if (.tool_input.command | type) == "string" then
-            .tool_input.command
-        elif (.tool_input.patch | type) == "string" then
-            .tool_input.patch
-        else
-            empty
-        end
-    else
-        empty
-    end
-')
-
-if [ -n "$patch_text" ]; then
-    patch_paths=$(printf '%s\n' "$patch_text" | sed -nE \
-        -e 's/^\*\*\* (Add|Update) File: (.+)$/\2/p' \
-        -e 's/^\*\*\* Move to: (.+)$/\1/p')
-    if [ -n "$patch_paths" ]; then
-        file_paths="${file_paths}${file_paths:+$'\n'}${patch_paths}"
-    fi
-fi
-
-[ -z "$file_paths" ] && exit 0
+[ -n "$patch_text" ] && file_paths=$(printf '%s\n' "$patch_text" | sed -nE \
+    -e 's/^\*\*\* (Add|Update) File: (.+)$/\2/p' \
+    -e 's/^\*\*\* Move to: (.+)$/\1/p')
 
 # Resolve relative paths against the event cwd. The fallback keeps direct hook
-# invocation and older harness payloads useful.
-cwd=$(echo "$input" | jq -r '
-    if (.cwd | type) == "string" then .cwd else empty end
-')
+# invocation useful.
+cwd=$(echo "$input" | jq -r '.cwd // empty')
 [ -z "$cwd" ] && cwd=$(pwd)
 
 # Filter to astra.yaml at any depth and universe files (universes/*.yaml),
 # while retaining absolute paths for validation and readable diagnostics.
+# Skip paths that do not exist: a Move header names the pre-rename source too.
 candidate_paths=""
 while IFS= read -r file_path; do
-    [ -z "$file_path" ] && continue
     case "$file_path" in
         /*) ;;
         *) file_path="${cwd%/}/$file_path" ;;
     esac
+    [ -f "$file_path" ] || continue
 
     filename=$(basename "$file_path")
     parent=$(basename "$(dirname "$file_path")")
@@ -117,31 +73,18 @@ fi
 
 messages=""
 while IFS= read -r file_path; do
-    [ -z "$file_path" ] && continue
     filename=$(basename "$file_path")
     project_root=$(dirname "$file_path")
-    if [ "$filename" != "astra.yaml" ]; then
-        project_root=$(dirname "$project_root")
-    fi
+    [ "$filename" = "astra.yaml" ] || project_root=$(dirname "$project_root")
 
-    if [ "$filename" = "astra.yaml" ]; then
-        result=$(cd "$project_root" 2>/dev/null && "${ASTRA_CMD[@]}" validate astra.yaml 2>&1)
-    else
-        result=$(cd "$project_root" 2>/dev/null && "${ASTRA_CMD[@]}" validate "$file_path" 2>&1)
-    fi
-    exit_code=$?
-
-    if [ $exit_code -eq 0 ]; then
+    result=$(cd "$project_root" && "${ASTRA_CMD[@]}" validate "$file_path" 2>&1)
+    if [ $? -eq 0 ]; then
         message="ASTRA validation passed for $file_path"
     else
         message=$(printf 'ASTRA validation FAILED for %s:\n%s' "$file_path" "$result")
     fi
-    if [ -n "$messages" ]; then
-        messages="${messages}"$'\n'"${message}"
-    else
-        messages="$message"
-    fi
-done < <(printf '%s\n' "$candidate_paths" | awk 'NF && !seen[$0]++')
+    messages="${messages}${messages:+$'\n'}${message}"
+done < <(printf '%s\n' "$candidate_paths")
 
 jq -n --arg ctx "$messages" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
 exit 0
