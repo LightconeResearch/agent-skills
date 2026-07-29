@@ -10,10 +10,6 @@ in code, and when an analysis should be split into smaller units. The bundled
 hooks load this guidance when an agent reads an ASTRA file and validate the file
 when it is saved.
 
-```bash
-codex plugin add astra@lightcone-research
-```
-
 [View the `astra` skill on GitHub](https://github.com/LightconeResearch/agent-skills/tree/main/skills/astra).
 
 ## Tutorial: measure dark energy
@@ -68,8 +64,9 @@ Make a directory to work in, and start your agent in it:
 
 ```bash
 mkdir sn-cosmology && cd sn-cosmology
-claude
 ```
+
+Then start your agent.
 
 Everything in a `text` block below is a prompt: paste it into the agent, not
 into your shell. Shell commands appear only where you are meant to look at
