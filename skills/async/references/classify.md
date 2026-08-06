@@ -1,46 +1,25 @@
----
-name: classify-run
-description: >
-  Decide whether a Lightcone target should run synchronously in the current
-  local or SLURM allocation or asynchronously through lc run --async. Detect
-  compute allocation versus cluster login node, compare ASTRA recipe.resources
-  with worker-node capacity and remaining walltime, and return or execute the
-  exact lc command. Use immediately before every production lc run or submission,
-  after allocation or session changes, when resuming work, or whenever asked to
-  run, queue, submit, or choose sync versus async execution.
----
-
-# Classify Lightcone Run
+# Classify Async Execution
 
 Choose the execution mode from fresh environment facts. Treat resource estimates
 as reusable inputs and classification as ephemeral: repeat this workflow whenever
-the allocation, remaining walltime, target DAG, or user lifetime requirement changes.
+the allocation, remaining walltime, target DAG, or user lifetime requirement
+changes.
 
-## Prerequisites
+## Contents
 
-1. Confirm the CLIs resolve:
-
-   ```bash
-   command -v lc
-   command -v astra
-   ```
-
-   If either is missing, tell the user to run `uv tool install lightcone-cli`
-   and stop.
-
-2. Work from the project containing `astra.yaml`. Discover the installed surface:
-
-   ```bash
-   lc run --help
-   lc status --help
-   lc --help
-   ```
-
-   If `lc run --async` is unavailable, record that limitation and continue the
-   classification. If the result is asynchronous, stop and recommend upgrading
-   lightcone-cli. Never substitute a hand-written `sbatch` command.
+- [Resolve the run](#1-resolve-the-run)
+- [Identify the execution environment](#2-identify-the-execution-environment)
+- [Compare demand with the current budget](#3-compare-demand-with-the-current-budget)
+- [Classify](#4-classify)
+- [Execute only when requested](#5-execute-only-when-requested)
+- [Report the result](#result)
 
 ## 1. Resolve the run
+
+Confirm that `lc run --async` is available from the command surface discovered
+by the main skill. If it is unavailable, record that limitation and continue the
+classification. If the result is asynchronous, stop and recommend upgrading
+lightcone-cli. Never substitute a hand-written `sbatch` command.
 
 Identify the exact outputs and universes the user intends to materialize. Inspect
 the root and relevant sub-analysis specs, universe files, and `lc status --json`.
@@ -48,8 +27,9 @@ Resolve the required upstream sub-DAG rather than checking only the named leaf.
 
 Read `recipe.resources` for every rule that may run. If CPU, memory, GPU, or
 `time_limit` requirements are missing, stale relative to the recipe/workload, or
-too uncertain to defend, stop and use `estimate`. Do not invent resource values
-inside this skill.
+too uncertain to defend, return **Estimate first**. Read the estimation reference,
+update and validate ASTRA, then restart this workflow with fresh environment
+facts. Do not invent resource values during classification.
 
 ## 2. Identify the execution environment
 

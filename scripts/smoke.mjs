@@ -27,7 +27,7 @@ const PLUGINS = ["astra", "lightcone"];
 const MARKET = "lightcone-research";
 const CODEX_PROBE_SKILLS = {
   astra: "astra",
-  lightcone: "classify-run",
+  lightcone: "async",
 };
 // Hooks auto-discover from a packaged hooks/hooks.json (no manifest declaration),
 // so their presence in the cache is what makes them load — probe the plugins that

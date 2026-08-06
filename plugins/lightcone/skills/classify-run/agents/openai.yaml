@@ -1,4 +1,0 @@
-interface:
-  display_name: "Classify Lightcone Run"
-  short_description: "Choose synchronous or asynchronous execution"
-  default_prompt: "Use $classify-run to decide whether this Lightcone output should run synchronously or asynchronously."

@@ -1,44 +1,16 @@
----
-name: estimate
-description: >
-  Estimate CPU, memory, GPU, and walltime requirements for Lightcone
-  outputs and record them in ASTRA recipe.resources for a specific workload and
-  hardware shape. Use when resources are missing, stale, uncertain, or implicated
-  in scheduling failures; for expensive simulations, training, scaling studies,
-  and first production runs; or whenever asked to size or benchmark a Lightcone
-  recipe. This skill estimates reusable requirements but does not choose the
-  current run mode; use classify-run immediately before execution.
----
+# Estimate Resource Requirements
 
-# Estimate Lightcone Resources
+Estimate from evidence and write the result into the ASTRA specification. Own
+measurement, extrapolation, and the candidate job shape; do not choose the
+current run mode or submit production work.
 
-Estimate from evidence and write the result into the ASTRA specification. Keep
-this reusable measurement separate from the per-run sync/async decision: this
-skill owns measurement, extrapolation, and candidate job shape; `classify-run`
-compares that result with the environment available at execution time.
+## Contents
 
-## Prerequisites
-
-1. Confirm the CLIs resolve:
-
-   ```bash
-   command -v lc
-   command -v astra
-   ```
-
-   If either is missing, tell the user to run `uv tool install lightcone-cli`
-   and stop.
-
-2. Work from the project containing `astra.yaml`. Read the relevant root or
-   sub-analysis spec, universe file, recipe, and source code before estimating.
-
-3. Discover the installed command surface rather than guessing:
-
-   ```bash
-   lc run --help
-   lc status --help
-   lc --help
-   ```
+- [Resolve the target](#1-resolve-the-target)
+- [Inspect the measurement environment](#2-inspect-the-measurement-environment)
+- [Decide whether to measure](#3-decide-whether-to-measure)
+- [Record resources in ASTRA](#4-record-resources-in-astra)
+- [Report the result](#result)
 
 ## 1. Resolve the target
 
@@ -46,7 +18,9 @@ Identify the output(s) and universe(s) being estimated. If the request is
 ambiguous, inspect `astra.yaml`, `universes/`, and `lc status --json`, then ask
 only for the choice that materially changes the estimate.
 
-For every rule in the requested output's upstream sub-DAG, inspect:
+Read the relevant root or sub-analysis specification, universe file, recipes,
+and source code. For every rule in the requested output's upstream sub-DAG,
+inspect:
 
 - `recipe.command`, `recipe.container`, and existing `recipe.resources`;
 - source code, configs, and data sizes that control cost;
@@ -170,7 +144,8 @@ Conclude with a compact table:
 | Output / universe | Evidence | Hardware shape | Declared resources | Confidence |
 |---|---|---|---|---|
 
-Call out extrapolation model, safety factor, QoS-cap risk, missing measurements,
-and assumptions that would invalidate the estimate. Do not classify or submit
-the production run. If execution is requested, hand off to `classify-run`, which
-must inspect the allocation and remaining walltime again at that moment.
+Call out the extrapolation model, safety factor, QoS-cap risk, missing
+measurements, and assumptions that would invalidate the estimate. Return to the
+main async router. Do not classify or submit production work unless the user
+also requested execution; in that case, perform the classification workflow
+with fresh environment facts.

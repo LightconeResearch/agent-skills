@@ -30,8 +30,7 @@
       "version": "0.0.3",
       "description": "Prepare Lightcone jobs for asynchronous execution: estimate recipe resources and classify synchronous execution in the current local or SLURM allocation versus detached submission with lc run --async. Bundles the ASTRA authoring skill and validation hooks.",
       "skills": [
-        "estimate",
-        "classify-run"
+        "async"
       ],
       "dependencies": [
         "astra"
