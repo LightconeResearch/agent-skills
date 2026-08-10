@@ -3,9 +3,10 @@ name: astra
 description: >
   ASTRA (astra.yaml) support: what the format is, and how to drive the pinned
   `astra` CLI — orientation via the agent guide and schema reference, the
-  validate loop, universes, and the paper-evidence workflow. Invoke whenever
-  reading, writing, validating, or restructuring an astra.yaml spec, working
-  with universes or evidence, or when the user asks about ASTRA.
+  validate loop, universes, and handling citations, quotes, and supporting
+  evidence through the paper utilities. Invoke whenever reading, writing,
+  validating, or restructuring an astra.yaml spec, working with universes or
+  evidence, or when the user asks about ASTRA.
 ---
 
 # ASTRA
@@ -57,25 +58,35 @@ argument checks every spec and universe file under the current directory
 (this plugin's hook also validates automatically when an ASTRA file is
 saved).
 
-## Citing papers
+## Citations, quotes, and supporting evidence
 
-Always run `uvx astra-tools@0.2.13 paper add <doi>` when you cite a paper.
-Three steps wire a paper into the analysis:
+Claims in ASTRA are backed by verifiable evidence: `prior_insights` (imported
+claims that motivate decisions) and `findings` (claims the analysis produces)
+both carry `evidence` entries — a `doi` with a verbatim quote for literature,
+or an `artifact` naming an output. The `paper` utilities manage the
+literature side end to end:
 
-1. **Cache the PDF** — `uvx astra-tools@0.2.13 paper add <doi>` resolves the
-   DOI and downloads the paper to the project's paper cache. Pass
-   `--version N` for a specific arXiv version.
-2. **Add a `prior_insights:` entry** that cites the DOI (and optionally
-   `version`) under `evidence:`. The `quote.exact` text must match the PDF
-   verbatim; optional `prefix`/`suffix` (~20–100 chars on either side)
-   disambiguate when the exact string occurs more than once.
-3. **Verify** — `uvx astra-tools@0.2.13 paper verify-quotes <doi>` for one
-   paper, or `uvx astra-tools@0.2.13 validate astra.yaml --verify-evidence` to
-   check every quote in the spec. A wrong `exact` string fails validation.
+1. **Cache the source at authoring time** — run
+   `uvx astra-tools@0.2.13 paper add <doi>` the moment you cite a paper (pass
+   `--version N` to pin an arXiv revision). The PDF lands in the project's
+   paper cache, so the citation stays checkable without asking the reader to
+   fetch anything.
+2. **Pull exact quotes from the cached PDF** —
+   `uvx astra-tools@0.2.13 paper path <doi>` prints the cached file's path so
+   you can open it and copy the supporting text *verbatim* into
+   `quote.exact`; add `prefix`/`suffix` (~20–100 chars on either side) when
+   the exact string occurs more than once. Write every quote as if a machine
+   will look for it — one will.
+3. **Verify before you're done** —
+   `uvx astra-tools@0.2.13 paper verify-quotes <doi>` checks one paper's
+   quotes; `uvx astra-tools@0.2.13 validate astra.yaml --verify-evidence`
+   checks every quote in the spec. A quote that doesn't match the PDF fails
+   validation.
 
-`uvx astra-tools@0.2.13 paper list` shows what's cached;
-`uvx astra-tools@0.2.13 paper path <doi>` prints the PDF path so you can open
-it for review.
+`uvx astra-tools@0.2.13 paper list` shows the cache;
+`uvx astra-tools@0.2.13 paper show <doi>` prints a cached paper's metadata.
+Artifact-backed evidence (typical for findings whose outputs aren't
+materialized yet) is reported as SKIPPED, not failed.
 
 ## CLI reference
 
@@ -93,7 +104,6 @@ uvx astra-tools@0.2.13 spec [TERM|--full]                        # Schema refere
 uvx astra-tools@0.2.13 info [--decisions|--inputs|--outputs]     # Analysis summary / element details
 uvx astra-tools@0.2.13 universe generate -n NAME [-d "desc"]     # Generate universe from defaults
 uvx astra-tools@0.2.13 universe check universes/x.yaml           # Check universe constraints
-uvx astra-tools@0.2.13 viz [--fmt ascii|mermaid]                 # Visualize decision space
 uvx astra-tools@0.2.13 paper add DOI [--version N]               # Cache a paper (resolved from its DOI)
 uvx astra-tools@0.2.13 paper list                                # List cached papers
 uvx astra-tools@0.2.13 paper show DOI                            # Show metadata for a cached paper
