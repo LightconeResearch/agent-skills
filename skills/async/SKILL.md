@@ -4,7 +4,8 @@ description: >
   Prepare and select asynchronous execution for Lightcone jobs. Estimate CPU,
   memory, GPU, and walltime requirements and record them in ASTRA
   recipe.resources when requested or when declarations are missing, stale, or
-  uncertain; immediately before every production lc run or submission, classify
+  uncertain; immediately before every production lc run or submission, inspect
+  the unresolved DAG and classify explicit expensive output boundaries for
   synchronous execution in the current local or SLURM allocation versus lc run
   --async. Use when asked to estimate or size a Lightcone job, prepare async
   execution, run, queue, submit, detach, resume, survive a session, or choose

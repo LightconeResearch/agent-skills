@@ -23,13 +23,28 @@ lightcone-cli. Never substitute a hand-written `sbatch` command.
 
 Identify the exact outputs and universes the user intends to materialize. Inspect
 the root and relevant sub-analysis specs, universe files, and `lc status --json`.
-Resolve the required upstream sub-DAG rather than checking only the named leaf.
+Resolve the missing or stale work in the upstream sub-DAG rather than checking
+only the named leaf or counting every already-materialized dependency.
 
-Read `recipe.resources` for every rule that may run. If CPU, memory, GPU, or
-`time_limit` requirements are missing, stale relative to the recipe/workload, or
-too uncertain to defend, return **Estimate first**. Read the estimation reference,
-update and validate ASTRA, then restart this workflow with fresh environment
-facts. Do not invent resource values during classification.
+Classify output by output. Within the unresolved DAG, find each explicit
+materialized output whose recipe is expensive enough to need detached execution.
+That output is the async boundary: its unresolved upstream dependencies travel
+with it, while cheap downstream outputs wait until it materializes and are
+classified again later. If the named final output is itself the expensive
+boundary, target it directly. Assume the user's ASTRA structure provides the
+required boundary; do not rewrite the analysis merely to manufacture one.
+
+Never plan a bare `lc run --async`. Async submission requires one or more explicit
+output ids and is intended for expensive materialized boundaries, not an implicit
+whole-analysis run.
+
+Read `recipe.resources` for every unresolved rule that may run up to each
+candidate boundary. Already-current upstream recipes do not contribute to the
+new allocation. If CPU, memory, GPU, or `time_limit` requirements are missing,
+stale relative to the recipe/workload, or too uncertain to defend, return
+**Estimate first**. Read the estimation reference, update and validate ASTRA,
+then restart this workflow with fresh environment facts. Do not invent resource
+values during classification.
 
 ## 2. Identify the execution environment
 
@@ -65,8 +80,9 @@ For synchronous execution, require all of the following:
 1. Every rule fits on one available worker node unless its recipe explicitly
    launches distributed work.
 2. The requested CPU/GPU concurrency fits the current allocation or local host.
-3. The conservative runtime for the required sub-DAG fits the allocation's
-   remaining walltime, including upstream work, startup, and shutdown margin.
+3. The conservative runtime for the unresolved required sub-DAG fits the
+   allocation's remaining walltime, including pending upstream work, startup,
+   and shutdown margin.
 4. The work may remain coupled to the current agent/allocation lifetime.
 
 Use the recorded padded `time_limit` values and DAG structure. Do not compare
@@ -93,6 +109,14 @@ Treat `lc` preflight failures as authoritative. If plain `lc run` reports that
 declared resources or walltime cannot fit, preserve its diagnostic and use the
 copyable `lc run --async ...` retry it provides.
 
+When an expensive boundary has cheap dependents, classify the boundary now and
+mark those dependents **deferred**. After the async job materializes the boundary,
+refresh `lc status`, repeat classification with current environment facts, and
+normally run the cheap dependents synchronously. Do not submit the boundary and
+its downstream consumer concurrently: Lightcone serializes project runs with a
+project lock, and the consumer's provenance must be built from the completed
+boundary manifest.
+
 ## 5. Execute only when requested
 
 If the user asked only for classification, report the decision and exact next
@@ -108,12 +132,16 @@ lc run --async <output> --universe <universe>
 
 # Observe materialization and queued/running state
 lc status --universe <universe>
+
+# After the boundary completes, materialize a cheap dependent
+lc run <downstream-output> --universe <universe>
 ```
 
-Pass `--account` when requested or when neither configuration nor the current
-allocation supplies one. Submission may originate on a login or compute node.
-Do not call `sbatch`, `srun`, Snakemake, or `podman-hpc` yourself. The submitted
-batch job must enter the same plain `lc run` path so container wrapping—including
+Pass `--account` when requested or when configuration does not supply one.
+Submission may originate on a login or compute node. Never forward a hand-built
+whole-analysis submission in place of an explicit output target. Do not call
+`sbatch`, `srun`, Snakemake, or `podman-hpc` yourself. The submitted batch job
+must enter the same plain `lc run` path so container wrapping—including
 `podman-hpc`—validation, locking, and manifests stay identical to synchronous
 execution.
 
@@ -121,8 +149,9 @@ execution.
 
 Conclude with a compact table:
 
-| Output / universe | Declared demand | Current environment | Decision | Next command |
+| Output boundary / universe | Pending sub-DAG demand | Current environment | Decision | Next command |
 |---|---|---|---|---|
 
-State remaining walltime, the limiting rule or resource, lifetime requirements,
-and any assumption that could change the decision.
+State remaining walltime, the limiting pending rule or resource, lifetime
+requirements, and any assumption that could change the decision. List cheap
+downstream outputs separately as deferred and give their post-completion command.
