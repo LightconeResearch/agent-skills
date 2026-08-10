@@ -205,7 +205,7 @@ export function buildArtifacts(model) {
   files[".claude-plugin/marketplace.json"] = jsonl({
     name: mk.name,
     owner: mk.owner,
-    metadata: { description: mk.description, version: mk.version },
+    metadata: { description: mk.description },
     plugins: config.plugins.map((p) => ({
       name: p.name,
       description: p.description,
@@ -348,7 +348,6 @@ export function buildArtifacts(model) {
       (skillToPlugins[s] ||= []).push(p.name);
   files["manifest.json"] = jsonl({
     name: mk.name,
-    version: mk.version,
     description: mk.description,
     repository: `https://github.com/${mk.repo}`,
     generated: "Run `npm run build` to regenerate. Do not edit by hand.",

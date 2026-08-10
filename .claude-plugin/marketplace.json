@@ -5,8 +5,7 @@
     "email": "info@lightconeresearch.org"
   },
   "metadata": {
-    "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction.",
-    "version": "0.0.3"
+    "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction."
   },
   "plugins": [
     {

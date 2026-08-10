@@ -29,10 +29,9 @@ and other compatible agents — and are also packaged as Claude Code and Codex
 
 ## 📦 Prerequisites
 
-The ASTRA and reproduction skills drive the `astra` command-line tool through
-version-pinned, ephemeral `uvx` invocations — the pinned toolchain installs
-itself on first use and never conflicts with anything on your PATH. The only
-prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/).
+Some plugins have Python dependencies that install themselves on first use.
+The only prerequisite is
+[uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## 🧩 Plugins
 
@@ -42,7 +41,7 @@ separate ASTRA dependency step.
 
 | Plugin | Skills | Bundles | Requires | Adds |
 |---|---|---|---|---|
-| **`astra`** | `astra` | — | — | standalone ASTRA authoring skill; validate-on-save & session-start hooks (pinned toolchain via `uvx`) |
+| **`astra`** | `astra` | — | — | standalone ASTRA authoring skill; validate-on-save & session-start hooks |
 | **`reproduction`** | `assess-reproducibility`, `reproduce`, `figure-comparison` | `astra` | — | feasibility triage, end-to-end replication, independent verification, and result comparison |
 
 ## 🚀 Install

@@ -47,8 +47,7 @@ Edit `skills.config.json`:
   Codex uses it as the install cache key. **Bump the version of every plugin
   whose generated `plugins/<name>/` dir changes in a PR** — including plugins
   that merely bundle a changed dependency (e.g. an `astra` change also bumps
-  `reproduction`) — and leave the others untouched. The `marketplace.version`
-  is catalog metadata only; it does not drive updates.
+  `reproduction`) — and leave the others untouched.
 - `skills` — directly-owned skills (Claude exposes exactly these).
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
   transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers
@@ -98,8 +97,6 @@ run, and the version is **templated**, never written by hand:
 
 Pin only the tool itself — never its transitive schema/data packages (e.g.
 astra-spec is deliberately unpinned; the astra-tools release resolves it).
-The weekly `pin-freshness` workflow compares every declared pin against PyPI
-and opens a tracking issue when one falls behind.
 
 ## Validation
 
