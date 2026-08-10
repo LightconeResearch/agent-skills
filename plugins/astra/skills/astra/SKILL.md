@@ -208,7 +208,7 @@ into the spec.
 
 ```bash
 astra init [DIRECTORY]                          # Scaffold a new analysis
-astra validate astra.yaml                       # Validate (run after every change)
+astra validate [FILE]                           # Validate the whole project, or one file (run after every change)
 astra validate astra.yaml --verify-evidence     # + verify insight quotes against PDFs
 astra spec [TERM|--full]                        # Schema reference (see above)
 astra info [--decisions|--inputs|--outputs]     # Analysis summary / element details

@@ -5,6 +5,10 @@
 # session (a per-session marker suppresses the repeats) — enough to catch an agent
 # that wandered into an astra.yaml cold, without nagging one already oriented.
 #
+# No jq: the path and session id are pulled from the raw payload with sed.
+# Exotic paths (embedded quotes or backslashes) simply don't match, which only
+# costs this one-time reminder.
+#
 #   Read ──▶ ASTRA file? ──no──▶ exit silent
 #              │yes
 #              ▼
@@ -14,7 +18,18 @@
 #         create marker, inject "load the astra skill" reminder
 
 input=$(cat)
-file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_response.filePath // empty')
+
+case "$input" in
+    *astra.yaml* | *universes/*) ;;
+    *) exit 0 ;;
+esac
+
+extract() {
+    printf '%s' "$input" | sed -n 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1
+}
+
+file_path=$(extract file_path)
+[ -z "$file_path" ] && file_path=$(extract filePath)
 [ -z "$file_path" ] && exit 0
 
 filename=$(basename "$file_path")
@@ -26,15 +41,10 @@ if [ "$filename" != "astra.yaml" ] && ! { [ "$parent" = "universes" ] && [[ "$fi
 fi
 
 # Fire once per session.
-session_id=$(echo "$input" | jq -r '.session_id // "nosession"')
-marker="${TMPDIR:-/tmp}/astra-activate-${session_id}"
+session_id=$(extract session_id)
+marker="${TMPDIR:-/tmp}/astra-activate-${session_id:-nosession}"
 [ -e "$marker" ] && exit 0
 : >"$marker" 2>/dev/null
 
-read -r -d '' ctx <<'EOF'
-You just read an ASTRA file. If you'll author or
-edit the spec, load the astra skill if it's not already loaded.
-EOF
-
-jq -n --arg ctx "$ctx" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
+printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"You just read an ASTRA file. If you will author or\nedit the spec, load the astra skill if it is not already loaded.\n"}}'
 exit 0

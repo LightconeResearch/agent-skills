@@ -1,21 +1,22 @@
 #!/bin/bash
-# PostToolUse(Write|Edit|apply_patch) hook: re-validate after writes to
-# astra.yaml or a universe file, and push the result back to the agent as
-# additionalContext.
+# PostToolUse(Write|Edit|apply_patch) hook: when a save plausibly touched an
+# ASTRA file, validate the whole project and push the result back to the agent
+# as additionalContext.
 #
-# The hook surfaces astra validate's output verbatim — no parsing. Pointers to
-# the relevant schema docs belong in astra-tools' own error messages (upstream).
+# No JSON parsing happens here — the raw payload is only string-matched for
+# ASTRA file names. Anything smarter lives in the pinned astra CLI itself:
+# `astra validate` with no argument validates every analysis and universe file
+# under the session directory, which also catches cross-file breakage that a
+# single-file check would miss. The string match can over-trigger (a save whose
+# payload merely mentions astra.yaml), which costs one harmless validation run.
 #
-# astra always runs as an ephemeral, dual-pinned `uvx` invocation (see
-# astra-pins.sh) — never an astra found on PATH, whose version is unknown.
-#
-#   Write/Edit/apply_patch ──▶ ASTRA file touched? ──no──▶ exit silent
+#   Write/Edit/apply_patch ──▶ payload mentions an ASTRA file? ──no──▶ exit silent
 #                     │yes
 #                     ▼
 #                uvx present? ──no──▶ inject "saved but NOT validated; ask user to install uv"
 #                     │yes
 #                     ▼
-#                astra validate ──pass──▶ inject "validation passed"
+#                astra validate (whole project) ──pass──▶ inject "validation passed"
 #                     │fail
 #                     ▼
 #                inject verbatim validate output
@@ -25,65 +26,22 @@ source "$SCRIPT_DIR/astra-pins.sh"
 
 input=$(cat)
 
-# Claude Code's Write/Edit payload carries a file_path string. Codex's
-# apply_patch payload carries patch text in tool_input.command; take the paths
-# from the patch's Add/Update/Move headers. The two are mutually exclusive.
-file_paths=$(echo "$input" | jq -r '.tool_input.file_path // .tool_response.filePath // empty')
-patch_text=$(echo "$input" | jq -r '.tool_input.command // empty')
-
-[ -n "$patch_text" ] && file_paths=$(printf '%s\n' "$patch_text" | sed -nE \
-    -e 's/^\*\*\* (Add|Update) File: (.+)$/\2/p' \
-    -e 's/^\*\*\* Move to: (.+)$/\1/p')
-
-# Resolve relative paths against the event cwd. The fallback keeps direct hook
-# invocation useful.
-cwd=$(echo "$input" | jq -r '.cwd // empty')
-[ -z "$cwd" ] && cwd=$(pwd)
-
-# Filter to astra.yaml at any depth and universe files (universes/*.yaml),
-# while retaining absolute paths for validation and readable diagnostics.
-# Skip paths that do not exist: a Move header names the pre-rename source too.
-candidate_paths=""
-while IFS= read -r file_path; do
-    case "$file_path" in
-        /*) ;;
-        *) file_path="${cwd%/}/$file_path" ;;
-    esac
-    [ -f "$file_path" ] || continue
-
-    filename=$(basename "$file_path")
-    parent=$(basename "$(dirname "$file_path")")
-    if [ "$filename" = "astra.yaml" ] || {
-        [ "$parent" = "universes" ] && [[ "$filename" == *.yaml ]]
-    }; then
-        candidate_paths="${candidate_paths}${candidate_paths:+$'\n'}${file_path}"
-    fi
-done < <(printf '%s\n' "$file_paths" | awk 'NF && !seen[$0]++')
-
-[ -z "$candidate_paths" ] && exit 0
+case "$input" in
+    *astra.yaml* | *universes/*) ;;
+    *) exit 0 ;;
+esac
 
 # If uv is not present, ask the USER to install it rather than failing
 # silently. Never install uv from here.
 if ! command -v uvx &>/dev/null; then
-    jq -n --arg ctx "ASTRA file saved but not validated: \`uv\` is not installed. Ask the user if they'd like to install it ($ASTRA_UV_INSTALL) to enable validation." \
-        '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
+    printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"ASTRA file saved but not validated: `uv` is not installed. Ask the user if they would like to install it (https://docs.astral.sh/uv/getting-started/installation/) to enable validation.\n"}}'
     exit 0
 fi
 
-messages=""
-while IFS= read -r file_path; do
-    filename=$(basename "$file_path")
-    project_root=$(dirname "$file_path")
-    [ "$filename" = "astra.yaml" ] || project_root=$(dirname "$project_root")
-
-    result=$(cd "$project_root" && "${ASTRA_CMD[@]}" validate "$file_path" 2>&1)
-    if [ $? -eq 0 ]; then
-        message="ASTRA validation passed for $file_path"
-    else
-        message=$(printf 'ASTRA validation FAILED for %s:\n%s' "$file_path" "$result")
-    fi
-    messages="${messages}${messages:+$'\n'}${message}"
-done < <(printf '%s\n' "$candidate_paths")
-
-jq -n --arg ctx "$messages" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
+result=$("${ASTRA_CMD[@]}" validate 2>&1)
+if [ $? -eq 0 ]; then
+    printf '%s' "ASTRA validation passed (all analysis and universe files)." | astra_emit PostToolUse
+else
+    printf 'ASTRA validation FAILED:\n%s' "$result" | astra_emit PostToolUse
+fi
 exit 0
