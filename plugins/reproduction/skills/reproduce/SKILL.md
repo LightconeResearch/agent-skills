@@ -7,26 +7,26 @@ description: Fully reproduce a scientific paper from its source and any availabl
 
 ## Prerequisites
 
-Run `astra` through uv's pinned runner, so the toolchain matches the bundled
-`astra` skill and validation hooks — never a bare `astra` from PATH, whose
-version is unknown:
+Run the `astra` CLI through uv's pinned runner, exactly as written everywhere
+in this document, so the toolchain matches the bundled `astra` skill and
+validation hooks — never a bare `astra` from PATH, whose version is unknown:
 
 ```bash
 uvx astra-tools@0.2.13 <command>
 ```
 
-Run the pinned `astra --help` silently to confirm it resolves. If `uvx` is
-missing, tell the user to install uv
-(https://docs.astral.sh/uv/getting-started/installation/), then stop until the
-pinned `astra --help` succeeds. Use `--help` to confirm current command syntax
-rather than guessing. Bare `astra` below stands for the pinned invocation.
+Run `uvx astra-tools@0.2.13 --help` silently to confirm it resolves. If `uvx`
+is missing, tell the user to install uv
+(https://docs.astral.sh/uv/getting-started/installation/), then stop until it
+succeeds. Use `--help` to confirm current command syntax rather than
+guessing.
 
 Reproduce the assigned paper using the paper source and any available code.
 Produce the full replication in ASTRA format in `astra.yaml`, following the
 bundled `astra` skill, and validate it with:
 
 ```bash
-astra validate astra.yaml
+uvx astra-tools@0.2.13 validate astra.yaml
 ```
 
 Do not stop until you have a full replication of every figure and all key
