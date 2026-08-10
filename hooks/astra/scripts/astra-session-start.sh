@@ -7,8 +7,9 @@
 # is the skill pointer.
 #
 # Self-contained on purpose — no sourcing, no jq/sed/awk. The astra-tools
-# version in the uvx invocation below is stamped by `npm run build` from the
-# `tools` pin in skills.config.json; bump it there, never here. The --json
+# version in the uvx invocation comes from the bundling plugin's `tools` pin
+# in skills.config.json: canonical sources write the @x.y.z placeholder and
+# `npm run build` substitutes the pin into the packaged copies. The --json
 # mode emits the header as ONE JSON-encoded, ANSI-free string, spliced into a
 # printf template; the only string surgery is stripping the outer quotes.
 #
@@ -38,7 +39,7 @@ if ! command -v uvx &>/dev/null; then
     exit 0
 fi
 
-header=$(uvx astra-tools@0.2.13 info --brief --json 2>/dev/null)
+header=$(uvx astra-tools@x.y.z info --brief --json 2>/dev/null)
 rc=$?
 
 case "$rc:$header" in

@@ -4,8 +4,9 @@
 # as additionalContext.
 #
 # Self-contained on purpose — no sourcing, no jq/sed/awk. The astra-tools
-# version in the uvx invocation below is stamped by `npm run build` from the
-# `tools` pin in skills.config.json; bump it there, never here.
+# version in the uvx invocation comes from the bundling plugin's `tools` pin
+# in skills.config.json: canonical sources write the @x.y.z placeholder and
+# `npm run build` substitutes the pin into the packaged copies.
 #   - trigger: a bash substring match on the raw payload ("astra.yaml"
 #     mentioned anywhere). It can over-trigger, which costs one harmless
 #     validation run; the [ -f ] gate keeps non-ASTRA sessions silent.
@@ -46,7 +47,7 @@ if ! command -v uvx &>/dev/null; then
     exit 0
 fi
 
-report=$(uvx astra-tools@0.2.13 validate astra.yaml --json 2>/dev/null)
+report=$(uvx astra-tools@x.y.z validate astra.yaml --json 2>/dev/null)
 rc=$?
 
 case "$report" in

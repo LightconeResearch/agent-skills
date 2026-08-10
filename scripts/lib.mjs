@@ -29,17 +29,20 @@ function filesUnder(relDir) {
 
 // --- Tool pins -------------------------------------------------------------
 // Each plugin may declare `tools: { <name>: <version> }` — the CLI tools its
-// skills and hooks invoke via `uvx <name>@<version>`. A plugin's EFFECTIVE
-// pins merge over its dependency closure (dependencies first, own entries
-// win), so a dependent plugin inherits its dependencies' pins unless it
-// overrides them. Every textual occurrence is generated from these
-// declarations: build.mjs stamps canonical skills/ and hooks/ with the owning
-// plugin's pins (pinStamps) and packaged copies with the bundling plugin's
-// pins (applyPins at copy time); validate.mjs rejects any occurrence that
-// disagrees — including specs the stamper can't rewrite, like @latest.
+// skills and hooks invoke via `uvx <name>@<version>`. Canonical skills/ and
+// hooks/ never carry a concrete version: they write the literal `@x.y.z`
+// placeholder, and the build substitutes each bundling plugin's EFFECTIVE
+// pins — merged over its dependency closure, own entries win — when the
+// plugins/ tree is generated. So different plugins can ship the same skill
+// pinned to different tool versions, and nothing in the canonical sources
+// ever looks like a number a contributor should wonder about updating.
 
 const PIN_SCAN_DIRS = ["skills", "hooks"];
 export const PIN_SCAN_EXTS = /\.(md|sh|json|ya?ml)$/;
+export const PIN_PLACEHOLDER = "x.y.z";
+// A tool invocation whose placeholder survived pin substitution (the tool name
+// sits right before the separator — prose mentions of "@x.y.z" don't match).
+export const UNPINNED_RE = /[A-Za-z0-9_-]+(?:@|==)x\.y\.z/;
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function declaredTools(plugin) {
@@ -55,65 +58,26 @@ export function pluginTools(pluginName, byName) {
   return out;
 }
 
-/** Rewrite every version-shaped `<name>@<version>` / `<name>==<version>`
- *  occurrence of the given tools to their pinned version. */
+/** Union of every tool name declared by any plugin. */
+export function declaredToolNames(config) {
+  return [...new Set(config.plugins.flatMap((p) => Object.keys(declaredTools(p))))];
+}
+
+/** Replace each tool's `@x.y.z` / `==x.y.z` placeholder with its pinned version. */
 export function applyPins(text, pins) {
   let out = text;
   for (const [name, pin] of Object.entries(pins)) {
     out = out.replace(
-      new RegExp(`(${escapeRe(name)}(?:@|==))(\\d[\\w.+-]*\\w|\\d)`, "g"),
+      new RegExp(`(${escapeRe(name)}(?:@|==))${escapeRe(PIN_PLACEHOLDER)}`, "g"),
       `$1${pin}`,
     );
   }
   return out;
 }
 
-/** Every canonical file subject to pin scanning (for policy checks). */
+/** Every canonical file subject to pin policy checks. */
 export function pinScanFiles() {
   return PIN_SCAN_DIRS.flatMap((dir) => filesUnder(dir)).filter((rel) => PIN_SCAN_EXTS.test(rel));
-}
-
-/** Map canonical file → the pins of the plugin(s) that directly own its tree
- *  (a skill's owner lists it in `skills:`; a hooks tree's owner declares it in
- *  `hooks:`). Throws when two owners pin the same tool differently — the
- *  canonical file can only carry one version. */
-export function canonicalPins(model) {
-  const { config } = model;
-  const byName = Object.fromEntries(config.plugins.map((p) => [p.name, p]));
-  const dirOwners = new Map();
-  const addOwner = (dir, owner) => dirOwners.set(dir, [...(dirOwners.get(dir) || []), owner]);
-  for (const p of config.plugins) {
-    for (const s of p.skills || []) addOwner(`skills/${s}`, p.name);
-    if (p.hooks) addOwner(dirname(p.hooks), p.name);
-  }
-  const result = new Map();
-  for (const [dir, owners] of dirOwners) {
-    const pins = {};
-    for (const owner of owners) {
-      for (const [name, pin] of Object.entries(pluginTools(owner, byName))) {
-        if (name in pins && pins[name] !== pin)
-          throw new Error(
-            `conflicting pins for ${name} in ${dir}: ${pins[name]} vs ${pin} (owners: ${owners.join(", ")})`,
-          );
-        pins[name] = pin;
-      }
-    }
-    if (!Object.keys(pins).length) continue;
-    for (const rel of filesUnder(dir)) if (PIN_SCAN_EXTS.test(rel)) result.set(rel, pins);
-  }
-  return result;
-}
-
-/** Canonical files whose pinned-tool occurrences drift from their owning
- *  plugin's pins, each with its corrected content. */
-export function pinStamps(model) {
-  const stamps = [];
-  for (const [rel, pins] of canonicalPins(model)) {
-    const text = readFileSync(join(ROOT, rel), "utf8");
-    const out = applyPins(text, pins);
-    if (out !== text) stamps.push({ rel, content: out });
-  }
-  return stamps;
 }
 
 function pluginDisplayName(name) {
@@ -389,12 +353,17 @@ export function buildArtifacts(model) {
     generated: "Run `npm run build` to regenerate. Do not edit by hand.",
     skills: Object.keys(skills)
       .sort()
-      .map((s) => ({
-        name: skills[s].name,
-        path: `skills/${s}`,
-        description: skills[s].description,
-        plugins: (skillToPlugins[s] || []).sort(),
-      })),
+      .map((s) => {
+        const inPlugins = (skillToPlugins[s] || []).sort();
+        return {
+          name: skills[s].name,
+          // Point at a packaged copy when one exists: canonical skills/ carries
+          // the @x.y.z tool-pin placeholder, packaged copies carry real pins.
+          path: inPlugins.length ? `plugins/${inPlugins[0]}/skills/${s}` : `skills/${s}`,
+          description: skills[s].description,
+          plugins: inPlugins,
+        };
+      }),
     plugins: config.plugins.map((p) => ({
       name: p.name,
       description: p.description,

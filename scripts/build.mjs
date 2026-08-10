@@ -4,17 +4,9 @@
 
 import { chmodSync, copyFileSync, mkdirSync, readFileSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { ROOT, loadModel, buildArtifacts, pinStamps, applyPins, PIN_SCAN_EXTS } from "./lib.mjs";
+import { ROOT, loadModel, buildArtifacts, applyPins, UNPINNED_RE, PIN_SCAN_EXTS } from "./lib.mjs";
 
 const model = loadModel();
-
-// Stamp each canonical tree with its owning plugin's tool pins first, so the
-// packaged copies below start from pinned sources.
-const stamps = pinStamps(model);
-for (const { rel, content } of stamps) writeFileSync(join(ROOT, rel), content);
-if (stamps.length)
-  console.log(`Stamped tool pins into ${stamps.length} canonical file(s): ${stamps.map((s) => s.rel).join(", ")}`);
-
 const { files, copies, dirs } = buildArtifacts(model);
 
 // plugins/ is fully generated — wipe it so renamed/removed plugins don't linger.
@@ -32,10 +24,14 @@ for (const { source, dest, pins } of copies) {
   const src = join(ROOT, source);
   const dst = join(ROOT, dest);
   mkdirSync(dirname(dst), { recursive: true });
-  // Packaged copies carry the bundling plugin's tool pins — a byte copy when
-  // they match the canonical pins (the common case).
+  // Packaged copies replace the canonical @x.y.z tool-pin placeholders with
+  // the bundling plugin's pinned versions; anything else is a byte copy.
   if (pins && Object.keys(pins).length && PIN_SCAN_EXTS.test(source)) {
-    writeFileSync(dst, applyPins(readFileSync(src, "utf8"), pins));
+    const content = applyPins(readFileSync(src, "utf8"), pins);
+    const leak = content.match(UNPINNED_RE);
+    if (leak)
+      throw new Error(`${dest}: "${leak[0]}" left unpinned — declare the tool in a plugin's "tools" map`);
+    writeFileSync(dst, content);
   } else {
     copyFileSync(src, dst);
   }

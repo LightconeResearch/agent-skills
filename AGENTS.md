@@ -44,14 +44,15 @@ to. Don't hand-edit it — when the tools pin bumps, run
 release predates the upstream page, the fetch is a no-op and the checked-in
 copy stands.) Tool pins have one source of truth — each plugin's `tools` map
 in `skills.config.json` (astra-spec is deliberately unpinned and resolves from
-the astra-tools release). A plugin's effective pins merge over its dependency
+the astra-tools release). Canonical `skills/` and `hooks/` never carry a
+concrete tool version: they write the literal `@x.y.z` placeholder, and
+`npm run build` substitutes each bundling plugin's pin into the generated
+`plugins/<name>/` copies. A plugin's effective pins merge over its dependency
 closure (own entries win), so `reproduction` inherits `astra`'s pin unless it
-overrides it. Every `<name>@<version>` occurrence is generated from these
-declarations: `npm run build` stamps canonical `skills/` and `hooks/` with the
-owning plugin's pins and packaged `plugins/<name>/` copies with the bundling
-plugin's pins; `npm test` fails on any occurrence that disagrees (or if
-canonical text pins astra-spec at all). To bump: edit the one number in
-`skills.config.json`, run `npm run build`, commit.
+overrides it. `npm test` fails if canonical text carries a concrete version,
+if a placeholder is left unpinned, or if canonical text pins astra-spec at
+all. To bump: edit the one number in `skills.config.json`, run
+`npm run build`, commit — no other file changes.
 
 ## Build tooling — design & rationale
 
@@ -115,8 +116,8 @@ zero-dep and reconciled them to the three-target need.
   keywords (this is what an agent reads to decide whether to load the skill).
 - Keep `SKILL.md` under ~500 lines; push depth into `references/` and load it on demand.
 - Any skill that shells out to `astra` must run it through the pinned `uvx`
-  invocation (`uvx astra-tools@<version>` — write any version; `npm run build`
-  stamps the owning plugin's pin from its `tools` map in `skills.config.json`)
+  invocation — write `uvx astra-tools@x.y.z` literally; the build substitutes
+  each bundling plugin's pin from its `tools` map in `skills.config.json` —
   and open with the **Prerequisites** preflight: confirm the pinned CLI
   resolves, point to the uv install docs if `uvx` is missing, and discover
   command syntax with `--help` rather than guessing.

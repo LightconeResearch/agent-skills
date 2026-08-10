@@ -20,7 +20,7 @@
       ],
       "hooks": "hooks/astra/hooks.json",
       "tools": {
-        "$comment": "Pins for the CLI tools this plugin's skills and hooks invoke via `uvx <name>@<version>`. Declared per plugin; a plugin's EFFECTIVE pins merge over its dependency closure (own entries win), so `reproduction` inherits this pin unless it declares its own. `npm run build` stamps every `<name>@<version>` (or ==) occurrence: canonical skills/ and hooks/ get the owning plugin's pins, packaged plugins/<name>/ copies get the bundling plugin's pins. `npm test` fails on any occurrence that disagrees. Only the tool itself is pinned — astra-spec is deliberately unpinned (the astra-tools release resolves it). astra-tools >= 0.2.13: the console-script alias arrived in 0.2.12, and `--json` string output (ANSI-free) plus `info --brief` land in 0.2.13 — the hooks lean on all of them.",
+        "$comment": "Pins for the CLI tools this plugin's skills and hooks invoke via `uvx <name>@<version>`. Canonical skills/ and hooks/ write the literal `@x.y.z` placeholder — never a concrete version — and `npm run build` substitutes each bundling plugin's pin into the generated plugins/<name>/ copies. A plugin's EFFECTIVE pins merge over its dependency closure (own entries win), so `reproduction` inherits this pin unless it declares its own. `npm test` fails if canonical sources carry a concrete version or if a placeholder is left unpinned. astra-spec is deliberately unpinned (the astra-tools release resolves it). astra-tools >= 0.2.13: the console-script alias arrived in 0.2.12, and `--json` string output (ANSI-free) plus `info --brief` land in 0.2.13 — the hooks lean on all of them.",
         "astra-tools": "0.2.13"
       },
       "dependencies": []

@@ -10,9 +10,11 @@ import {
   loadModel,
   buildArtifacts,
   closure,
-  canonicalPins,
+  declaredToolNames,
   pinScanFiles,
   applyPins,
+  PIN_PLACEHOLDER,
+  UNPINNED_RE,
   PIN_SCAN_EXTS,
 } from "./lib.mjs";
 
@@ -43,31 +45,27 @@ for (const p of config.plugins) {
   if (p.hooks && !existsSync(join(ROOT, p.hooks))) errors.push(`plugin "${p.name}": missing hooks file ${p.hooks}`);
 }
 
-// 3. Tool pins: each plugin's `tools` map in skills.config.json is the single
-//    source of truth; every `<name>@<version>` (or ==) occurrence in a
-//    canonical tree must match its owning plugin's effective pin exactly
-//    (`npm run build` stamps them). astra-spec is deliberately unpinned (the
-//    astra-tools release resolves it), so any spec pin in canonical text is
-//    stale by definition.
-try {
-  for (const [rel, pins] of canonicalPins(model)) {
+// 3. Tool pins: canonical skills/ and hooks/ never carry a concrete tool
+//    version — they write the literal `@x.y.z` placeholder, and the build
+//    substitutes each bundling plugin's pin (its `tools` map in
+//    skills.config.json) into the generated plugins/ copies. astra-spec is
+//    deliberately unpinned (the astra-tools release resolves it), so any spec
+//    pin in canonical text is stale by definition.
+{
+  const toolNames = declaredToolNames(model.config);
+  for (const rel of pinScanFiles()) {
     const text = readFileSync(join(ROOT, rel), "utf8");
-    for (const [name, pin] of Object.entries(pins)) {
-      const re = new RegExp(`\\b${name}(?:@|==)([\\w.+-]+)`, "g");
-      for (const [, version] of text.matchAll(re)) {
-        if (version.replace(/\.+$/, "") !== pin)
+    for (const name of toolNames) {
+      for (const [, version] of text.matchAll(new RegExp(`\\b${name}(?:@|==)([\\w.+-]+)`, "g"))) {
+        if (version.replace(/\.+$/, "") !== PIN_PLACEHOLDER)
           errors.push(
-            `${rel}: pins ${name} ${version}, but its owning plugin pins ${pin} (run npm run build)`,
+            `${rel}: pins ${name} ${version} — canonical sources write the @${PIN_PLACEHOLDER} placeholder; the version comes from skills.config.json at build time`,
           );
       }
     }
+    if (/\bastra-spec(?:@|==)/.test(text))
+      errors.push(`${rel}: pins astra-spec — the spec is not pinned; the astra-tools pin resolves it`);
   }
-} catch (err) {
-  errors.push(err.message);
-}
-for (const rel of pinScanFiles()) {
-  if (/\bastra-spec(?:@|==)/.test(readFileSync(join(ROOT, rel), "utf8")))
-    errors.push(`${rel}: pins astra-spec — the spec is not pinned; the astra-tools pin resolves it`);
 }
 
 // 4. Generated files match what the current source would produce (no drift).
@@ -89,9 +87,16 @@ for (const { source, dest, pins } of copies) {
     continue;
   }
   const stamped = pins && Object.keys(pins).length && PIN_SCAN_EXTS.test(source);
-  const upToDate = stamped
-    ? readFileSync(dst, "utf8") === applyPins(readFileSync(src, "utf8"), pins)
-    : readFileSync(src).equals(readFileSync(dst));
+  let upToDate;
+  if (stamped) {
+    const expected = applyPins(readFileSync(src, "utf8"), pins);
+    const leak = expected.match(UNPINNED_RE);
+    if (leak)
+      errors.push(`${dest}: "${leak[0]}" left unpinned — declare the tool in a plugin's "tools" map`);
+    upToDate = readFileSync(dst, "utf8") === expected;
+  } else {
+    upToDate = readFileSync(src).equals(readFileSync(dst));
+  }
   if (!upToDate) {
     errors.push(`generated packaged file out of date: ${dest} (run npm run build)`);
   }
