@@ -30,7 +30,7 @@ Run every `astra` command through uv's pinned runner, so the CLI and the schema
 it validates against match the version this skill is written for:
 
 ```bash
-uvx astra-tools@0.2.12 <command>
+uvx astra-tools@0.2.13 <command>
 ```
 
 Never run a bare `astra` found on PATH — its version is unknown and may not

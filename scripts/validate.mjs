@@ -52,7 +52,7 @@ for (const p of config.plugins) {
       if (version !== toolsPin)
         errors.push(`${rel}: pins astra-tools ${version}, but astra-pins.sh pins ${toolsPin}`);
     }
-    if (/\bastra-spec==/.test(text))
+    if (/\bastra-spec(?:@|==)/.test(text))
       errors.push(`${rel}: pins astra-spec — the spec is not pinned; the astra-tools pin resolves it`);
   }
 }

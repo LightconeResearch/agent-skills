@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const pins = readFileSync(join(ROOT, "hooks/astra/scripts/astra-pins.sh"), "utf8");
 const toolsPin = pins.match(/^ASTRA_TOOLS_PIN="([^"]+)"/m)[1];
-const toolsReq = toolsPin.includes("+") ? toolsPin : `astra-tools==${toolsPin}`;
+const toolsReq = `astra-tools==${toolsPin}`;
 
 const probe = spawnSync(
   "uv",

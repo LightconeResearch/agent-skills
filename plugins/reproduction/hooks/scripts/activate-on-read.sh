@@ -6,10 +6,11 @@
 # that wandered into an astra.yaml cold, without nagging one already oriented.
 #
 # No jq: the path and session id are pulled from the raw payload with sed.
-# Detection is simply "astra.yaml appears in the file path" — universe files
-# are not worth a special case here, since anyone deep enough to read one has
-# read the spec. Exotic paths (embedded quotes or backslashes) simply don't
-# match, which only costs this one-time reminder.
+# Content-embedded fields can't spoof the match (their quotes are escaped
+# inside a JSON string). Detection is simply "astra.yaml appears in the file
+# path" — universe files are not worth a special case here, since anyone deep
+# enough to read one has read the spec. Exotic paths (embedded quotes or
+# backslashes) simply don't match, which only costs this one-time reminder.
 #
 #   Read ──▶ file path contains astra.yaml? ──no──▶ exit silent
 #              │yes
@@ -18,6 +19,9 @@
 #              │no
 #              ▼
 #         create marker, inject "load the astra skill" reminder
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/astra-pins.sh"
 
 input=$(cat)
 
@@ -39,5 +43,6 @@ marker="${TMPDIR:-/tmp}/astra-activate-${session_id:-nosession}"
 [ -e "$marker" ] && exit 0
 : >"$marker" 2>/dev/null
 
-printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"You just read an ASTRA file. If you will author or\nedit the spec, load the astra skill if it is not already loaded.\n"}}'
+printf '%s' "You just read an ASTRA file. If you will author or
+edit the spec, load the astra skill if it is not already loaded." | astra_emit PostToolUse
 exit 0

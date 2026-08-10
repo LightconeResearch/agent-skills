@@ -12,7 +12,7 @@ Run `astra` through uv's pinned runner, so the toolchain matches the bundled
 version is unknown:
 
 ```bash
-uvx astra-tools@0.2.12 <command>
+uvx astra-tools@0.2.13 <command>
 ```
 
 Run the pinned `astra --help` silently to confirm it resolves. If `uvx` is

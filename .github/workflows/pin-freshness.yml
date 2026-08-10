@@ -39,11 +39,6 @@ jobs:
           drift=""
           check_one() {
             local name="$1" pin="$2"
-            # A pin containing "+" is a git requirement, not a PyPI version — skip.
-            if [[ "$pin" == *+* ]]; then
-              echo "$name pinned to a git requirement ($pin) — skipping PyPI check."
-              return
-            fi
             local latest
             latest=$(latest_on_pypi "$name")
             echo "$name: pinned $pin, latest $latest"

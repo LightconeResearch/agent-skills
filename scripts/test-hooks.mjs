@@ -34,6 +34,7 @@ writeFileSync(
 echo "$*" >> "${uvxLog}"
 printf 'fake output: %s\\n' "$*"
 printf 'tricky "quotes" and \\\\backslashes\\n'
+printf 'ansi \\033[31mred\\033[0m end\\n'
 exit "\${FAKE_UVX_RC:-1}"
 `,
   { mode: 0o755 },
@@ -93,6 +94,10 @@ try {
   assertIncludes("save/fail", context, "ASTRA validation FAILED");
   assertIncludes("save/fail", context, "fake output:");
   assertIncludes("save/fail", context, 'tricky "quotes" and \\backslashes');
+  // Control characters (ANSI escapes from a forced-color Rich) must be
+  // stripped, not passed through as illegal JSON string bytes.
+  assertIncludes("save/fail ansi", context, "red");
+  if (context.includes("\u001b")) throw new Error("save/fail ansi: raw ESC byte in context");
   const [firstCall] = uvxCalls();
   assertIncludes("save/fail uvx args", firstCall, "astra-tools@");
   assertIncludes("save/fail uvx args", firstCall, " validate");
@@ -128,6 +133,26 @@ try {
   );
   if (silent !== "") throw new Error(`save/silent: expected no output\n${silent}`);
   if (uvxCalls().length !== before) throw new Error("save/silent: uvx was invoked");
+
+  // Payload mentions astra.yaml, but the session dir has no ASTRA project →
+  // silent (the mention was incidental, e.g. docs content), and no uvx run.
+  const noProject = join(scratch, "no-project");
+  mkdirSync(noProject);
+  const incidental = spawnSync("bash", [join(SCRIPTS, "validate-on-save.sh")], {
+    cwd: noProject,
+    encoding: "utf8",
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    input: JSON.stringify({
+      cwd: noProject,
+      tool_name: "Write",
+      tool_input: { file_path: join(noProject, "README.md"), content: "see astra.yaml docs" },
+      tool_response: {},
+    }),
+  });
+  if (incidental.status !== 0 || incidental.stdout !== "") {
+    throw new Error(`save/no-project: expected silent success\n${incidental.stdout}`);
+  }
+  if (uvxCalls().length !== before) throw new Error("save/no-project: uvx was invoked");
 
   // --- activate-on-read ---------------------------------------------------
   const readPayload = (file, session) =>
