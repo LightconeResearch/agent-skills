@@ -2,9 +2,15 @@
 # SessionStart hook (astra plugin): orient the agent in an ASTRA project.
 #
 # Everything here is dynamic — read from the environment at session start:
-# where the spec lives, and the analysis's shape (`astra info` header:
-# name, version, input/output/decision counts; plus universe and
-# sub-analysis file counts). The one static line is the skill pointer.
+# where the spec lives, and the analysis's shape from `astra info`. The one
+# static line is the skill pointer.
+#
+# Self-contained on purpose — no sourcing, no jq/sed/awk. The astra-tools
+# version in the uvx invocation comes from the bundling plugin's `tools` pin
+# in skills.config.json: canonical sources write the @x.y.z placeholder and
+# `npm run build` substitutes the pin into the packaged copies. The --json
+# mode emits the header as ONE JSON-encoded, ANSI-free string, spliced into a
+# printf template; the only string surgery is stripping the outer quotes.
 #
 # Deliberately NOT here:
 #   - execution-layer status -- this plugin is about the ASTRA spec.
@@ -13,68 +19,38 @@
 #     moment an ASTRA file actually changes.
 #   - skill listing -- the harness already advertises installed skills.
 #
-#   SessionStart ──▶ cwd + astra.yaml present? ──no──▶ exit silent
+#   SessionStart ──▶ ./astra.yaml present? ──no──▶ exit silent
 #                          │yes
 #                          ▼
-#                     astra resolves? ──no──▶ inject "could not run astra info — toolchain problem"
+#                     uvx present? ──no──▶ inject "install uv to enable astra"
 #                          │yes
 #                          ▼
-#                     astra info shape = "Unknown"? ──yes──▶ inject "spec likely malformed; run astra validate"
-#                          │no
+#                     astra info --json ──ok──▶ inject spec path + info
+#                          │not a JSON string
 #                          ▼
-#                     inject spec path + shape + on-disk layout (subs, universes)
+#                     inject "toolchain problem or malformed spec"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/astra-pins.sh"
+cat >/dev/null # consume the payload; everything needed comes from the cwd
+[ -f astra.yaml ] || exit 0
 
-input=$(cat)
-cwd=$(echo "$input" | jq -r '.cwd // empty')
-
-[ -z "$cwd" ] && exit 0
-cd "$cwd" 2>/dev/null || exit 0
-[ -f "astra.yaml" ] || exit 0
-
-summary="ASTRA project — spec at ./astra.yaml"
-
-# Shape of the analysis, straight from the spec: `astra info` opens with
-# name, version, and "Inputs: N | Outputs: M | Decisions: K" before the
-# detail tables; keep just that header.
-if astra_resolve; then
-    info_out=$("${ASTRA_CMD[@]}" info 2>/dev/null)
-    info_rc=$?
-    shape=$(echo "$info_out" | awk '/^Inputs:/ { print; exit } NF { print }')
-    if [ "$info_rc" -ne 0 ] || [ -z "$shape" ]; then
-        # astra itself failed (uvx resolution, network, version mismatch) —
-        # an environment problem, not a statement about the spec.
-        summary="$summary
-Could not run \`astra info\` (exit $info_rc) — toolchain problem, not necessarily the spec."
-    elif [ "$(echo "$shape" | head -1)" = "Unknown" ]; then
-        summary="$summary
-Could not read the analysis shape — the spec is likely malformed. Run \`astra validate astra.yaml\` to see why."
-    else
-        summary="$summary
-$shape"
-    fi
+if ! command -v uvx &>/dev/null; then
+    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ASTRA project — spec at ./astra.yaml\\n`uv` is not installed, so the astra CLI is unavailable. Ask the user if they would like to install it (https://docs.astral.sh/uv/getting-started/installation/).\\n\\nActivate the astra skill when working with ASTRA analyses.\\n"}}\n'
+    exit 0
 fi
 
-# Layout: sub-analysis specs and universe files, found on disk — a count
-# plus the directory holding them, so the primer stays one line no matter
-# how many there are and the agent still knows where to look.
-# TODO(upstream): this could move into `astra info` itself; drop this block
-# once it does.
-subs=$(find . -mindepth 2 -name astra.yaml -not -path "./universes/*" 2>/dev/null | sed 's|^\./||')
-sub_count=$(echo "$subs" | grep -c . )
-sub_dirs=$(echo "$subs" | sed 's|/[^/]*/astra.yaml$||' | sort -u | awk 'NR > 1 { printf ", " } { printf "./%s/", $0 } END { print "" }')
-universe_count=$(find universes -maxdepth 1 -name "*.yaml" 2>/dev/null | grep -c .)
-layout=""
-[ "$sub_count" -gt 0 ] && layout="$sub_count sub-analys$( [ "$sub_count" -eq 1 ] && echo is || echo es) in $sub_dirs"
-[ "$universe_count" -gt 0 ] && layout="${layout:+$layout, }$universe_count universe$( [ "$universe_count" -ne 1 ] && echo s) in ./universes/"
-[ -n "$layout" ] && summary="$summary
-Layout: $layout"
+header=$(uvx astra-tools@0.2.13 info --json 2>/dev/null)
+rc=$?
 
-summary="$summary
-
-Activate the astra skill when working with ASTRA analyses."
-
-jq -n --arg ctx "$summary" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: ($ctx + "\n")}}'
+case "$rc:$header" in
+    0:\"*\")
+        body="${header#\"}"
+        body="${body%\"}"
+        printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ASTRA project — spec at ./astra.yaml\\n%s\\nActivate the astra skill when working with ASTRA analyses.\\n"}}\n' \
+            "$body"
+        ;;
+    *)
+        printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ASTRA project — spec at ./astra.yaml\\nCould not run `astra info` (exit %s) — a toolchain problem, or a malformed spec; run `astra validate astra.yaml` to see which.\\n\\nActivate the astra skill when working with ASTRA analyses.\\n"}}\n' \
+            "$rc"
+        ;;
+esac
 exit 0

@@ -7,17 +7,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/scripts/validate-on-save.sh\"",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/scripts/activate-on-read.sh\"",
-            "timeout": 5
+            "timeout": 90
           }
         ]
       }
@@ -28,7 +18,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/scripts/astra-session-start.sh\"",
-            "timeout": 15
+            "timeout": 90
           }
         ]
       }

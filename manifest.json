@@ -1,13 +1,12 @@
 {
   "name": "lightcone-research",
-  "version": "0.0.2",
   "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction.",
   "repository": "https://github.com/LightconeResearch/agent-skills",
   "generated": "Run `npm run build` to regenerate. Do not edit by hand.",
   "skills": [
     {
       "name": "assess-reproducibility",
-      "path": "skills/assess-reproducibility",
+      "path": "plugins/reproduction/skills/assess-reproducibility",
       "description": "Assess how reproducible a scientific paper is by checking full-replication feasibility, public code and data, compute requirements, and access blockers. Use for one arXiv link or DOI by default, or optionally for multiple papers or a bibliography that should also be ranked by feasibility.",
       "plugins": [
         "reproduction"
@@ -15,8 +14,8 @@
     },
     {
       "name": "astra",
-      "path": "skills/astra",
-      "description": "Orientation and judgment for authoring an ASTRA analysis (astra.yaml): what the format is for, what deserves to be a decision, when to split a sub-analysis, and how to write it for and with a human. Invoke whenever reading, writing, or restructuring an astra.yaml spec, deciding whether a methodological choice should be a decision, weighing a sub-analysis split, or when the user asks about ASTRA.",
+      "path": "plugins/astra/skills/astra",
+      "description": "ASTRA (astra.yaml) support: what the format is, and how to drive the `astra` CLI. Invoke whenever reading, writing, validating, or restructuring an astra.yaml spec, working with universes or evidence, or when the user asks about ASTRA.",
       "plugins": [
         "astra",
         "reproduction"
@@ -24,7 +23,7 @@
     },
     {
       "name": "figure-comparison",
-      "path": "skills/figure-comparison",
+      "path": "plugins/reproduction/skills/figure-comparison",
       "description": "Build a self-contained HTML report comparing original paper figures, tables, and reported values against reproduced artifacts in any project layout. Accept explicit reference and reproduction paths or discover common folders, pair artifacts using manifests, labels, captions, and filenames, embed images for portability, and flag missing or divergent results. Use when the user asks to compare results, build a side-by-side report, inspect reproduction fidelity, or determine whether a paper was reproduced.",
       "plugins": [
         "reproduction"
@@ -32,7 +31,7 @@
     },
     {
       "name": "reproduce",
-      "path": "skills/reproduce",
+      "path": "plugins/reproduction/skills/reproduce",
       "description": "Fully reproduce a scientific paper from its source and any available code, regenerate all figures and key scientific results with executable code, describe the work in a validated ASTRA specification, build a figure comparison report, and iterate through independent verification until the replication is broadly successful. Use when Codex is asked to reproduce or replicate an academic paper end to end.",
       "plugins": [
         "reproduction"
@@ -42,6 +41,7 @@
   "plugins": [
     {
       "name": "astra",
+      "version": "0.0.3",
       "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
       "skills": [
         "astra"
@@ -53,6 +53,7 @@
     },
     {
       "name": "reproduction",
+      "version": "0.0.3",
       "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
       "skills": [
         "assess-reproducibility",

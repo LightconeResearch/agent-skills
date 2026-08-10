@@ -4,7 +4,19 @@
 
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, NAME_RE, loadModel, buildArtifacts, closure } from "./lib.mjs";
+import {
+  ROOT,
+  NAME_RE,
+  loadModel,
+  buildArtifacts,
+  closure,
+  declaredToolNames,
+  pinScanFiles,
+  applyPins,
+  PIN_PLACEHOLDER,
+  UNPINNED_RE,
+  PIN_SCAN_EXTS,
+} from "./lib.mjs";
 
 const errors = [];
 const model = loadModel();
@@ -24,6 +36,8 @@ const seen = new Set();
 const byName = Object.fromEntries(config.plugins.map((p) => [p.name, p]));
 for (const p of config.plugins) {
   if (!NAME_RE.test(p.name)) errors.push(`plugin "${p.name}": name must be lowercase-hyphen`);
+  if (!/^\d+\.\d+\.\d+$/.test(p.version || ""))
+    errors.push(`plugin "${p.name}": missing or non-semver "version" (both harnesses resolve updates from it)`);
   if (seen.has(p.name)) errors.push(`plugin "${p.name}": duplicate plugin name`);
   seen.add(p.name);
   for (const s of p.skills) if (!skills[s]) errors.push(`plugin "${p.name}": references unknown skill "${s}"`);
@@ -33,7 +47,30 @@ for (const p of config.plugins) {
   if (p.hooks && !existsSync(join(ROOT, p.hooks))) errors.push(`plugin "${p.name}": missing hooks file ${p.hooks}`);
 }
 
-// 3. Generated files match what the current source would produce (no drift).
+// 3. Tool pins: canonical skills/ and hooks/ never carry a concrete tool
+//    version — they write the literal `@x.y.z` placeholder, and the build
+//    substitutes each bundling plugin's pin (its `tools` map in
+//    skills.config.json) into the generated plugins/ copies. astra-spec is
+//    deliberately unpinned (the astra-tools release resolves it), so any spec
+//    pin in canonical text is stale by definition.
+{
+  const toolNames = declaredToolNames(model.config);
+  for (const rel of pinScanFiles()) {
+    const text = readFileSync(join(ROOT, rel), "utf8");
+    for (const name of toolNames) {
+      for (const [, version] of text.matchAll(new RegExp(`\\b${name}(?:@|==)([\\w.+-]+)`, "g"))) {
+        if (version.replace(/\.+$/, "") !== PIN_PLACEHOLDER)
+          errors.push(
+            `${rel}: pins ${name} ${version} — canonical sources write the @${PIN_PLACEHOLDER} placeholder; the version comes from skills.config.json at build time`,
+          );
+      }
+    }
+    if (/\bastra-spec(?:@|==)/.test(text))
+      errors.push(`${rel}: pins astra-spec — the spec is not pinned; the astra-tools pin resolves it`);
+  }
+}
+
+// 4. Generated files match what the current source would produce (no drift).
 const { files, copies } = buildArtifacts(model);
 for (const [rel, expected] of Object.entries(files)) {
   const abs = join(ROOT, rel);
@@ -41,16 +78,28 @@ for (const [rel, expected] of Object.entries(files)) {
   if (readFileSync(abs, "utf8") !== expected) errors.push(`generated file out of date: ${rel} (run npm run build)`);
 }
 
-// 4. Every packaged closure file exists, matches its canonical source bytes,
-//    and preserves executable permission where relevant.
-for (const { source, dest } of copies) {
+// 5. Every packaged closure file exists, matches its canonical source content
+//    (with the bundling plugin's tool pins applied — a byte copy when they
+//    match the canonical pins), and preserves executable permission.
+for (const { source, dest, pins } of copies) {
   const src = join(ROOT, source);
   const dst = join(ROOT, dest);
   if (!existsSync(dst)) {
     errors.push(`generated packaged file missing: ${dest} (run npm run build)`);
     continue;
   }
-  if (!readFileSync(src).equals(readFileSync(dst))) {
+  const stamped = pins && Object.keys(pins).length && PIN_SCAN_EXTS.test(source);
+  let upToDate;
+  if (stamped) {
+    const expected = applyPins(readFileSync(src, "utf8"), pins);
+    const leak = expected.match(UNPINNED_RE);
+    if (leak)
+      errors.push(`${dest}: "${leak[0]}" left unpinned — declare the tool in a plugin's "tools" map`);
+    upToDate = readFileSync(dst, "utf8") === expected;
+  } else {
+    upToDate = readFileSync(src).equals(readFileSync(dst));
+  }
+  if (!upToDate) {
     errors.push(`generated packaged file out of date: ${dest} (run npm run build)`);
   }
   if ((statSync(src).mode & 0o111) !== (statSync(dst).mode & 0o111)) {

@@ -1,10 +1,9 @@
 {
-  "$comment": "SINGLE SOURCE OF TRUTH for the multi-target build. Edit this, then run `npm run build`. Bump `version` once per PR — installs are versioned snapshots, and `claude plugin update` no-ops unless the version moved; while iterating within a PR, uninstall/reinstall to refresh a local install to regenerate .claude-plugin/marketplace.json, .agents/plugins/marketplace.json, plugins/*, and manifest.json. CI (`npm test`) fails if the generated files drift. A plugin composes with other plugins two ways: `dependencies` is a build-time CLOSURE — the build bundles every dependency's skills+hooks+agents into the self-contained plugins/<name>/ dir that BOTH harnesses install (no native, Claude-only resolution, so Claude Code and Codex install identically). `requires` is a documented-only dependency — NOT bundled and NOT auto-installed; the user installs it themselves. Use `requires` when a plugin builds on another but shouldn't ship a copy of it.",
+  "$comment": "How skills compose into plugins — the single source of truth for the build. Edit this, then `npm run build` (regenerates plugins/ and all manifests; `npm test` fails on drift). Per plugin: `version` drives harness update/caching, so bump it for every plugin whose generated plugins/<name>/ dir changes in a PR (including via a bundled dependency); `dependencies` are bundled into the plugin's self-contained dir; `requires` is documented-only (user installs it separately); `tools` pins the CLI tools its skills/hooks invoke — canonical sources write `<name>@x.y.z` and the build substitutes the pin.",
   "marketplace": {
     "name": "lightcone-research",
     "displayName": "Lightcone Research Skills",
     "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction.",
-    "version": "0.0.2",
     "repo": "LightconeResearch/agent-skills",
     "owner": {
       "name": "Lightcone Research",
@@ -14,16 +13,30 @@
   "plugins": [
     {
       "name": "astra",
+      "version": "0.0.3",
       "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
-      "skills": ["astra"],
+      "skills": [
+        "astra"
+      ],
       "hooks": "hooks/astra/hooks.json",
+      "tools": {
+        "$comment": "Pins for the CLI tools this plugin's skills and hooks invoke via `uvx <name>@<version>`. Canonical skills/ and hooks/ write the literal `@x.y.z` placeholder — never a concrete version — and `npm run build` substitutes each bundling plugin's pin into the generated plugins/<name>/ copies.",
+        "astra-tools": "0.2.13"
+      },
       "dependencies": []
     },
     {
       "name": "reproduction",
+      "version": "0.0.3",
       "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
-      "skills": ["assess-reproducibility", "reproduce", "figure-comparison"],
-      "dependencies": ["astra"]
+      "skills": [
+        "assess-reproducibility",
+        "reproduce",
+        "figure-comparison"
+      ],
+      "dependencies": [
+        "astra"
+      ]
     }
   ]
 }

@@ -14,7 +14,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
 | `.agents/plugins/marketplace.json` | Codex marketplace manifest | ⚙️ generated |
-| `plugins/**` | Per-plugin dirs — self-contained byte-copies | ⚙️ generated |
+| `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted | ⚙️ generated |
 | `manifest.json` | Skill/plugin registry | ⚙️ generated |
 
 ## Add a skill
@@ -28,9 +28,12 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
    ---
    ```
    Keep the body under ~500 lines; offload detail to `skills/<name>/references/`.
-2. If it shells out to `lc`/`astra`, add the **Prerequisites** preflight block (copy
-   the pattern from `skills/start/SKILL.md`): check the CLI resolves, point to
-   `uv tool install lightcone-cli` if missing, and use `--help` to discover syntax.
+2. If it shells out to a CLI tool (e.g. `astra`), invoke it through the pinned
+   `uvx` form with the **literal version placeholder** — `uvx astra-tools@x.y.z
+   <command>` — and add the **Prerequisites** preflight block (copy the pattern
+   from `skills/reproduce/SKILL.md`): check the pinned CLI resolves, point to
+   the uv install docs if `uvx` is missing, and use `--help` to discover
+   syntax. See [Tool pins](#tool-pins) for how `x.y.z` becomes a real version.
 3. Add the skill to the relevant plugin(s) in `skills.config.json` (`plugins[].skills`).
 4. `npm run build && npm test`, then commit source **and** regenerated files together.
 
@@ -38,6 +41,13 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 
 Edit `skills.config.json`:
 
+- `version` — this plugin's own semver, independent of every other plugin.
+  Both harnesses resolve updates per plugin from it: Claude Code skips
+  `claude plugin update` when the resolved version matches its cache, and
+  Codex uses it as the install cache key. **Bump the version of every plugin
+  whose generated `plugins/<name>/` dir changes in a PR** — including plugins
+  that merely bundle a changed dependency (e.g. an `astra` change also bumps
+  `reproduction`) — and leave the others untouched.
 - `skills` — directly-owned skills (Claude exposes exactly these).
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
   transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers
@@ -59,6 +69,35 @@ Edit `skills.config.json`:
 
 Then `npm run build && npm test`.
 
+## Tool pins
+
+Skills and hooks that invoke a CLI tool do it through a version-pinned `uvx`
+run, and the version is **templated**, never written by hand:
+
+- **Canonical sources use the literal placeholder** `x.y.z` — e.g.
+  `uvx astra-tools@x.y.z validate astra.yaml`. A concrete version in
+  `skills/` or `hooks/` is a CI error, so nothing in the sources ever looks
+  like a number a contributor should wonder about updating.
+- **Pins are declared per plugin** in `skills.config.json`, in each plugin's
+  `tools` map (e.g. `"tools": { "astra-tools": "0.2.13" }`). A plugin's
+  *effective* pins merge over its dependency closure — dependencies first, own
+  entries win — so `reproduction` inherits `astra`'s pin unless it declares
+  its own, and two plugins can ship the same skill pinned to different
+  versions.
+- **`npm run build` substitutes the pins** into the generated `plugins/<name>/`
+  copies (canonical files are never rewritten). The drift check compares each
+  packaged file against the pin-substituted source, so generator and checker
+  agree by construction.
+- **Unpinned placeholders fail the build.** If a skill invokes
+  `sometool@x.y.z` and no plugin bundling it declares a `sometool` pin, both
+  `npm run build` and `npm test` fail naming the invocation — that's the
+  reminder to add the pin.
+- **To bump a version**: edit the one number in `skills.config.json`, run
+  `npm run build`, commit. No other file changes.
+
+Pin only the tool itself — never its transitive schema/data packages (e.g.
+astra-spec is deliberately unpinned; the astra-tools release resolves it).
+
 ## Validation
 
 `npm test` (alias `node scripts/validate.mjs`) checks:
@@ -66,8 +105,12 @@ Then `npm run build && npm test`.
 - every skill's `name` is lowercase-hyphen and matches its directory;
 - `description` is present and ≤ 1024 chars;
 - plugins reference only skills/agents/hooks/deps that exist;
-- the generated manifests and `plugins/` byte-copies match what the current source
-  would produce (drift check).
+- canonical `skills/` and `hooks/` use the `@x.y.z` tool-pin placeholder (no
+  concrete versions, no astra-spec pin), and no placeholder is left unpinned
+  by the plugins that bundle it;
+- the generated manifests and `plugins/` copies match what the current source
+  would produce — packaged copies compared with the bundling plugin's tool
+  pins applied (drift check).
 
 ## Local testing of the install paths
 
