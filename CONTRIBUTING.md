@@ -41,6 +41,14 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 
 Edit `skills.config.json`:
 
+- `version` — this plugin's own semver, independent of every other plugin.
+  Both harnesses resolve updates per plugin from it: Claude Code skips
+  `claude plugin update` when the resolved version matches its cache, and
+  Codex uses it as the install cache key. **Bump the version of every plugin
+  whose generated `plugins/<name>/` dir changes in a PR** — including plugins
+  that merely bundle a changed dependency (e.g. an `astra` change also bumps
+  `reproduction`) — and leave the others untouched. The `marketplace.version`
+  is catalog metadata only; it does not drive updates.
 - `skills` — directly-owned skills (Claude exposes exactly these).
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
   transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers

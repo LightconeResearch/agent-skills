@@ -42,6 +42,7 @@
   "plugins": [
     {
       "name": "astra",
+      "version": "0.0.3",
       "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
       "skills": [
         "astra"
@@ -53,6 +54,7 @@
     },
     {
       "name": "reproduction",
+      "version": "0.0.3",
       "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
       "skills": [
         "assess-reproducibility",

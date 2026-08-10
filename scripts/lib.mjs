@@ -209,6 +209,7 @@ export function buildArtifacts(model) {
     plugins: config.plugins.map((p) => ({
       name: p.name,
       description: p.description,
+      version: p.version,
       source: `./plugins/${p.name}`,
     })),
   });
@@ -255,7 +256,7 @@ export function buildArtifacts(model) {
     // Shared metadata for both harnesses' manifests.
     const base = {
       name: p.name,
-      version: mk.version,
+      version: p.version,
       description: p.description,
       author: mk.owner,
       homepage: `https://github.com/${mk.repo}`,
@@ -366,6 +367,7 @@ export function buildArtifacts(model) {
       }),
     plugins: config.plugins.map((p) => ({
       name: p.name,
+      version: p.version,
       description: p.description,
       skills: closure(p.name, byName).sort(),
       dependencies: p.dependencies || [],

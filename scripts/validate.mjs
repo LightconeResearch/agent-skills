@@ -36,6 +36,8 @@ const seen = new Set();
 const byName = Object.fromEntries(config.plugins.map((p) => [p.name, p]));
 for (const p of config.plugins) {
   if (!NAME_RE.test(p.name)) errors.push(`plugin "${p.name}": name must be lowercase-hyphen`);
+  if (!/^\d+\.\d+\.\d+$/.test(p.version || ""))
+    errors.push(`plugin "${p.name}": missing or non-semver "version" (both harnesses resolve updates from it)`);
   if (seen.has(p.name)) errors.push(`plugin "${p.name}": duplicate plugin name`);
   seen.add(p.name);
   for (const s of p.skills) if (!skills[s]) errors.push(`plugin "${p.name}": references unknown skill "${s}"`);
