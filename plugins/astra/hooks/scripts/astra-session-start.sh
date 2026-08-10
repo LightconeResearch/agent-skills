@@ -2,9 +2,8 @@
 # SessionStart hook (astra plugin): orient the agent in an ASTRA project.
 #
 # Everything here is dynamic — read from the environment at session start:
-# where the spec lives, and the analysis's shape from `astra info --brief`
-# (name, version, description, element counts, layout). The one static line
-# is the skill pointer.
+# where the spec lives, and the analysis's shape from `astra info`. The one
+# static line is the skill pointer.
 #
 # Self-contained on purpose — no sourcing, no jq/sed/awk. The astra-tools
 # version in the uvx invocation comes from the bundling plugin's `tools` pin
@@ -26,7 +25,7 @@
 #                     uvx present? ──no──▶ inject "install uv to enable astra"
 #                          │yes
 #                          ▼
-#                     astra info --brief --json ──ok──▶ inject spec path + header
+#                     astra info --json ──ok──▶ inject spec path + info
 #                          │not a JSON string
 #                          ▼
 #                     inject "toolchain problem or malformed spec"
@@ -39,7 +38,7 @@ if ! command -v uvx &>/dev/null; then
     exit 0
 fi
 
-header=$(uvx astra-tools@0.2.13 info --brief --json 2>/dev/null)
+header=$(uvx astra-tools@0.2.13 info --json 2>/dev/null)
 rc=$?
 
 case "$rc:$header" in

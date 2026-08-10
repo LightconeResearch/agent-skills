@@ -185,7 +185,7 @@ try {
   assertIncludes("session/primer", context, "ASTRA project — spec at ./astra.yaml");
   assertIncludes("session/primer", context, "fake report:");
   assertIncludes("session/primer", context, "Activate the astra skill");
-  assertIncludes("session/primer uvx args", uvxCalls().at(-1), "info --brief --json");
+  assertIncludes("session/primer uvx args", uvxCalls().at(-1), "info --json");
 
   // Toolchain failure → degraded message, still valid JSON.
   context = parsedContext(
