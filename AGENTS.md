@@ -35,14 +35,9 @@ Commit the regenerated files alongside your source change. CI runs `npm test` an
 fails if the generated files are out of sync. The generator is zero-dependency
 (Node ≥ 18 built-ins only) — no `npm install` is required.
 
-## The astra getting-started reference
+## Tool pins
 
-`skills/astra/references/getting-started.md` is a verbatim copy of astra-spec's
-`docs/getting-started.md` at the spec version the pinned astra-tools resolves
-to. Don't hand-edit it — when the tools pin bumps, run
-`npm run fetch-getting-started` and commit the result. (While the resolved
-release predates the upstream page, the fetch is a no-op and the checked-in
-copy stands.) Tool pins have one source of truth — each plugin's `tools` map
+Tool pins have one source of truth — each plugin's `tools` map
 in `skills.config.json` (astra-spec is deliberately unpinned and resolves from
 the astra-tools release). Canonical `skills/` and `hooks/` never carry a
 concrete tool version: they write the literal `@x.y.z` placeholder, and

@@ -224,7 +224,8 @@ astra paper verify-quotes DOI                   # Batch-verify quotes; reads {"q
 
 ## References
 
-- `references/getting-started.md` — a ground-up, tutorial-style tour of the format.
-  Long, so not for every touch — but worth reading before any substantial
-  authoring or restructuring work; for small edits to a developed astra.yaml,
-  `astra spec` suffices.
+- `astra guide` — a compact, agent-oriented tour of the format, shipped with
+  the installed toolchain so it always matches the validator (also published
+  at https://astra-spec.org/latest/agent-guide/). Not for every touch — worth
+  reading before any substantial authoring or restructuring work; for small
+  edits to a developed astra.yaml, `astra spec` suffices.
