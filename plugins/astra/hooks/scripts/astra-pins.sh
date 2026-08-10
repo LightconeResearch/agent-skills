@@ -17,10 +17,6 @@ ASTRA_UV_INSTALL="https://docs.astral.sh/uv/getting-started/installation/"
 
 # The one way to run astra: an ephemeral, pinned `uvx` invocation (cached
 # after first use) — never an `astra` found on PATH, whose version is unknown.
-# Color is forced off: hook output is embedded in JSON responses, and a
-# forced-color environment (FORCE_COLOR / CLICOLOR_FORCE, common in agent and
-# CI shells) would lace it with ANSI sequences.
+# No color handling is needed here: --json output is guaranteed plain by
+# astra-tools itself, even when the environment forces color.
 ASTRA_CMD=(uvx "astra-tools@${ASTRA_TOOLS_PIN}")
-astra_run() {
-  env -u FORCE_COLOR -u CLICOLOR_FORCE NO_COLOR=1 "${ASTRA_CMD[@]}" "$@"
-}

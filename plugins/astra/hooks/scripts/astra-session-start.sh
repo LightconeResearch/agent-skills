@@ -40,7 +40,7 @@ if ! command -v uvx &>/dev/null; then
     exit 0
 fi
 
-header=$(astra_run info --brief --json 2>/dev/null)
+header=$("${ASTRA_CMD[@]}" info --brief --json 2>/dev/null)
 rc=$?
 
 case "$rc:$header" in

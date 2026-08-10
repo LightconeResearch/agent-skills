@@ -47,7 +47,7 @@ if ! command -v uvx &>/dev/null; then
     exit 0
 fi
 
-report=$(astra_run validate astra.yaml --json 2>/dev/null)
+report=$("${ASTRA_CMD[@]}" validate astra.yaml --json 2>/dev/null)
 rc=$?
 
 case "$report" in
