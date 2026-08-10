@@ -42,13 +42,13 @@ fails if the generated files are out of sync. The generator is zero-dependency
 to. Don't hand-edit it — when the tools pin bumps, run
 `npm run fetch-getting-started` and commit the result. (While the resolved
 release predates the upstream page, the fetch is a no-op and the checked-in
-copy stands.) The astra toolchain pin has one source of truth —
-`hooks/astra/scripts/astra-pins.sh` (`ASTRA_TOOLS_PIN`; astra-spec is
-deliberately unpinned and resolves from the tools release) — sourced by the
-astra hooks and echoed as the pinned `uvx` invocation in skill text;
-`npm test` fails if any `astra-tools@<version>` (or `==`) in `skills/**.md`
-disagrees with the pins file (or if skill text pins astra-spec at all), so
-bump the pins file first and fix the skill text it flags.
+copy stands.) Tool pins have one source of truth — the `tools` map in
+`skills.config.json` (astra-spec is deliberately unpinned and resolves from
+the astra-tools release). Every `<name>@<version>` occurrence in canonical
+`skills/` and `hooks/` is generated from it: `npm run build` stamps drifted
+occurrences, and `npm test` fails on any occurrence that disagrees (or if
+canonical text pins astra-spec at all). To bump: edit the one number in
+`skills.config.json`, run `npm run build`, commit.
 
 ## Build tooling — design & rationale
 
@@ -112,10 +112,10 @@ zero-dep and reconciled them to the three-target need.
   keywords (this is what an agent reads to decide whether to load the skill).
 - Keep `SKILL.md` under ~500 lines; push depth into `references/` and load it on demand.
 - Any skill that shells out to `astra` must run it through the pinned `uvx`
-  invocation (`uvx astra-tools@<pin>`, pin from
-  `hooks/astra/scripts/astra-pins.sh`) and open with the **Prerequisites**
-  preflight: confirm the pinned CLI resolves, point to the uv install docs if
-  `uvx` is missing, and discover command syntax with `--help` rather than
-  guessing.
+  invocation (`uvx astra-tools@<version>` — write any version; `npm run build`
+  stamps the pin declared in `skills.config.json`'s `tools` map) and open with
+  the **Prerequisites** preflight: confirm the pinned CLI resolves, point to
+  the uv install docs if `uvx` is missing, and discover command syntax with
+  `--help` rather than guessing.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full add-a-skill walkthrough.

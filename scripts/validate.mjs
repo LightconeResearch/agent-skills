@@ -2,9 +2,9 @@
 // Validate skills + confirm the generated files are in sync with the source.
 // Usage: npm test   (CI fails on any error below)
 
-import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, NAME_RE, loadModel, buildArtifacts, closure } from "./lib.mjs";
+import { ROOT, NAME_RE, loadModel, buildArtifacts, closure, toolPins, pinScanFiles } from "./lib.mjs";
 
 const errors = [];
 const model = loadModel();
@@ -33,24 +33,23 @@ for (const p of config.plugins) {
   if (p.hooks && !existsSync(join(ROOT, p.hooks))) errors.push(`plugin "${p.name}": missing hooks file ${p.hooks}`);
 }
 
-// 3. Every astra-tools pin written in skill text matches the single source of
-//    truth (hooks/astra/scripts/astra-pins.sh), so the version the skills teach
-//    agents to run cannot drift from the version the hooks pin. astra-spec is
-//    deliberately unpinned (the tools pin resolves it), so any spec pin in
-//    skill text is stale by definition.
+// 3. Tool pins: skills.config.json's `tools` map is the single source of
+//    truth; every `<name>@<version>` (or ==) occurrence in canonical skills/
+//    and hooks/ must match it exactly (`npm run build` stamps them). astra-spec
+//    is deliberately unpinned (the astra-tools release resolves it), so any
+//    spec pin in canonical text is stale by definition.
 {
-  const pinsSh = readFileSync(join(ROOT, "hooks/astra/scripts/astra-pins.sh"), "utf8");
-  const toolsPin = pinsSh.match(/^ASTRA_TOOLS_PIN="([^"]+)"/m)?.[1];
-  const mdFiles = (function walk(dir) {
-    return readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) =>
-      e.isDirectory() ? walk(join(dir, e.name)) : e.name.endsWith(".md") ? [join(dir, e.name)] : [],
-    );
-  })("skills");
-  for (const rel of mdFiles) {
+  const pins = toolPins(model.config);
+  for (const rel of pinScanFiles()) {
     const text = readFileSync(join(ROOT, rel), "utf8");
-    for (const [, version] of text.matchAll(/\bastra-tools(?:@|==)([^\s`"']+)/g)) {
-      if (version !== toolsPin)
-        errors.push(`${rel}: pins astra-tools ${version}, but astra-pins.sh pins ${toolsPin}`);
+    for (const [name, pin] of pins) {
+      const re = new RegExp(`\\b${name}(?:@|==)([\\w.+-]+)`, "g");
+      for (const [, version] of text.matchAll(re)) {
+        if (version.replace(/\.+$/, "") !== pin)
+          errors.push(
+            `${rel}: pins ${name} ${version}, but skills.config.json pins ${pin} (run npm run build)`,
+          );
+      }
     }
     if (/\bastra-spec(?:@|==)/.test(text))
       errors.push(`${rel}: pins astra-spec — the spec is not pinned; the astra-tools pin resolves it`);

@@ -4,9 +4,18 @@
 
 import { chmodSync, copyFileSync, mkdirSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { ROOT, loadModel, buildArtifacts } from "./lib.mjs";
+import { ROOT, loadModel, buildArtifacts, pinStamps } from "./lib.mjs";
 
-const { files, copies, dirs } = buildArtifacts(loadModel());
+const model = loadModel();
+
+// Stamp the declared tool pins (skills.config.json `tools`) into the canonical
+// trees first, so the packaged copies below inherit them.
+const stamps = pinStamps(model);
+for (const { rel, content } of stamps) writeFileSync(join(ROOT, rel), content);
+if (stamps.length)
+  console.log(`Stamped tool pins into ${stamps.length} canonical file(s): ${stamps.map((s) => s.rel).join(", ")}`);
+
+const { files, copies, dirs } = buildArtifacts(model);
 
 // plugins/ is fully generated — wipe it so renamed/removed plugins don't linger.
 rmSync(join(ROOT, "plugins"), { recursive: true, force: true });

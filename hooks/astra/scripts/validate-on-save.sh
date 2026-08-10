@@ -3,15 +3,18 @@
 # ASTRA spec, re-validate ./astra.yaml and push the result back to the agent
 # as additionalContext.
 #
-# There is deliberately no parsing here — no jq, no sed, no awk:
+# Self-contained on purpose — no sourcing, no jq/sed/awk. The astra-tools
+# version in the uvx invocation below is stamped by `npm run build` from the
+# `tools` pin in skills.config.json; bump it there, never here.
 #   - trigger: a bash substring match on the raw payload ("astra.yaml"
 #     mentioned anywhere). It can over-trigger, which costs one harmless
 #     validation run; the [ -f ] gate keeps non-ASTRA sessions silent.
 #   - target: always ./astra.yaml in the session directory (universe files
 #     are not validated at hook level — the spec is what the agent authors).
-#   - JSON: `astra validate --json` emits its report as ONE JSON-encoded
-#     string, so the response is assembled by splicing that string into a
-#     printf template; the only string surgery is stripping the outer quotes.
+#   - JSON: `astra validate --json` emits its report as ONE JSON-encoded,
+#     ANSI-free string, so the response is assembled by splicing that string
+#     into a printf template; the only string surgery is stripping the outer
+#     quotes.
 #
 #   Write/Edit/apply_patch ──▶ payload mentions astra.yaml? ──no──▶ exit silent
 #                     │yes
@@ -27,9 +30,6 @@
 #                     ▼                           ▼
 #                inject verbatim report      inject "toolchain problem"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/astra-pins.sh"
-
 input=$(cat)
 
 case "$input" in
@@ -42,12 +42,11 @@ esac
 # If uv is not present, ask the USER to install it rather than failing
 # silently. Never install uv from here.
 if ! command -v uvx &>/dev/null; then
-    printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"ASTRA file saved but not validated: `uv` is not installed. Ask the user if they would like to install it (%s) to enable validation.\\n"}}\n' \
-        "$ASTRA_UV_INSTALL"
+    printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"ASTRA file saved but not validated: `uv` is not installed. Ask the user if they would like to install it (https://docs.astral.sh/uv/getting-started/installation/) to enable validation.\\n"}}\n'
     exit 0
 fi
 
-report=$("${ASTRA_CMD[@]}" validate astra.yaml --json 2>/dev/null)
+report=$(uvx astra-tools@0.2.13 validate astra.yaml --json 2>/dev/null)
 rc=$?
 
 case "$report" in

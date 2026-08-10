@@ -11,6 +11,10 @@
       "email": "info@lightconeresearch.org"
     }
   },
+  "tools": {
+    "$comment": "SINGLE SOURCE OF TRUTH for the CLI tools that skills and hooks invoke via `uvx <name>@<version>`. `npm run build` stamps every `<name>@<version>` (or ==) occurrence across canonical skills/ and hooks/ to these pins; `npm test` fails on any occurrence that disagrees. Only the tool itself is pinned — astra-spec is deliberately unpinned (the astra-tools release resolves it), so bumping a pin here is the one act that moves that whole toolchain. astra-tools >= 0.2.13: the console-script alias arrived in 0.2.12, and `--json` string output (ANSI-free) plus `info --brief` land in 0.2.13 — the hooks lean on all of them.",
+    "astra-tools": "0.2.13"
+  },
   "plugins": [
     {
       "name": "astra",

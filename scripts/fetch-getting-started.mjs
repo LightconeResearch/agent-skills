@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 // Refresh skills/astra/references/getting-started.md verbatim from astra-spec
-// at the version the pinned astra-tools (ASTRA_TOOLS_PIN in
-// hooks/astra/scripts/astra-pins.sh) resolves to — the spec itself is not
-// pinned, so uv resolves it the same way the hooks' uvx invocation does.
-// Opt-in: run it when the tools pin bumps (npm run fetch-getting-started),
-// then commit the result. If the resolved release predates the page (404),
-// the checked-in copy is left untouched.
+// at the version the pinned astra-tools (`tools` in skills.config.json)
+// resolves to — the spec itself is not pinned, so uv resolves it the same way
+// the hooks' uvx invocation does. Opt-in: run it when the tools pin bumps
+// (npm run fetch-getting-started), then commit the result. If the resolved
+// release predates the page (404), the checked-in copy is left untouched.
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadModel } from "./lib.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const pins = readFileSync(join(ROOT, "hooks/astra/scripts/astra-pins.sh"), "utf8");
-const toolsPin = pins.match(/^ASTRA_TOOLS_PIN="([^"]+)"/m)[1];
+const toolsPin = loadModel().config.tools["astra-tools"];
 const toolsReq = `astra-tools==${toolsPin}`;
 
 const probe = spawnSync(

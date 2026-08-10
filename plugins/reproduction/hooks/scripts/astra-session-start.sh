@@ -6,9 +6,11 @@
 # (name, version, description, element counts, layout). The one static line
 # is the skill pointer.
 #
-# There is deliberately no parsing here — no jq, no sed, no awk: the --json
-# mode emits the header as ONE JSON-encoded string, spliced into a printf
-# template; the only string surgery is stripping the outer quotes.
+# Self-contained on purpose — no sourcing, no jq/sed/awk. The astra-tools
+# version in the uvx invocation below is stamped by `npm run build` from the
+# `tools` pin in skills.config.json; bump it there, never here. The --json
+# mode emits the header as ONE JSON-encoded, ANSI-free string, spliced into a
+# printf template; the only string surgery is stripping the outer quotes.
 #
 # Deliberately NOT here:
 #   - execution-layer status -- this plugin is about the ASTRA spec.
@@ -28,19 +30,15 @@
 #                          ▼
 #                     inject "toolchain problem or malformed spec"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/astra-pins.sh"
-
 cat >/dev/null # consume the payload; everything needed comes from the cwd
 [ -f astra.yaml ] || exit 0
 
 if ! command -v uvx &>/dev/null; then
-    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ASTRA project — spec at ./astra.yaml\\n`uv` is not installed, so the astra CLI is unavailable. Ask the user if they would like to install it (%s).\\n\\nActivate the astra skill when working with ASTRA analyses.\\n"}}\n' \
-        "$ASTRA_UV_INSTALL"
+    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ASTRA project — spec at ./astra.yaml\\n`uv` is not installed, so the astra CLI is unavailable. Ask the user if they would like to install it (https://docs.astral.sh/uv/getting-started/installation/).\\n\\nActivate the astra skill when working with ASTRA analyses.\\n"}}\n'
     exit 0
 fi
 
-header=$("${ASTRA_CMD[@]}" info --brief --json 2>/dev/null)
+header=$(uvx astra-tools@0.2.13 info --brief --json 2>/dev/null)
 rc=$?
 
 case "$rc:$header" in

@@ -27,6 +27,47 @@ function filesUnder(relDir) {
   return out;
 }
 
+// --- Tool pins -------------------------------------------------------------
+// skills.config.json's `tools` map pins the CLI tools that skills and hooks
+// invoke via `uvx <name>@<version>`. The pin is declared once there; every
+// textual occurrence in the canonical trees is generated from it: build.mjs
+// stamps drifted occurrences (pinStamps), validate.mjs rejects any occurrence
+// that disagrees — including specs the stamper can't rewrite, like @latest.
+
+const PIN_SCAN_DIRS = ["skills", "hooks"];
+const PIN_SCAN_EXTS = /\.(md|sh|json|ya?ml)$/;
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Declared tool pins as [name, version] pairs ($-prefixed keys are comments). */
+export function toolPins(config) {
+  return Object.entries(config.tools || {}).filter(([k]) => !k.startsWith("$"));
+}
+
+/** The canonical files subject to pin stamping/checking. */
+export function pinScanFiles() {
+  return PIN_SCAN_DIRS.flatMap((dir) => filesUnder(dir)).filter((rel) => PIN_SCAN_EXTS.test(rel));
+}
+
+/** Canonical files whose version-shaped `<tool>@<version>` occurrences drift
+ *  from the declared pin, each with its corrected content. */
+export function pinStamps(model) {
+  const pins = toolPins(model.config);
+  const stamps = [];
+  if (!pins.length) return stamps;
+  for (const rel of pinScanFiles()) {
+    const text = readFileSync(join(ROOT, rel), "utf8");
+    let out = text;
+    for (const [name, pin] of pins) {
+      out = out.replace(
+        new RegExp(`(${escapeRe(name)}(?:@|==))(\\d[\\w.+-]*\\w|\\d)`, "g"),
+        `$1${pin}`,
+      );
+    }
+    if (out !== text) stamps.push({ rel, content: out });
+  }
+  return stamps;
+}
+
 function pluginDisplayName(name) {
   return name
     .split("-")

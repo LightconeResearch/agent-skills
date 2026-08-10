@@ -1,10 +1,10 @@
 name: Pin freshness
 
-# Weekly drift check: compare the exact astra-tools pin in
-# hooks/astra/scripts/astra-pins.sh against the latest release on PyPI and open
-# (or update) a single tracking issue when it is behind. The pin stays exact —
-# this workflow only surfaces drift, it never edits it. astra-spec is not
-# pinned; it resolves from whatever the pinned tools release declares.
+# Weekly drift check: compare every tool pin declared in skills.config.json's
+# `tools` map against the latest release on PyPI and open (or update) a single
+# tracking issue when one is behind. Pins stay exact — this workflow only
+# surfaces drift, it never edits them. astra-spec is not pinned; it resolves
+# from whatever the pinned astra-tools release declares.
 
 on:
   schedule:
@@ -25,29 +25,19 @@ jobs:
         id: check
         run: |
           set -euo pipefail
-          # shellcheck source=/dev/null
-          source hooks/astra/scripts/astra-pins.sh
 
           version_lt() {
             [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
           }
 
-          latest_on_pypi() {
-            curl -fsSL "https://pypi.org/pypi/$1/json" | jq -r '.info.version'
-          }
-
           drift=""
-          check_one() {
-            local name="$1" pin="$2"
-            local latest
-            latest=$(latest_on_pypi "$name")
+          while read -r name pin; do
+            latest=$(curl -fsSL "https://pypi.org/pypi/$name/json" | jq -r '.info.version')
             echo "$name: pinned $pin, latest $latest"
             if version_lt "$pin" "$latest"; then
               drift+="- \`$name\`: pinned **$pin**, latest on PyPI **$latest**"$'\n'
             fi
-          }
-
-          check_one astra-tools "$ASTRA_TOOLS_PIN"
+          done < <(node -e 'const t = require("./skills.config.json").tools || {}; for (const [k, v] of Object.entries(t)) if (!k.startsWith("$")) console.log(k, v)')
 
           {
             echo "drift<<EOF"
@@ -64,7 +54,7 @@ jobs:
           set -euo pipefail
           TITLE="Toolchain pins are behind PyPI"
           BODY=$(cat <<EOF
-          One or more toolchain pins in \`hooks/astra/scripts/astra-pins.sh\` are behind the latest PyPI release:
+          One or more tool pins in \`skills.config.json\` (\`tools\`) are behind the latest PyPI release:
 
           $DRIFT
           Pins stay exact. Bump them deliberately after checking the release notes; do not treat this as an auto-merge signal.
