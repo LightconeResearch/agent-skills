@@ -1,10 +1,10 @@
 name: Pin freshness
 
-# Weekly drift check: compare every tool pin declared in skills.config.json's
-# `tools` map against the latest release on PyPI and open (or update) a single
-# tracking issue when one is behind. Pins stay exact — this workflow only
-# surfaces drift, it never edits them. astra-spec is not pinned; it resolves
-# from whatever the pinned astra-tools release declares.
+# Weekly drift check: compare every tool pin declared in skills.config.json
+# (each plugin's `tools` map) against the latest release on PyPI and open (or
+# update) a single tracking issue when one is behind. Pins stay exact — this
+# workflow only surfaces drift, it never edits them. astra-spec is not pinned;
+# it resolves from whatever the pinned astra-tools release declares.
 
 on:
   schedule:
@@ -37,7 +37,7 @@ jobs:
             if version_lt "$pin" "$latest"; then
               drift+="- \`$name\`: pinned **$pin**, latest on PyPI **$latest**"$'\n'
             fi
-          done < <(node -e 'const t = require("./skills.config.json").tools || {}; for (const [k, v] of Object.entries(t)) if (!k.startsWith("$")) console.log(k, v)')
+          done < <(node -e 'const c = require("./skills.config.json"); const seen = new Set(); for (const p of c.plugins || []) for (const [k, v] of Object.entries(p.tools || {})) { if (k.startsWith("$") || seen.has(k + "@" + v)) continue; seen.add(k + "@" + v); console.log(k, v); }')
 
           {
             echo "drift<<EOF"
@@ -54,7 +54,7 @@ jobs:
           set -euo pipefail
           TITLE="Toolchain pins are behind PyPI"
           BODY=$(cat <<EOF
-          One or more tool pins in \`skills.config.json\` (\`tools\`) are behind the latest PyPI release:
+          One or more tool pins in \`skills.config.json\` (per-plugin \`tools\` maps) are behind the latest PyPI release:
 
           $DRIFT
           Pins stay exact. Bump them deliberately after checking the release notes; do not treat this as an auto-merge signal.

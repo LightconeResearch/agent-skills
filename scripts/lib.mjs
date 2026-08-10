@@ -28,41 +28,89 @@ function filesUnder(relDir) {
 }
 
 // --- Tool pins -------------------------------------------------------------
-// skills.config.json's `tools` map pins the CLI tools that skills and hooks
-// invoke via `uvx <name>@<version>`. The pin is declared once there; every
-// textual occurrence in the canonical trees is generated from it: build.mjs
-// stamps drifted occurrences (pinStamps), validate.mjs rejects any occurrence
-// that disagrees — including specs the stamper can't rewrite, like @latest.
+// Each plugin may declare `tools: { <name>: <version> }` — the CLI tools its
+// skills and hooks invoke via `uvx <name>@<version>`. A plugin's EFFECTIVE
+// pins merge over its dependency closure (dependencies first, own entries
+// win), so a dependent plugin inherits its dependencies' pins unless it
+// overrides them. Every textual occurrence is generated from these
+// declarations: build.mjs stamps canonical skills/ and hooks/ with the owning
+// plugin's pins (pinStamps) and packaged copies with the bundling plugin's
+// pins (applyPins at copy time); validate.mjs rejects any occurrence that
+// disagrees — including specs the stamper can't rewrite, like @latest.
 
 const PIN_SCAN_DIRS = ["skills", "hooks"];
-const PIN_SCAN_EXTS = /\.(md|sh|json|ya?ml)$/;
+export const PIN_SCAN_EXTS = /\.(md|sh|json|ya?ml)$/;
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Declared tool pins as [name, version] pairs ($-prefixed keys are comments). */
-export function toolPins(config) {
-  return Object.entries(config.tools || {}).filter(([k]) => !k.startsWith("$"));
+function declaredTools(plugin) {
+  return Object.fromEntries(
+    Object.entries(plugin.tools || {}).filter(([k]) => !k.startsWith("$")),
+  );
 }
 
-/** The canonical files subject to pin stamping/checking. */
+/** Effective tool pins for a plugin: merged over its closure, own entries win. */
+export function pluginTools(pluginName, byName) {
+  const out = {};
+  for (const p of closurePlugins(pluginName, byName)) Object.assign(out, declaredTools(p));
+  return out;
+}
+
+/** Rewrite every version-shaped `<name>@<version>` / `<name>==<version>`
+ *  occurrence of the given tools to their pinned version. */
+export function applyPins(text, pins) {
+  let out = text;
+  for (const [name, pin] of Object.entries(pins)) {
+    out = out.replace(
+      new RegExp(`(${escapeRe(name)}(?:@|==))(\\d[\\w.+-]*\\w|\\d)`, "g"),
+      `$1${pin}`,
+    );
+  }
+  return out;
+}
+
+/** Every canonical file subject to pin scanning (for policy checks). */
 export function pinScanFiles() {
   return PIN_SCAN_DIRS.flatMap((dir) => filesUnder(dir)).filter((rel) => PIN_SCAN_EXTS.test(rel));
 }
 
-/** Canonical files whose version-shaped `<tool>@<version>` occurrences drift
- *  from the declared pin, each with its corrected content. */
-export function pinStamps(model) {
-  const pins = toolPins(model.config);
-  const stamps = [];
-  if (!pins.length) return stamps;
-  for (const rel of pinScanFiles()) {
-    const text = readFileSync(join(ROOT, rel), "utf8");
-    let out = text;
-    for (const [name, pin] of pins) {
-      out = out.replace(
-        new RegExp(`(${escapeRe(name)}(?:@|==))(\\d[\\w.+-]*\\w|\\d)`, "g"),
-        `$1${pin}`,
-      );
+/** Map canonical file → the pins of the plugin(s) that directly own its tree
+ *  (a skill's owner lists it in `skills:`; a hooks tree's owner declares it in
+ *  `hooks:`). Throws when two owners pin the same tool differently — the
+ *  canonical file can only carry one version. */
+export function canonicalPins(model) {
+  const { config } = model;
+  const byName = Object.fromEntries(config.plugins.map((p) => [p.name, p]));
+  const dirOwners = new Map();
+  const addOwner = (dir, owner) => dirOwners.set(dir, [...(dirOwners.get(dir) || []), owner]);
+  for (const p of config.plugins) {
+    for (const s of p.skills || []) addOwner(`skills/${s}`, p.name);
+    if (p.hooks) addOwner(dirname(p.hooks), p.name);
+  }
+  const result = new Map();
+  for (const [dir, owners] of dirOwners) {
+    const pins = {};
+    for (const owner of owners) {
+      for (const [name, pin] of Object.entries(pluginTools(owner, byName))) {
+        if (name in pins && pins[name] !== pin)
+          throw new Error(
+            `conflicting pins for ${name} in ${dir}: ${pins[name]} vs ${pin} (owners: ${owners.join(", ")})`,
+          );
+        pins[name] = pin;
+      }
     }
+    if (!Object.keys(pins).length) continue;
+    for (const rel of filesUnder(dir)) if (PIN_SCAN_EXTS.test(rel)) result.set(rel, pins);
+  }
+  return result;
+}
+
+/** Canonical files whose pinned-tool occurrences drift from their owning
+ *  plugin's pins, each with its corrected content. */
+export function pinStamps(model) {
+  const stamps = [];
+  for (const [rel, pins] of canonicalPins(model)) {
+    const text = readFileSync(join(ROOT, rel), "utf8");
+    const out = applyPins(text, pins);
     if (out !== text) stamps.push({ rel, content: out });
   }
   return stamps;
@@ -235,6 +283,10 @@ export function buildArtifacts(model) {
     const closureSkills = closure(p.name, byName);
     const closAgents = closureAgents(p.name, byName);
     const closHooks = closureHooks(p.name, byName); // repo-relative hooks.json paths
+    // The bundling plugin's effective tool pins: stamped into its packaged
+    // copies at build time, so a plugin can bundle a dependency's skills and
+    // hooks while pinning the tools they invoke to its own chosen versions.
+    const pins = pluginTools(p.name, byName);
 
     // Shared metadata for both harnesses' manifests.
     const base = {
@@ -277,6 +329,7 @@ export function buildArtifacts(model) {
       const sourceRoot = `skills/${s}`;
       for (const source of filesUnder(sourceRoot)) copies.push({
         kind: "skill",
+        pins,
         source,
         dest: `plugins/${p.name}/skills/${s}/${source.slice(sourceRoot.length + 1)}`,
       });
@@ -288,6 +341,7 @@ export function buildArtifacts(model) {
       const file = a.replace(/^agents\//, "");
       copies.push({
         kind: "agent",
+        pins,
         source: a,
         dest: `plugins/${p.name}/agents/${file}`,
       });
@@ -313,11 +367,11 @@ export function buildArtifacts(model) {
           if (prior && prior !== source)
             throw new Error(`plugin "${p.name}": hook file collision at ${dest} (${prior} vs ${source})`);
           seenDest.set(dest, source);
-          copies.push({ kind: "hook", source, dest });
+          copies.push({ kind: "hook", pins, source, dest });
         }
       }
       const manifestDest = `plugins/${p.name}/hooks/hooks.json`;
-      if (closHooks.length === 1) copies.push({ kind: "hook", source: closHooks[0], dest: manifestDest });
+      if (closHooks.length === 1) copies.push({ kind: "hook", pins, source: closHooks[0], dest: manifestDest });
       else files[manifestDest] = mergeHooks(closHooks);
     }
   }
