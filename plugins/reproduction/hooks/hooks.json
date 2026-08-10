@@ -10,16 +10,6 @@
             "timeout": 90
           }
         ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/scripts/activate-on-read.sh\"",
-            "timeout": 5
-          }
-        ]
       }
     ],
     "SessionStart": [

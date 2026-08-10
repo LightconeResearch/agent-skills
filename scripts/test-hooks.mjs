@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// Hermetic tests for the astra hook shims (no jq, no network, no real astra).
+// Hermetic tests for the astra hook shims (no jq/sed/awk contracts, no
+// network, no real astra).
 //
-// The shims are deliberately thin: string-match the raw payload, then delegate
-// real work to the pinned `uvx astra-tools@<pin>` invocation. So the tests
-// stub uvx (controllable exit code + invocation log) and assert the shim's
-// halves: the prefilter (non-ASTRA events exit silently WITHOUT invoking uvx),
-// the delegation (correct astra subcommand), and the JSON emission (every
-// emitted line must JSON.parse — this exercises the bash escaper).
+// The shims are deliberately thin: string-match the raw payload, then
+// delegate to the pinned `uvx astra-tools@<pin>` invocation, whose --json
+// mode returns ONE JSON-encoded string that the shim splices into the
+// response envelope. So the tests stub uvx (controllable exit code +
+// invocation log) and assert the shim's halves: the prefilter (non-ASTRA
+// events exit silently WITHOUT invoking uvx), the delegation (correct astra
+// arguments), and the envelope (every emitted line must JSON.parse, with the
+// spliced report intact).
 //
 // A fake `astra` that always SUCCEEDS also sits on PATH: if any script ever
 // regresses to running a PATH astra instead of uvx, the expected FAILED
@@ -28,24 +31,30 @@ const uvxLog = join(scratch, "uvx-invocations.log");
 mkdirSync(project, { recursive: true });
 mkdirSync(bin);
 writeFileSync(join(project, "astra.yaml"), "id: test\n");
+// The fake emits what the real --json mode emits: one JSON-encoded string
+// (here with embedded quotes and a backslash, to prove the splice needs no
+// re-escaping). FAKE_UVX_GARBAGE simulates a toolchain that never got to
+// astra (uvx resolution failure, crash) — non-JSON noise on stdout.
 writeFileSync(
   join(bin, "uvx"),
   `#!/bin/sh
 echo "$*" >> "${uvxLog}"
-printf 'fake output: %s\\n' "$*"
-printf 'tricky "quotes" and \\\\backslashes\\n'
-printf 'ansi \\033[31mred\\033[0m end\\n'
+if [ -n "\${FAKE_UVX_GARBAGE}" ]; then
+  echo "error: no interpreter found"
+  exit 2
+fi
+printf '%s\\n' "\\"fake report: $* | with \\\\\\"quotes\\\\\\" and a \\\\\\\\backslash\\""
 exit "\${FAKE_UVX_RC:-1}"
 `,
   { mode: 0o755 },
 );
 writeFileSync(join(bin, "astra"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
 
-function run(script, input, env = {}) {
+function run(script, input, env = {}, cwd = project) {
   const result = spawnSync("bash", [join(SCRIPTS, script)], {
-    cwd: project,
+    cwd,
     encoding: "utf8",
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, TMPDIR: scratch, ...env },
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, ...env },
     input,
   });
   if (result.status !== 0) {
@@ -74,6 +83,11 @@ function assertIncludes(label, haystack, needle) {
   }
 }
 
+function assertSilent(label, stdout, before) {
+  if (stdout !== "") throw new Error(`${label}: expected no output\n${stdout}`);
+  if (uvxCalls().length !== before) throw new Error(`${label}: uvx was invoked`);
+}
+
 const uvxCalls = () => (existsSync(uvxLog) ? readFileSync(uvxLog, "utf8").trim().split("\n") : []);
 
 try {
@@ -85,22 +99,18 @@ try {
     tool_response: {},
   });
 
-  // Failing validation → FAILED message with the validator's output, escaped.
+  // Failing validation → FAILED message with the spliced report.
   let context = parsedContext(
     "save/fail",
     run("validate-on-save.sh", writePayload),
     "PostToolUse",
   );
-  assertIncludes("save/fail", context, "ASTRA validation FAILED");
-  assertIncludes("save/fail", context, "fake output:");
-  assertIncludes("save/fail", context, 'tricky "quotes" and \\backslashes');
-  // Control characters (ANSI escapes from a forced-color Rich) must be
-  // stripped, not passed through as illegal JSON string bytes.
-  assertIncludes("save/fail ansi", context, "red");
-  if (context.includes("\u001b")) throw new Error("save/fail ansi: raw ESC byte in context");
+  assertIncludes("save/fail", context, "ASTRA validation FAILED for ./astra.yaml");
+  assertIncludes("save/fail", context, "fake report:");
+  assertIncludes("save/fail", context, 'with "quotes" and a \\backslash');
   const [firstCall] = uvxCalls();
   assertIncludes("save/fail uvx args", firstCall, "astra-tools@");
-  assertIncludes("save/fail uvx args", firstCall, " validate");
+  assertIncludes("save/fail uvx args", firstCall, "validate astra.yaml --json");
 
   // Passing validation → single-line passed message.
   context = parsedContext(
@@ -109,6 +119,14 @@ try {
     "PostToolUse",
   );
   assertIncludes("save/pass", context, "ASTRA validation passed");
+
+  // Toolchain failure (no JSON string on stdout) → toolchain message, valid JSON.
+  context = parsedContext(
+    "save/toolchain",
+    run("validate-on-save.sh", writePayload, { FAKE_UVX_GARBAGE: "1" }),
+    "PostToolUse",
+  );
+  assertIncludes("save/toolchain", context, "toolchain problem");
 
   // Codex apply_patch payloads trigger through the same string prefilter.
   const patchPayload = JSON.stringify({
@@ -121,87 +139,67 @@ try {
   assertIncludes("save/patch", context, "ASTRA validation FAILED");
 
   // Non-ASTRA event → silent, and uvx is never invoked.
-  const before = uvxCalls().length;
-  const silent = run(
-    "validate-on-save.sh",
-    JSON.stringify({
-      cwd: project,
-      tool_name: "Write",
-      tool_input: { file_path: join(project, "README.md") },
-      tool_response: {},
-    }),
+  let before = uvxCalls().length;
+  assertSilent(
+    "save/silent",
+    run(
+      "validate-on-save.sh",
+      JSON.stringify({
+        cwd: project,
+        tool_name: "Write",
+        tool_input: { file_path: join(project, "README.md") },
+        tool_response: {},
+      }),
+    ),
+    before,
   );
-  if (silent !== "") throw new Error(`save/silent: expected no output\n${silent}`);
-  if (uvxCalls().length !== before) throw new Error("save/silent: uvx was invoked");
 
-  // Payload mentions astra.yaml, but the session dir has no ASTRA project →
-  // silent (the mention was incidental, e.g. docs content), and no uvx run.
+  // Payload mentions astra.yaml, but the session dir has no spec → silent
+  // (the mention was incidental, e.g. docs content), and no uvx run.
   const noProject = join(scratch, "no-project");
   mkdirSync(noProject);
-  const incidental = spawnSync("bash", [join(SCRIPTS, "validate-on-save.sh")], {
-    cwd: noProject,
-    encoding: "utf8",
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
-    input: JSON.stringify({
-      cwd: noProject,
-      tool_name: "Write",
-      tool_input: { file_path: join(noProject, "README.md"), content: "see astra.yaml docs" },
-      tool_response: {},
-    }),
-  });
-  if (incidental.status !== 0 || incidental.stdout !== "") {
-    throw new Error(`save/no-project: expected silent success\n${incidental.stdout}`);
-  }
-  if (uvxCalls().length !== before) throw new Error("save/no-project: uvx was invoked");
-
-  // --- activate-on-read ---------------------------------------------------
-  const readPayload = (file, session) =>
-    JSON.stringify({
-      cwd: project,
-      session_id: session,
-      tool_name: "Read",
-      tool_input: { file_path: file },
-      tool_response: {},
-    });
-
-  context = parsedContext(
-    "read/nudge",
-    run("activate-on-read.sh", readPayload(join(project, "astra.yaml"), "s1")),
-    "PostToolUse",
+  before = uvxCalls().length;
+  assertSilent(
+    "save/no-project",
+    run(
+      "validate-on-save.sh",
+      JSON.stringify({
+        cwd: noProject,
+        tool_name: "Write",
+        tool_input: { file_path: join(noProject, "README.md"), content: "see astra.yaml docs" },
+        tool_response: {},
+      }),
+      {},
+      noProject,
+    ),
+    before,
   );
-  assertIncludes("read/nudge", context, "load the astra skill");
-
-  // Second read in the same session → marker suppresses the nudge.
-  const again = run("activate-on-read.sh", readPayload(join(project, "astra.yaml"), "s1"));
-  if (again !== "") throw new Error(`read/again: expected no output\n${again}`);
-
-  // Non-ASTRA read → silent.
-  const other = run("activate-on-read.sh", readPayload(join(project, "notes.md"), "s2"));
-  if (other !== "") throw new Error(`read/other: expected no output\n${other}`);
 
   // --- session-start ------------------------------------------------------
-  // Fake uvx exits 1, so `astra info` fails → toolchain-problem message.
+  // Healthy toolchain → primer with the spliced info header.
   context = parsedContext(
-    "session/toolchain",
-    run("astra-session-start.sh", JSON.stringify({ cwd: project })),
+    "session/primer",
+    run("astra-session-start.sh", "{}", { FAKE_UVX_RC: "0" }),
     "SessionStart",
   );
-  assertIncludes("session/toolchain", context, "ASTRA project — spec at ./astra.yaml");
-  assertIncludes("session/toolchain", context, "toolchain problem");
-  assertIncludes("session/toolchain", context, "Activate the astra skill");
+  assertIncludes("session/primer", context, "ASTRA project — spec at ./astra.yaml");
+  assertIncludes("session/primer", context, "fake report:");
+  assertIncludes("session/primer", context, "Activate the astra skill");
+  assertIncludes("session/primer uvx args", uvxCalls().at(-1), "info --brief --json");
+
+  // Toolchain failure → degraded message, still valid JSON.
+  context = parsedContext(
+    "session/toolchain",
+    run("astra-session-start.sh", "{}", { FAKE_UVX_GARBAGE: "1" }),
+    "SessionStart",
+  );
+  assertIncludes("session/toolchain", context, "Could not run `astra info`");
 
   // Outside an ASTRA project → silent.
-  const elsewhere = spawnSync("bash", [join(SCRIPTS, "astra-session-start.sh")], {
-    cwd: scratch,
-    encoding: "utf8",
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
-    input: "{}",
-  });
-  if (elsewhere.status !== 0 || elsewhere.stdout !== "") {
-    throw new Error(`session/elsewhere: expected silent success\n${elsewhere.stdout}`);
-  }
+  before = uvxCalls().length;
+  assertSilent("session/elsewhere", run("astra-session-start.sh", "{}", {}, scratch), before);
 
-  console.log("✓ ASTRA hook shims: prefilter, uvx delegation, and JSON emission all behave.");
+  console.log("✓ ASTRA hook shims: prefilter, uvx delegation, and JSON splicing all behave.");
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
