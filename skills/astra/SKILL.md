@@ -211,6 +211,7 @@ astra init [DIRECTORY]                          # Scaffold a new analysis
 astra validate [FILE]                           # Validate the whole project, or one file (run after every change)
 astra validate astra.yaml --verify-evidence     # + verify insight quotes against PDFs
 astra spec [TERM|--full]                        # Schema reference (see above)
+astra guide                                     # Agent-oriented tour of the format (see References)
 astra info [--decisions|--inputs|--outputs]     # Analysis summary / element details
 astra universe generate -n NAME [-d "desc"]     # Generate universe from defaults
 astra universe check universes/x.yaml           # Check universe constraints
