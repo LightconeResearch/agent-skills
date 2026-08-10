@@ -1,15 +1,17 @@
 #!/bin/bash
-# PostToolUse(Read) hook: when an agent reads an ASTRA file, drop a soft reminder
+# PostToolUse(Read) hook: when an agent reads an astra.yaml, drop a soft reminder
 # to load the astra skill. The harness can't tell us whether the skill is already
 # active, so the reminder is deliberately gentle and fires at most once per
 # session (a per-session marker suppresses the repeats) — enough to catch an agent
 # that wandered into an astra.yaml cold, without nagging one already oriented.
 #
 # No jq: the path and session id are pulled from the raw payload with sed.
-# Exotic paths (embedded quotes or backslashes) simply don't match, which only
-# costs this one-time reminder.
+# Detection is simply "astra.yaml appears in the file path" — universe files
+# are not worth a special case here, since anyone deep enough to read one has
+# read the spec. Exotic paths (embedded quotes or backslashes) simply don't
+# match, which only costs this one-time reminder.
 #
-#   Read ──▶ ASTRA file? ──no──▶ exit silent
+#   Read ──▶ file path contains astra.yaml? ──no──▶ exit silent
 #              │yes
 #              ▼
 #         marker for this session_id exists? ──yes──▶ exit silent (already nudged)
@@ -19,26 +21,17 @@
 
 input=$(cat)
 
-case "$input" in
-    *astra.yaml* | *universes/*) ;;
-    *) exit 0 ;;
-esac
-
 extract() {
     printf '%s' "$input" | sed -n 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1
 }
 
 file_path=$(extract file_path)
 [ -z "$file_path" ] && file_path=$(extract filePath)
-[ -z "$file_path" ] && exit 0
 
-filename=$(basename "$file_path")
-parent=$(basename "$(dirname "$file_path")")
-
-# Same detection as validate-on-save: astra.yaml at any depth, universes/*.yaml.
-if [ "$filename" != "astra.yaml" ] && ! { [ "$parent" = "universes" ] && [[ "$filename" == *.yaml ]]; }; then
-    exit 0
-fi
+case "$file_path" in
+    *astra.yaml*) ;;
+    *) exit 0 ;;
+esac
 
 # Fire once per session.
 session_id=$(extract session_id)
