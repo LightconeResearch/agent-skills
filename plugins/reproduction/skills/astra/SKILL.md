@@ -24,9 +24,26 @@ An `astra.yaml` spec captures this for a single unit of work. The structure is
 **self-similar**: a top-level analysis and a nested sub-analysis have exactly
 the same shape. Everything here applies equally to both.
 
+## Running `astra`
+
+Run every `astra` command through uv's pinned runner, so the CLI and the schema
+it validates against match the version this skill is written for:
+
+```bash
+uvx astra-tools@0.2.12 <command>
+```
+
+Never run a bare `astra` found on PATH — its version is unknown and may not
+match what this skill assumes. The rest of this document writes bare `astra`
+for readability; always substitute the pinned invocation when you run it.
+(`uvx` caches the environment, so repeated calls are fast. If `uvx` is
+missing, ask the user to install uv:
+https://docs.astral.sh/uv/getting-started/installation/ — never install it
+yourself.)
+
 ## Orient with `astra spec`
 
-The installed `astra` CLI is the ground truth for the format: the field-level
+The `astra` CLI is the ground truth for the format: the field-level
 grammar — every concept, its fields, constraints, and cross-references — is
 served in sync with the schema that `astra validate` checks against (saved
 files are validated automatically). Do not begin writing or editing an
@@ -180,6 +197,9 @@ paper into the analysis:
 path so you can open it for review.
 
 ## CLI reference
+
+All commands below run through the pinned invocation from
+[Running `astra`](#running-astra).
 
 `astra` validates and inspects; it never executes recipes. The separation is
 deliberate — the spec stays stable while agents and execution layers evolve,

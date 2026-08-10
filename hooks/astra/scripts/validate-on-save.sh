@@ -6,14 +6,13 @@
 # The hook surfaces astra validate's output verbatim — no parsing. Pointers to
 # the relevant schema docs belong in astra-tools' own error messages (upstream).
 #
-# astra is resolved global-first (the astra on PATH, installed from the
-# lightcone-cli wheel), falling back to an ephemeral, dual-pinned `uvx` run when
-# there is no global install. Validation is stateless, so uvx is a safe fallback.
+# astra always runs as an ephemeral, dual-pinned `uvx` invocation (see
+# astra-pins.sh) — never an astra found on PATH, whose version is unknown.
 #
 #   Write/Edit/apply_patch ──▶ ASTRA file touched? ──no──▶ exit silent
 #                     │yes
 #                     ▼
-#                astra resolves? ──no──▶ inject "saved but NOT validated; ask user to install uv"
+#                uvx present? ──no──▶ inject "saved but NOT validated; ask user to install uv"
 #                     │yes
 #                     ▼
 #                astra validate ──pass──▶ inject "validation passed"
@@ -63,9 +62,9 @@ done < <(printf '%s\n' "$file_paths" | awk 'NF && !seen[$0]++')
 
 [ -z "$candidate_paths" ] && exit 0
 
-# Resolve an astra runner; if neither astra nor uv is present, ask the USER to
-# install uv rather than failing silently. Never install uv from here.
-if ! astra_resolve; then
+# If uv is not present, ask the USER to install it rather than failing
+# silently. Never install uv from here.
+if ! command -v uvx &>/dev/null; then
     jq -n --arg ctx "ASTRA file saved but not validated: \`uv\` is not installed. Ask the user if they'd like to install it ($ASTRA_UV_INSTALL) to enable validation." \
         '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: ($ctx + "\n")}}'
     exit 0

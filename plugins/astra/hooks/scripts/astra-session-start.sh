@@ -16,7 +16,7 @@
 #   SessionStart ──▶ cwd + astra.yaml present? ──no──▶ exit silent
 #                          │yes
 #                          ▼
-#                     astra resolves? ──no──▶ inject "could not run astra info — toolchain problem"
+#                     uvx present? ──no──▶ inject "could not run astra info — toolchain problem"
 #                          │yes
 #                          ▼
 #                     astra info shape = "Unknown"? ──yes──▶ inject "spec likely malformed; run astra validate"
@@ -39,7 +39,7 @@ summary="ASTRA project — spec at ./astra.yaml"
 # Shape of the analysis, straight from the spec: `astra info` opens with
 # name, version, and "Inputs: N | Outputs: M | Decisions: K" before the
 # detail tables; keep just that header.
-if astra_resolve; then
+if command -v uvx &>/dev/null; then
     info_out=$("${ASTRA_CMD[@]}" info 2>/dev/null)
     info_rc=$?
     shape=$(echo "$info_out" | awk '/^Inputs:/ { print; exit } NF { print }')

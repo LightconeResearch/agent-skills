@@ -1,17 +1,37 @@
 #!/usr/bin/env node
-// Refresh skills/astra/references/getting-started.md verbatim from astra-spec at
-// ASTRA_SPEC_PIN (hooks/astra/scripts/astra-pins.sh). Opt-in: run it when the
-// pin bumps (npm run fetch-getting-started), then commit the result. If the pinned
-// release predates the page (404), the checked-in copy is left untouched.
+// Refresh skills/astra/references/getting-started.md verbatim from astra-spec
+// at the version the pinned astra-tools (ASTRA_TOOLS_PIN in
+// hooks/astra/scripts/astra-pins.sh) resolves to — the spec itself is not
+// pinned, so uv resolves it the same way the hooks' uvx invocation does.
+// Opt-in: run it when the tools pin bumps (npm run fetch-getting-started),
+// then commit the result. If the resolved release predates the page (404),
+// the checked-in copy is left untouched.
 
+import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const pins = readFileSync(join(ROOT, "hooks/astra/scripts/astra-pins.sh"), "utf8");
-const pin = pins.match(/^ASTRA_SPEC_PIN="([^"]+)"/m)[1];
-const ref = `v${pin}`;
+const toolsPin = pins.match(/^ASTRA_TOOLS_PIN="([^"]+)"/m)[1];
+const toolsReq = toolsPin.includes("+") ? toolsPin : `astra-tools==${toolsPin}`;
+
+const probe = spawnSync(
+  "uv",
+  ["run", "--no-project", "--with", toolsReq, "python", "-c",
+    "from importlib.metadata import version; print(version('astra-spec'))"],
+  { encoding: "utf8" },
+);
+if (probe.error || probe.status !== 0) {
+  console.error(
+    `Could not resolve astra-spec from ${toolsReq} via uv (is uv installed?):\n` +
+      `${probe.error ?? probe.stderr}`,
+  );
+  process.exit(1);
+}
+const specVersion = probe.stdout.trim();
+const ref = `v${specVersion}`;
 const url = `https://raw.githubusercontent.com/LightconeResearch/astra-spec/${ref}/docs/getting-started.md`;
 
 const res = await fetch(url).catch((err) => {

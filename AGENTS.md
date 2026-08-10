@@ -38,12 +38,17 @@ fails if the generated files are out of sync. The generator is zero-dependency
 ## The astra getting-started reference
 
 `skills/astra/references/getting-started.md` is a verbatim copy of astra-spec's
-`docs/getting-started.md` at the pinned version. Don't hand-edit it — when the
-schema pin bumps, run `npm run fetch-getting-started` and commit the result.
-(While the pinned release predates the upstream page, the fetch is a no-op
-and the checked-in copy stands.) The astra toolchain pins live in one place —
-`hooks/astra/scripts/astra-pins.sh` (`ASTRA_TOOLS_PIN` / `ASTRA_SPEC_PIN`) —
-sourced by the astra hooks.
+`docs/getting-started.md` at the spec version the pinned astra-tools resolves
+to. Don't hand-edit it — when the tools pin bumps, run
+`npm run fetch-getting-started` and commit the result. (While the resolved
+release predates the upstream page, the fetch is a no-op and the checked-in
+copy stands.) The astra toolchain pin has one source of truth —
+`hooks/astra/scripts/astra-pins.sh` (`ASTRA_TOOLS_PIN`; astra-spec is
+deliberately unpinned and resolves from the tools release) — sourced by the
+astra hooks and echoed as the pinned `uvx` invocation in skill text;
+`npm test` fails if any `astra-tools@<version>` (or `==`) in `skills/**.md`
+disagrees with the pins file (or if skill text pins astra-spec at all), so
+bump the pins file first and fix the skill text it flags.
 
 ## Build tooling — design & rationale
 
@@ -106,8 +111,11 @@ zero-dep and reconciled them to the three-target need.
 - `description`: ≤ 1024 chars; say *what it does* and *when to use it*, with trigger
   keywords (this is what an agent reads to decide whether to load the skill).
 - Keep `SKILL.md` under ~500 lines; push depth into `references/` and load it on demand.
-- Any skill that shells out to `astra` must open with the **Prerequisites**
-  preflight: confirm the CLI resolves, point to `uv tool install lightcone-cli` if not,
-  and discover command syntax with `--help` rather than guessing.
+- Any skill that shells out to `astra` must run it through the pinned `uvx`
+  invocation (`uvx astra-tools@<pin>`, pin from
+  `hooks/astra/scripts/astra-pins.sh`) and open with the **Prerequisites**
+  preflight: confirm the pinned CLI resolves, point to the uv install docs if
+  `uvx` is missing, and discover command syntax with `--help` rather than
+  guessing.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full add-a-skill walkthrough.

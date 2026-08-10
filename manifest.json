@@ -1,6 +1,6 @@
 {
   "name": "lightcone-research",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction.",
   "repository": "https://github.com/LightconeResearch/agent-skills",
   "generated": "Run `npm run build` to regenerate. Do not edit by hand.",

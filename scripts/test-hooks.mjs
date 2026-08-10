@@ -17,7 +17,12 @@ mkdirSync(bin);
 writeFileSync(join(project, "astra.yaml"), "id: test\n");
 writeFileSync(join(project, "README.md"), "not an ASTRA file\n");
 writeFileSync(join(project, "universes", "fiducial.yaml"), "id: fiducial\n");
-writeFileSync(join(bin, "astra"), "#!/bin/sh\nprintf 'fake validation: %s\\n' \"$*\"\nexit 1\n", { mode: 0o755 });
+// The hook must resolve astra as a pinned `uvx` run and never use an `astra`
+// from PATH: the fake uvx fails (driving the deterministic FAILED path with no
+// network), while the fake astra succeeds — so any regression to PATH
+// resolution flips the message to "passed" and breaks the assertions.
+writeFileSync(join(bin, "uvx"), "#!/bin/sh\nprintf 'fake validation: %s\\n' \"$*\"\nexit 1\n", { mode: 0o755 });
+writeFileSync(join(bin, "astra"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
 
 const spec = join(project, "astra.yaml");
 const patchFor = (...lines) => `*** Begin Patch\n${lines.join("\n")}\n*** End Patch`;

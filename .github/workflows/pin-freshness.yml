@@ -1,9 +1,10 @@
 name: Pin freshness
 
-# Weekly drift check: compare the exact astra-tools / astra-spec pins in
-# hooks/astra/scripts/astra-pins.sh against the latest releases on PyPI and open
-# (or update) a single tracking issue when a pin is behind. Pins stay exact —
-# this workflow only surfaces drift, it never edits them.
+# Weekly drift check: compare the exact astra-tools pin in
+# hooks/astra/scripts/astra-pins.sh against the latest release on PyPI and open
+# (or update) a single tracking issue when it is behind. The pin stays exact —
+# this workflow only surfaces drift, it never edits it. astra-spec is not
+# pinned; it resolves from whatever the pinned tools release declares.
 
 on:
   schedule:
@@ -52,7 +53,6 @@ jobs:
           }
 
           check_one astra-tools "$ASTRA_TOOLS_PIN"
-          check_one astra-spec "$ASTRA_SPEC_PIN"
 
           {
             echo "drift<<EOF"
