@@ -1,12 +1,9 @@
 ---
 name: astra
 description: >
-  ASTRA (astra.yaml) support: what the format is, and how to drive the pinned
-  `astra` CLI — orientation via the agent guide and schema reference, the
-  validate loop, universes, and handling citations, quotes, and supporting
-  evidence through the paper utilities. Invoke whenever reading, writing,
-  validating, or restructuring an astra.yaml spec, working with universes or
-  evidence, or when the user asks about ASTRA.
+  ASTRA (astra.yaml) support: what the format is, and how to drive the
+  `astra` CLI. Invoke whenever reading, writing, validating, or restructuring an astra.yaml spec, 
+  working with universes or evidence, or when the user asks about ASTRA.
 ---
 
 # ASTRA
@@ -45,8 +42,7 @@ The CLI serves everything this skill deliberately does not repeat:
   core concepts, worked examples, the authoring workflow and judgment (what
   deserves to be a decision, when to split a sub-analysis, universes,
   evidence), and the format rules. **Read it before any substantial authoring
-  or restructuring work.** It ships with the installed toolchain, so it
-  always matches the validator (same text as https://astra-spec.org/llms.txt).
+  or restructuring work.**
 - `uvx astra-tools@x.y.z spec` — the field-level ground truth, served in sync
   with the schema the validator enforces: no argument prints the concept map;
   `uvx astra-tools@x.y.z spec <term>` prints one concept in full (the mode to
