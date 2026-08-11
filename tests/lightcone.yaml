@@ -57,7 +57,7 @@ tests:
       comment line `# e2e-touch` to the end of astra.yaml using your file
       editing tool. Do nothing else, and do not explain.
     edits_file: astra.yaml
-    attempts: 2
+    attempts: 3
     expect_context: ASTRA validation passed
     forbid_context:
       - validation FAILED   # spec rejected

@@ -80,7 +80,7 @@ const skip = (m) => {
   console.log(`  \x1b[33m∅ skip\x1b[0m ${m}`);
 };
 const have = (bin) => spawnSync("sh", ["-c", `command -v ${bin}`]).status === 0;
-const tail = (s, n = 400) => (s || "").trim().slice(-n);
+const tail = (s, n = 2000) => (s || "").trim().slice(-n);
 
 function run(bin, argv, { cwd, env = {}, timeout = 120_000, input } = {}) {
   const r = spawnSync(bin, argv, {
@@ -251,9 +251,17 @@ function runSpecTests(harness, spec, sc, session) {
   }
   for (const t of spec.tests) {
     const label = `${harness}/${spec.plugin}/${t.name}`;
-    const attempts = t.edits_file ? t.attempts || 1 : 1;
+    const attempts = t.attempts || 1;
     const editPath = t.edits_file ? join(sc.project, t.edits_file) : null;
     for (let attempt = 1; attempt <= attempts; attempt++) {
+      // Restore the fixture files so attempts are independent: a prior
+      // attempt's edit would otherwise leave the requested change already in
+      // place, and the model then (reasonably) declines to repeat it —
+      // misclassifying a retry as "model never edited".
+      for (const [rel, content] of Object.entries(spec.project || {})) {
+        mkdirSync(dirname(join(sc.project, rel)), { recursive: true });
+        writeFileSync(join(sc.project, rel), content);
+      }
       const before = sc.stubCalls().length;
       const pre = editPath && existsSync(editPath) ? readFileSync(editPath, "utf8") : null;
       const r = session(t);
@@ -279,6 +287,11 @@ function runSpecTests(harness, spec, sc, session) {
       }
       // The event had its chance (edit happened, or none was needed) and
       // evidence is still missing: this is what this suite exists to catch.
+      // Sessions are stochastic, though — e.g. the model can satisfy the
+      // edit through a tool the hook matcher doesn't cover — so burn the
+      // remaining attempts before declaring dispatch broken. Real breakage
+      // fails every attempt anyway.
+      if (attempt < attempts) continue;
       fail(`${label}: ${t.event} hook evidence missing — ${missing.join("; ")} (exit ${r.status}).\n${tail(r.out)}`);
       break;
     }
@@ -306,15 +319,33 @@ function claudeLeg() {
       const ins = run("claude", ["plugin", "install", `${spec.plugin}@${MARKET}`, "--scope", "user"], { env: baseEnv });
       if (!/Successfully installed plugin/i.test(ins.out)) { fail(`${spec.plugin}: install failed: ${tail(ins.out)}`); continue; }
       const sc = makeScratch(`e2e-cc-${spec.plugin}-`, spec);
+      // The stream-json output alone is NOT a sufficient trace: PostToolUse
+      // hooks emit no hook_started/hook_response stream events, and their
+      // injected additionalContext is not echoed into the stream either —
+      // it only surfaced there when the model happened to repeat the hook
+      // feedback in its visible output, which made these tests a coin flip.
+      // The context IS persisted deterministically in the session
+      // transcript under <config>/projects/ (as a hook_additional_context
+      // attachment), so — mirroring the Codex rollout files — a test's
+      // trace is the stream output plus the transcripts its session
+      // created.
+      const projectsDir = join(baseEnv.CLAUDE_CONFIG_DIR, "projects");
+      const transcripts = () =>
+        existsSync(projectsDir)
+          ? readdirSync(projectsDir, { recursive: true })
+              .map(String)
+              .filter((f) => f.endsWith(".jsonl"))
+              .map((f) => join(projectsDir, f))
+          : [];
       try {
         runSpecTests("claude", spec, sc, (t) => {
+          const preFiles = new Set(transcripts());
           const r = run(
             "claude",
             [
               "-p", t.prompt, "--model", "haiku",
-              // stream-json (which requires --verbose in print mode) is the
-              // trace: hook-injected context flows through it for every
-              // event type.
+              // stream-json (which requires --verbose in print mode) carries
+              // the session-scoped hook events and the model's output.
               "--output-format", "stream-json", "--verbose",
               // acceptEdits when the test needs a file edit: headless runs
               // can't answer a permission prompt, and the whole point is to
@@ -325,7 +356,11 @@ function claudeLeg() {
             ],
             { cwd: sc.project, env: { ...baseEnv, PATH: `${sc.bin}:${process.env.PATH}` }, timeout: 300_000 },
           );
-          return { ...r, trace: r.out };
+          const trace = [
+            r.out,
+            ...transcripts().filter((f) => !preFiles.has(f)).map((f) => readFileSync(f, "utf8")),
+          ].join("\n");
+          return { ...r, trace };
         });
       } finally { rmSync(sc.scratch, { recursive: true, force: true }); }
     } finally { rmSync(cfg, { recursive: true, force: true }); }

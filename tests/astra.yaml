@@ -9,8 +9,10 @@
 #
 #   1. expect_context — a marker substring the hook itself injects into the
 #      conversation (its additionalContext), searched in the harness's session
-#      trace (Claude: the stream-json output; Codex: the session rollout file
-#      under $CODEX_HOME/sessions/). Works for ANY hook, including ones that
+#      trace (Claude: the stream-json output plus the session transcripts
+#      under the throwaway config's projects/ dir — the stream alone omits
+#      PostToolUse context; Codex: the session rollout file under
+#      $CODEX_HOME/sessions/). Works for ANY hook, including ones that
 #      never shell out to a binary. Keep markers ASCII — traces JSON-escape
 #      non-ASCII characters.
 #   2. forbid_context — degraded-path markers that must NOT appear: hooks that
@@ -39,9 +41,13 @@
 #   edits_file        (optional) file the model must edit to trigger the event.
 #                     Grants the session write access, and separates the two
 #                     failure modes: file edited but evidence missing → dispatch
-#                     is broken; file never edited → inconclusive, retried up to
-#                     `attempts` times, then failed as such.
-#   attempts          (optional, default 1) total tries for inconclusive runs
+#                     looks broken; file never edited → inconclusive.
+#   attempts          (optional, default 1) total session tries before the test
+#                     fails. Both failure modes retry: sessions are stochastic
+#                     (the model can skip the edit, or make it through a tool
+#                     the hook matcher doesn't cover), so one bad session
+#                     shouldn't fail CI — real dispatch breakage fails every
+#                     attempt anyway.
 #
 # Top-level fields: plugin (required), tests (required), project (fixture
 # files), stubs (optional PATH stubs: {stdout, exit}), setup (optional shell
@@ -99,7 +105,7 @@ tests:
       comment line `# e2e-touch` to the end of astra.yaml using your file
       editing tool. Do nothing else, and do not explain.
     edits_file: astra.yaml
-    attempts: 2
+    attempts: 3
     # Only real, successful validation of the (still valid) fixture says this.
     expect_context: ASTRA validation passed
     forbid_context:
