@@ -23,16 +23,18 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
-const PLUGINS = ["astra"];
+const PLUGINS = ["astra", "reproduction"];
 const MARKET = "lightcone-research";
 const CODEX_PROBE_SKILLS = {
   astra: "astra",
+  reproduction: "reproduce",
 };
 // Hooks auto-discover from a packaged hooks/hooks.json (no manifest declaration),
 // so their presence in the cache is what makes them load — probe the plugins that
 // ship them. Same silent-omission risk as skills; keep the assertions symmetric.
 const CODEX_PROBE_HOOKS = {
   astra: "hooks/hooks.json",
+  reproduction: "hooks/hooks.json",
 };
 
 const args = process.argv.slice(2);

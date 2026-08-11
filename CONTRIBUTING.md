@@ -31,7 +31,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 2. If it shells out to a CLI tool (e.g. `astra`), invoke it through the pinned
    `uvx` form with the **literal version placeholder** — `uvx astra-tools@x.y.z
    <command>` — and add the **Prerequisites** preflight block (copy the pattern
-   from `skills/astra/SKILL.md`): check the pinned CLI resolves, point to
+   from `skills/reproduce/SKILL.md`): check the pinned CLI resolves, point to
    the uv install docs if `uvx` is missing, and use `--help` to discover
    syntax. See [Tool pins](#tool-pins) for how `x.y.z` becomes a real version.
 3. Add the skill to the relevant plugin(s) in `skills.config.json` (`plugins[].skills`).
@@ -46,13 +46,14 @@ Edit `skills.config.json`:
   `claude plugin update` when the resolved version matches its cache, and
   Codex uses it as the install cache key. **Bump the version of every plugin
   whose generated `plugins/<name>/` dir changes in a PR** — including plugins
-  that merely bundle a changed dependency (an `astra` change also bumps every
-  plugin bundling it) — and leave the others untouched.
+  that merely bundle a changed dependency (e.g. an `astra` change also bumps
+  `reproduction`) — and leave the others untouched.
 - `skills` — directly-owned skills (Claude exposes exactly these).
 - `dependencies` — other plugins this one **bundles**. The generator inlines the full
   transitive closure (own + dependency skills, hooks, agents) as byte-copies (installers
   archive the dir and don't follow outward symlinks, so copies are required) under `plugins/<name>/`, so the plugin
-  is self-contained and installs identically on both harnesses.
+  is self-contained and installs identically on both harnesses. Example: `reproduction`
+  bundles `astra`.
 - `requires` — other plugins this one **depends on but does not bundle**. Documented
   only: the user installs the required plugin separately (surfaced in the README and the
   plugin description). Nothing is added to the closure.
@@ -61,7 +62,7 @@ Edit `skills.config.json`:
   `CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines (the `$PLUGIN_ROOT`
   fallback covers older harness versions) — and always spell script paths `hooks/scripts/<name>.sh`
   — the build flattens every closure hook tree under one `hooks/scripts/` dir. When a
-  plugin bundles a dependency that also ships hooks (e.g. a plugin bundling `astra`), the
+  plugin bundles a dependency that also ships hooks (e.g. `reproduction` + `astra`), the
   generator **merges** the manifests: hook groups concatenate per event, scripts copy
   side by side (canonical script basenames must stay unique across plugins). `agents` —
   Claude subagent file paths.
@@ -80,9 +81,9 @@ run, and the version is **templated**, never written by hand:
 - **Pins are declared per plugin** in `skills.config.json`, in each plugin's
   `tools` map (e.g. `"tools": { "astra-tools": "0.2.13" }`). A plugin's
   *effective* pins merge over its dependency closure — dependencies first, own
-  entries win — so a plugin bundling `astra` inherits its pin unless it
-  declares its own, and two plugins can ship the same skill pinned to
-  different versions.
+  entries win — so `reproduction` inherits `astra`'s pin unless it declares
+  its own, and two plugins can ship the same skill pinned to different
+  versions.
 - **`npm run build` substitutes the pins** into the generated `plugins/<name>/`
   copies (canonical files are never rewritten). The drift check compares each
   packaged file against the pin-substituted source, so generator and checker
@@ -125,11 +126,11 @@ npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
 ```bash
 # Claude Code, against your local checkout:
 claude plugin marketplace add ./           # or: /plugin marketplace add ./ in-session
-claude plugin install astra@lightcone-research
+claude plugin install reproduction@lightcone-research
 
 # Validate the Claude plugin/marketplace manifests:
 claude plugin validate .
-claude plugin validate ./plugins/astra   # (Codex plugin.json layout)
+claude plugin validate ./plugins/reproduction   # (Codex plugin.json layout)
 
 # npx skills, from the repo:
 npx skills add ./ --list
