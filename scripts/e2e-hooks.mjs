@@ -292,12 +292,17 @@ function claudeLeg() {
   if (!process.env.ANTHROPIC_API_KEY && !process.env.CLAUDE_CODE_OAUTH_TOKEN)
     return skip("no ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN — Claude leg needs auth");
 
-  const cfg = mkdtempSync(join(tmpdir(), "e2e-cc-cfg-"));
-  const baseEnv = { CLAUDE_CONFIG_DIR: join(cfg, "config") };
-  try {
-    const add = run("claude", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
-    if (!/added marketplace/i.test(add.out)) return fail(`marketplace add failed: ${tail(add.out)}`);
-    for (const spec of specs) {
+  // One fresh config home PER SPEC, not per leg: a plugin installed for an
+  // earlier spec keeps its hooks registered in a shared home, and a spec
+  // whose plugin vendors another plugin's hooks (lightcone bundles astra's)
+  // could then pass on evidence produced by the standalone copy instead of
+  // its own. A hermetic home per spec keeps the evidence attributable.
+  for (const spec of specs) {
+    const cfg = mkdtempSync(join(tmpdir(), "e2e-cc-cfg-"));
+    const baseEnv = { CLAUDE_CONFIG_DIR: join(cfg, "config") };
+    try {
+      const add = run("claude", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
+      if (!/added marketplace/i.test(add.out)) { fail(`${spec.plugin}: marketplace add failed: ${tail(add.out)}`); continue; }
       const ins = run("claude", ["plugin", "install", `${spec.plugin}@${MARKET}`, "--scope", "user"], { env: baseEnv });
       if (!/Successfully installed plugin/i.test(ins.out)) { fail(`${spec.plugin}: install failed: ${tail(ins.out)}`); continue; }
       const sc = makeScratch(`e2e-cc-${spec.plugin}-`, spec);
@@ -323,8 +328,8 @@ function claudeLeg() {
           return { ...r, trace: r.out };
         });
       } finally { rmSync(sc.scratch, { recursive: true, force: true }); }
-    }
-  } finally { rmSync(cfg, { recursive: true, force: true }); }
+    } finally { rmSync(cfg, { recursive: true, force: true }); }
+  }
 }
 
 // ---- Codex ---------------------------------------------------------------
@@ -334,16 +339,18 @@ function codexLeg() {
   const key = process.env.CODEX_API_KEY || process.env.OPENAI_API_KEY;
   if (!key) return skip("no CODEX_API_KEY / OPENAI_API_KEY — Codex leg needs auth");
 
-  const home = mkdtempSync(join(tmpdir(), "e2e-cx-home-"));
-  const baseEnv = { CODEX_HOME: join(home, "codex"), CODEX_API_KEY: key, OPENAI_API_KEY: key };
-  mkdirSync(baseEnv.CODEX_HOME, { recursive: true });
-  // Belt and braces: some Codex versions read the key from the environment,
-  // others want it persisted in auth.json. Harmless where redundant.
-  run("codex", ["login", "--with-api-key"], { env: baseEnv, input: key });
-  try {
-    const add = run("codex", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
-    if (!/Added marketplace/i.test(add.out)) return fail(`marketplace add failed: ${tail(add.out)}`);
-    for (const spec of specs) {
+  // Fresh CODEX_HOME per spec, for the same evidence-attribution reason as
+  // the Claude leg (see comment there).
+  for (const spec of specs) {
+    const home = mkdtempSync(join(tmpdir(), "e2e-cx-home-"));
+    const baseEnv = { CODEX_HOME: join(home, "codex"), CODEX_API_KEY: key, OPENAI_API_KEY: key };
+    mkdirSync(baseEnv.CODEX_HOME, { recursive: true });
+    // Belt and braces: some Codex versions read the key from the environment,
+    // others want it persisted in auth.json. Harmless where redundant.
+    run("codex", ["login", "--with-api-key"], { env: baseEnv, input: key });
+    try {
+      const add = run("codex", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
+      if (!/Added marketplace/i.test(add.out)) { fail(`${spec.plugin}: marketplace add failed: ${tail(add.out)}`); continue; }
       const ins = run("codex", ["plugin", "add", `${spec.plugin}@${MARKET}`], { env: baseEnv });
       if (!/Added plugin/i.test(ins.out)) { fail(`${spec.plugin}: plugin add failed: ${tail(ins.out)}`); continue; }
       const sc = makeScratch(`e2e-cx-${spec.plugin}-`, spec);
@@ -389,8 +396,8 @@ function codexLeg() {
           return { ...r, trace };
         });
       } finally { rmSync(sc.scratch, { recursive: true, force: true }); }
-    }
-  } finally { rmSync(home, { recursive: true, force: true }); }
+    } finally { rmSync(home, { recursive: true, force: true }); }
+  }
 }
 
 // ---- run -----------------------------------------------------------------

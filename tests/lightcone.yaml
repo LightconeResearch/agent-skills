@@ -1,0 +1,64 @@
+# E2E hook-dispatch test spec for the lightcone plugin. Field-by-field
+# documentation of how specs work lives in tests/astra.yaml.
+#
+# lightcone ships no hooks of its own — it VENDORS the astra plugin (via
+# `dependencies` in skills.config.json), so byte-copies of astra's hooks are
+# packaged under plugins/lightcone/hooks/. These tests install `lightcone`
+# ALONE and re-run the astra dispatch checks against that vendored copy:
+# what they prove is that the bundling path (closure copy, hooks.json merge,
+# script flattening, pin substitution) produces a plugin whose hooks
+# actually fire. The runner gives each spec a fresh config home, so this
+# evidence cannot come from a standalone astra install.
+#
+# The `astra-tools@x.y.z` placeholder below resolves through lightcone's
+# EFFECTIVE pins — inherited from the bundled astra dependency.
+
+plugin: lightcone
+
+# Same minimal VALID fixture as tests/astra.yaml (the vendored hooks run the
+# real pinned toolchain against it).
+project:
+  astra.yaml: |
+    version: "0.0.13"
+    name: "E2E fixture"
+    description: "Minimal valid analysis used as the e2e project fixture."
+
+    inputs:
+      - id: primary_data
+        type: data
+        description: "Placeholder input."
+
+    outputs:
+      - id: main_result
+        type: metric
+        description: "Placeholder output."
+        inputs: [primary_data]
+        recipe:
+          command: python analyze.py --data {inputs.primary_data} --out {output}
+
+# Warm the pinned environment so the first hook invocation isn't racing its
+# timeout against a cold download.
+setup:
+  - uvx astra-tools@x.y.z --help
+
+tests:
+  - name: session-start-primer
+    event: SessionStart
+    prompt: "Reply with exactly: OK"
+    expect_context: E2E fixture
+    forbid_context:
+      - Could not run       # `astra info` failed
+      - is not installed    # uv missing on the runner
+
+  - name: validate-on-save
+    event: PostToolUse
+    prompt: >-
+      A file named astra.yaml exists in the current directory. Append the
+      comment line `# e2e-touch` to the end of astra.yaml using your file
+      editing tool. Do nothing else, and do not explain.
+    edits_file: astra.yaml
+    attempts: 2
+    expect_context: ASTRA validation passed
+    forbid_context:
+      - validation FAILED   # spec rejected
+      - not validated       # uv missing, or the toolchain crashed
