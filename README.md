@@ -18,20 +18,59 @@
 ---
 
 Agent skills for the [Lightcone Research](https://github.com/LightconeResearch)
-stack: the **ASTRA** specification. The skills follow the open
+stack. The skills follow the open
 [Agent Skills standard](https://agentskills.io) (a `SKILL.md` plus optional
 `references/`, `scripts/`, and `assets/`), so they work across Claude Code, Codex,
 and other compatible agents — and are also packaged as Claude Code and Codex
 **plugins** for hooks that plain skills can't carry.
 
 > [!TIP]
-> **New here?** Install the [toolchain](#-prerequisites), then `claude plugin marketplace add LightconeResearch/agent-skills && claude plugin install astra@lightcone-research` and ask your agent to help author an `astra.yaml`.
+> **New here?** Get started by running `claude plugin marketplace add LightconeResearch/agent-skills && claude plugin install astra@lightcone-research` and ask your agent to help author an `astra.yaml`.
 
 ## 📦 Prerequisites
 
 Some plugins have Python dependencies that install themselves on first use.
-The only prerequisite is
-[uv](https://docs.astral.sh/uv/getting-started/installation/).
+The only prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+## 🛒 Add the marketplace
+
+One-time setup: register this repository as a plugin marketplace in your
+harness. It registers under the name `lightcone-research`, which is the
+`@lightcone-research` suffix in the install commands below.
+
+<details>
+<summary><b>Claude Code</b></summary>
+
+```bash
+claude plugin marketplace add LightconeResearch/agent-skills
+```
+
+</details>
+
+<details>
+<summary><b>Claude App</b></summary>
+
+Open **Customize → Plugins → Add → Add marketplace → Add from repo** and paste
+`https://github.com/LightconeResearch/agent-skills`.
+
+</details>
+
+<details>
+<summary><b>Codex CLI</b></summary>
+
+```bash
+codex plugin marketplace add LightconeResearch/agent-skills
+```
+
+</details>
+
+<details>
+<summary><b>Codex App</b></summary>
+
+Open **Plugins** from the arrow beside **Create** and add the
+`LightconeResearch/agent-skills` marketplace.
+
+</details>
 
 ## 🧩 Plugins
 
@@ -39,37 +78,49 @@ The only prerequisite is
 |---|---|---|
 | **`astra`** | `astra` | standalone ASTRA authoring skill; validate-on-save & session-start hooks |
 
-## 🚀 Install
+## 🚀 Install a plugin
 
-The `astra` plugin provides the ASTRA authoring and validation skill.
+Plugin skills are namespaced by plugin name: once a plugin is installed, invoke
+its skills as `/<plugin>:<skill>` in Claude or `$<plugin>:<skill>` in Codex.
+The examples below install `astra`; substitute any plugin from the table above.
 
-### Claude Code
+<details>
+<summary><b>Claude Code</b></summary>
 
 ```bash
-claude plugin marketplace add LightconeResearch/agent-skills
 claude plugin install astra@lightcone-research
 ```
 
-### Claude App
+Then invoke `/astra:astra` in a session.
 
-Open **Customize → Plugins → Add → Add marketplace → Add from repo**, paste
-`https://github.com/LightconeResearch/agent-skills`, choose `astra`, then
-invoke `/astra:astra`.
+</details>
 
-### Codex CLI
+<details>
+<summary><b>Claude App</b></summary>
+
+In **Customize → Plugins**, choose `astra` from the `lightcone-research`
+marketplace, then invoke `/astra:astra`.
+
+</details>
+
+<details>
+<summary><b>Codex CLI</b></summary>
 
 ```bash
-codex plugin marketplace add LightconeResearch/agent-skills
 codex plugin add astra@lightcone-research
 ```
 
 Then invoke the skill in Codex, for example `$astra:astra`.
 
-### Codex App
+</details>
 
-Open **Plugins** from the arrow beside **Create**, add the
-`LightconeResearch/agent-skills` marketplace, then search for and install
+<details>
+<summary><b>Codex App</b></summary>
+
+Open **Plugins** from the arrow beside **Create**, then search for and install
 `astra`. Invoke `/astra:astra`.
+
+</details>
 
 ## ✨ Skills
 
