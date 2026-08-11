@@ -5,20 +5,30 @@
 # How a spec works: the runner installs `plugin` from this repo's marketplace
 # into a throwaway config home, creates the `project` files in a temp dir,
 # prepends the `stubs` binaries to PATH, then runs one real headless session
-# per test. Each stub appends "<name> <argv>" to an invocation log; a test
-# passes when a NEW log line contains `expect_stub_call`, which proves the
-# whole dispatch chain ran (event fired → matcher matched → plugin root
-# resolved → packaged hook script executed). Model output is never asserted.
+# per test and checks every configured piece of EVIDENCE that the hook fired:
+#
+#   1. expect_context — a marker substring the hook itself injects into the
+#      conversation (its additionalContext), searched in the harness's session
+#      trace (Claude: the stream-json output; Codex: the session rollout file
+#      under $CODEX_HOME/sessions/). Works for ANY hook, including ones that
+#      never shell out to a binary.
+#   2. expect_stub_call — a substring that must appear in a new stub
+#      invocation-log line. Only for hooks that delegate to a stubbed binary.
+#
+# Model output is never asserted; the model is only a means to trigger events.
 #
 # Test fields:
 #   name              label for output
-#   event             hook event under test (documentation; shown in messages)
+#   event             hook event under test (labeling/documentation)
 #   prompt            the headless session's prompt — keep it mechanical
+#   expect_context    substring of the hook's injected context to find in the
+#                     session trace
 #   expect_stub_call  substring that must appear in a new stub-log line
+#                     (each test needs expect_context and/or expect_stub_call)
 #   edits_file        (optional) file the model must edit to trigger the event.
 #                     Grants the session write access, and separates the two
-#                     failure modes: file edited but no stub call → dispatch is
-#                     broken; file never edited → inconclusive, retried up to
+#                     failure modes: file edited but evidence missing → dispatch
+#                     is broken; file never edited → inconclusive, retried up to
 #                     `attempts` times, then failed as such.
 #   attempts          (optional, default 1) total tries for inconclusive runs
 
@@ -59,6 +69,8 @@ tests:
   - name: session-start-primer
     event: SessionStart
     prompt: "Reply with exactly: OK"
+    # The primer always ends with this line, whatever the toolchain said.
+    expect_context: Activate the astra skill
     expect_stub_call: info --json
 
   - name: validate-on-save
@@ -69,4 +81,6 @@ tests:
       editing tool. Do nothing else, and do not explain.
     edits_file: astra.yaml
     attempts: 2
+    # With the stub exiting 0, the hook reports a passing validation.
+    expect_context: ASTRA validation passed
     expect_stub_call: validate astra.yaml --json
