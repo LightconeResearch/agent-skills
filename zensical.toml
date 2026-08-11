@@ -14,6 +14,9 @@ nav = [
       { "Home" = "index.md" },
       { "ASTRA" = "astra.md" },
   ] },
+  { "Tutorials" = [
+      { "Getting started with ASTRA" = "getting-started.md" },
+  ] },
 ]
 
 # Match astra-spec's versioned GitHub Pages layout.
