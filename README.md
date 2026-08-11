@@ -2,7 +2,7 @@
 
 # 🔭 Lightcone Research — Agent Skills
 
-**Portable, open-standard skills that teach coding agents the [Lightcone Research](https://github.com/LightconeResearch) stack: [`ASTRA`](skills/astra).**
+**Portable, open-standard skills that teach coding agents the [Lightcone Research](https://github.com/LightconeResearch) stack.**
 
 [![Agent Skills standard](https://img.shields.io/badge/standard-Agent%20Skills-7c3aed?style=for-the-badge)](https://agentskills.io)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=for-the-badge)](LICENSE)
@@ -70,7 +70,7 @@ Open **Plugins** from the arrow beside **Create** and add the
 
 | Plugin | Skills | Adds |
 |---|---|---|
-| **`astra`** | `astra` | standalone ASTRA authoring skill; validate-on-save & session-start hooks |
+| **`astra`** | `astra` | [`ASTRA`](skills/astra) authoring skill; validate-on-save & session-start hooks |
 
 ## 🚀 Install a plugin
 
