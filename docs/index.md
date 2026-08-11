@@ -1,7 +1,6 @@
 # Lightcone Research Agent Skills
 
-Portable, open-standard skills for **ASTRA** and **scientific paper
-reproduction**.
+Portable, open-standard skills for **ASTRA**.
 
 These skills follow the [Agent Skills standard](https://agentskills.io), work
 across Claude Code and Codex, and are also packaged as plugins with their hooks
@@ -14,18 +13,8 @@ included.
 | Plugin | What it provides |
 |---|---|
 | **[`astra`](astra.md)** | ASTRA authoring guidance and validation hooks. |
-| **[`reproduction`](reproduction.md)** | Paper assessment, reproduction, and figure comparison, with ASTRA bundled. |
 
 ## Install
-
-First, pick a plugin:
-
-- `astra` if you want to write and validate ASTRA analyses.
-- `reproduction` if you want to assess and reproduce papers and compare the
-  results. It already includes ASTRA.
-
-The commands below install `astra`. Use `reproduction@lightcone-research`
-instead if you want the full reproduction toolkit.
 
 === "Claude Code"
 
@@ -38,8 +27,8 @@ instead if you want the full reproduction toolkit.
 
     Go to **Customize → Plugins**, click **Add**, then choose
     **Add marketplace → Add from repo**. Paste
-    `https://github.com/LightconeResearch/agent-skills`, pick a plugin, and call
-    it with `/astra:astra` or `/reproduction:reproduce`.
+    `https://github.com/LightconeResearch/agent-skills`, pick `astra`, and call
+    it with `/astra:astra`.
 
 === "Codex CLI"
 
@@ -53,11 +42,9 @@ instead if you want the full reproduction toolkit.
 === "Codex App"
 
     Click the arrow beside **Create** and open **Plugins**. Install the
-    `LightconeResearch/agent-skills` marketplace, search for `astra` or
-    `reproduction`, and install one. Then call `/astra:astra` or
-    `/reproduction:reproduce`.
+    `LightconeResearch/agent-skills` marketplace, search for `astra`, and
+    install it. Then call `/astra:astra`.
 
 ## Skills
 
 - **ASTRA:** [`astra`](https://github.com/LightconeResearch/agent-skills/tree/main/skills/astra)
-- **Reproduction:** [`assess-reproducibility`](https://github.com/LightconeResearch/agent-skills/tree/main/skills/assess-reproducibility), [`reproduce`](https://github.com/LightconeResearch/agent-skills/tree/main/skills/reproduce), and [`figure-comparison`](https://github.com/LightconeResearch/agent-skills/tree/main/skills/figure-comparison)

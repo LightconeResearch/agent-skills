@@ -3,10 +3,8 @@
 This repository is the **source of truth for the Lightcone Research agent skills**.
 It is not an application — it packages `SKILL.md`-based skills for three install
 targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
-from a single canonical source. Two plugins: `astra` (spec reference) and
-`reproduction` (replication assessment, execution, and review), which bundles
-`astra`. Plugin skills are namespaced by plugin name (e.g.
-`/reproduction:reproduce`, `/astra:astra`).
+from a single canonical source. One plugin: `astra` (spec reference). Plugin
+skills are namespaced by plugin name (e.g. `/astra:astra`).
 
 ## Where things live
 
@@ -14,8 +12,8 @@ from a single canonical source. Two plugins: `astra` (spec reference) and
   skill; the directory name must equal the `name:` in the frontmatter.
 - `hooks/<plugin>/` — per-plugin `hooks.json` + bash scripts (`astra/` validates
   on save and reminds the agent to load the skill).
-- `skills.config.json` — declares how skills compose into the plugins
-  (`astra`, `reproduction`). A plugin composes with others two ways:
+- `skills.config.json` — declares how skills compose into the plugins.
+  A plugin composes with others two ways:
   `dependencies` (bundled build-time closure) and `requires` (documented-only
   prerequisite the user installs — not bundled).
 - `scripts/build.mjs`, `scripts/validate.mjs` — the generator and the validator.
@@ -43,8 +41,8 @@ the astra-tools release). Canonical `skills/` and `hooks/` never carry a
 concrete tool version: they write the literal `@x.y.z` placeholder, and
 `npm run build` substitutes each bundling plugin's pin into the generated
 `plugins/<name>/` copies. A plugin's effective pins merge over its dependency
-closure (own entries win), so `reproduction` inherits `astra`'s pin unless it
-overrides it. `npm test` fails if canonical text carries a concrete version,
+closure (own entries win), so a bundling plugin inherits its dependencies'
+pins unless it overrides them. `npm test` fails if canonical text carries a concrete version,
 if a placeholder is left unpinned, or if canonical text pins astra-spec at
 all. To bump: edit the one number in `skills.config.json`, run
 `npm run build`, commit — no other file changes.

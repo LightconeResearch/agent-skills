@@ -16,19 +16,6 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Development"
-    },
-    {
-      "name": "reproduction",
-      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
-      "source": {
-        "source": "local",
-        "path": "./plugins/reproduction"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Development"
     }
   ]
 }
