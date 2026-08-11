@@ -15,9 +15,12 @@
 //
 // Auth comes from the environment (ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
 // for Claude Code; CODEX_API_KEY or OPENAI_API_KEY for Codex). A leg whose
-// auth or binary is missing is SKIPPED, not failed — so fork PRs without
-// secrets and machines without one CLI stay green (with a CI warning
-// annotation).
+// auth or binary is missing is skipped LOCALLY (a dev without one CLI or key
+// can still run the rest), but in CI every skip is a hard FAILURE: the
+// workflow installs both CLIs and is expected to have both secrets, so a
+// skip there means a missing/forgotten secret or a broken install — exactly
+// what must not silently green the check. (Consequence: PRs from forks fail
+// these legs, since GitHub does not expose secrets to forks.)
 //
 // The sentinel: hooks delegate to `uvx`, so each leg prepends a stub `uvx` to
 // PATH that appends its argv to a log file and prints the canned JSON-encoded
@@ -53,8 +56,11 @@ let failures = 0;
 const pass = (m) => console.log(`  \x1b[32m✓\x1b[0m ${m}`);
 const fail = (m) => { console.log(`  \x1b[31m✗ ${m}\x1b[0m`); failures++; };
 const skip = (m) => {
+  if (process.env.GITHUB_ACTIONS) {
+    console.log(`::error::e2e-hooks: ${m} — skips are failures in CI (check repo secrets / CLI install)`);
+    return fail(`${m} — skips are failures in CI`);
+  }
   console.log(`  \x1b[33m∅ skip\x1b[0m ${m}`);
-  if (process.env.GITHUB_ACTIONS) console.log(`::warning::e2e-hooks skipped: ${m}`);
 };
 const have = (bin) => spawnSync("sh", ["-c", `command -v ${bin}`]).status === 0;
 const tail = (s, n = 400) => (s || "").trim().slice(-n);

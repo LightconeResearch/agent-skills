@@ -7,8 +7,9 @@
 # New repository secret):
 #   ANTHROPIC_API_KEY — for the Claude Code leg (headless `claude -p`)
 #   CODEX_API_KEY     — for the Codex leg (`codex exec`)
-# A leg whose secret is absent is skipped with a warning annotation instead of
-# failing, so PRs from forks (which never see secrets) stay green.
+# A missing secret FAILS the job (a forgotten key must not silently green the
+# check). Consequence: PRs from forks fail these legs — GitHub never exposes
+# secrets to forks.
 name: e2e-hooks
 
 on:
