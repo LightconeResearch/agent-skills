@@ -29,7 +29,7 @@
 // these legs, since GitHub does not expose secrets to forks.)
 //
 // A test passes when every piece of EVIDENCE it configures is observed
-// (see tests/astra.yaml for the field docs). Two evidence sources:
+// (see tests/astra.yaml for the field docs). Three evidence checks:
 //
 //   1. expect_context — a marker the hook injects into the conversation,
 //      searched in the harness's session trace (Claude: the stream-json
@@ -37,14 +37,18 @@
 //      under $CODEX_HOME/sessions/, where injected context lands as a
 //      developer message). Fully general: works for hooks that never run a
 //      binary.
-//   2. expect_stub_call — each spec may declare stub binaries its hooks
-//      delegate to (astra's call `uvx`). Stubs are prepended to PATH, append
-//      their argv to a log file, and print the spec's canned stdout; a new
-//      log line proves the hook script executed AND keeps the test hermetic
-//      (no network, no real toolchain).
+//   2. forbid_context — degraded-path markers that must NOT appear. Hooks
+//      that catch their own errors and inject an apologetic message instead
+//      of failing (the astra hooks do) would otherwise pass a weak marker
+//      check while their tool CLI is broken underneath.
+//   3. expect_stub_call — a spec may declare stub binaries on PATH (canned
+//      stdout/exit + argv log) to isolate hooks from their real toolchain;
+//      a new log line proves the hook script executed. The astra spec runs
+//      the REAL toolchain instead (uv/uvx + pinned astra-tools, warmed by a
+//      `setup` command), so toolchain breakage is part of what it tests.
 //
-// Both sources are deterministic and independent of model wording. The model
-// is only a means to trigger events. (A third surface was evaluated and
+// All checks are deterministic and independent of model wording. The model
+// is only a means to trigger events. (A further surface was evaluated and
 // deliberately NOT used: Claude's stream-json emits structured
 // system/hook_started+hook_response events, but only for session-scoped
 // events like SessionStart — a PostToolUse hook runs without any such event
@@ -56,6 +60,7 @@ import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { applyPins, loadModel, pluginTools } from "./lib.mjs";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const MARKET = "lightcone-research";
@@ -172,15 +177,23 @@ function parseYamlLite(src) {
 const shQuote = (s) => `'${String(s).replaceAll("'", `'\\''`)}'`;
 
 // ---- spec loading --------------------------------------------------------
+// Specs write tool pins as the same `@x.y.z` placeholder the canonical hook
+// scripts use; the plugin's effective pins from skills.config.json are
+// substituted into the whole spec text before parsing, so specs never carry
+// (or drift from) a concrete version.
 const TESTS_DIR = join(ROOT, "tests");
+const model = loadModel();
+const byName = Object.fromEntries(model.config.plugins.map((p) => [p.name, p]));
 const specs = readdirSync(TESTS_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort()
   .map((f) => {
-    const spec = parseYamlLite(readFileSync(join(TESTS_DIR, f), "utf8"));
-    for (const field of ["plugin", "tests"]) {
-      if (!spec[field]) throw new Error(`tests/${f}: missing required field \`${field}\``);
-    }
+    const text = readFileSync(join(TESTS_DIR, f), "utf8");
+    const plugin = parseYamlLite(text).plugin;
+    if (!plugin || !byName[plugin])
+      throw new Error(`tests/${f}: \`plugin\` must name a plugin from skills.config.json`);
+    const spec = parseYamlLite(applyPins(text, pluginTools(plugin, byName)));
+    if (!spec.tests) throw new Error(`tests/${f}: missing required field \`tests\``);
     for (const t of spec.tests) {
       if (!t.expect_context && !t.expect_stub_call)
         throw new Error(`tests/${f}: test \`${t.name}\` asserts nothing — set expect_context and/or expect_stub_call`);
@@ -223,6 +236,19 @@ function makeScratch(prefix, spec) {
 //           later fails, and the evidence is what's under test)
 //   trace   the harness's session trace, searched for expect_context
 function runSpecTests(harness, spec, sc, session) {
+  // Optional per-spec setup (e.g. warming a pinned uvx environment so the
+  // first real hook invocation isn't racing its timeout against a download).
+  // A failing setup fails the whole spec on this harness: the environment
+  // the tests assume could not be provisioned.
+  for (const cmd of spec.setup || []) {
+    const r = run("sh", ["-c", cmd], {
+      cwd: sc.project,
+      env: { PATH: `${sc.bin}:${process.env.PATH}` },
+      timeout: 300_000,
+    });
+    if (r.status !== 0)
+      return fail(`${harness}/${spec.plugin}: setup \`${cmd}\` exited ${r.status}:\n${tail(r.out)}`);
+  }
   for (const t of spec.tests) {
     const label = `${harness}/${spec.plugin}/${t.name}`;
     const attempts = t.edits_file ? t.attempts || 1 : 1;
@@ -234,6 +260,9 @@ function runSpecTests(harness, spec, sc, session) {
       const missing = [];
       if (t.expect_context && !r.trace.includes(t.expect_context))
         missing.push(`context marker ${JSON.stringify(t.expect_context)} not in the session trace`);
+      const forbidden = [t.forbid_context ?? []].flat().filter((m) => r.trace.includes(m));
+      if (forbidden.length)
+        missing.push(`degraded marker(s) ${forbidden.map((m) => JSON.stringify(m)).join(", ")} FOUND in the session trace`);
       if (t.expect_stub_call && !sc.stubCalls().slice(before).some((l) => l.includes(t.expect_stub_call)))
         missing.push(`no \`${t.expect_stub_call}\` stub call`);
       if (!missing.length) {

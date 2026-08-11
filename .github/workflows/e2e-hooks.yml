@@ -41,6 +41,14 @@ jobs:
       - name: Install harness CLIs
         run: npm install -g @anthropic-ai/claude-code @openai/codex
 
+      # The astra hooks shell out to `uvx astra-tools@<pin>` for real (the
+      # spec declares no stubs), so the runner needs uv — a missing uv shows
+      # up as the hooks' degraded messages and fails the forbid_context check.
+      - name: Install uv (real astra toolchain for hooks)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run e2e hook-dispatch tests
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
