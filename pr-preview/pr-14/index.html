@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Portable agent skills for ASTRA and scientific reproduction.">
+        <meta name="description" content="Portable agent skills for ASTRA.">
       
       
         <meta name="author" content="Lightcone Research">
@@ -219,6 +219,28 @@
   
 
       
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="./getting-started/" class="md-tabs__link">
+          
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -413,10 +435,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#skills" class="md-nav__link">
+  <a href="#tutorial" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Skills
+        Tutorial
       </span>
     </span>
   </a>
@@ -459,6 +481,63 @@
 
               
             
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Tutorials
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Tutorials
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
               
                 
   
@@ -466,14 +545,14 @@
   
   
     <li class="md-nav__item">
-      <a href="./reproduction/" class="md-nav__link">
+      <a href="./getting-started/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Reproduction
+  Getting started with ASTRA
 
     
   </span>
@@ -556,10 +635,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#skills" class="md-nav__link">
+  <a href="#tutorial" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Skills
+        Tutorial
       </span>
     </span>
   </a>
@@ -585,10 +664,10 @@
 
 
 <h1 id="lightcone-research-agent-skills">Lightcone Research Agent Skills<a class="headerlink" href="#lightcone-research-agent-skills" title="Permanent link">&para;</a></h1>
-<p>Portable, open-standard skills for <strong>ASTRA</strong> and <strong>scientific paper
-reproduction</strong>.</p>
-<p>These skills follow the <a href="https://agentskills.io">Agent Skills standard</a>, work
-across Claude Code and Codex, and are also packaged as plugins with their hooks
+<p>Portable, open-standard skills that teach coding agents the
+<a href="https://github.com/LightconeResearch">Lightcone Research</a> stack.</p>
+<p>The skills follow the <a href="https://agentskills.io">Agent Skills standard</a>, work
+across Claude Code and Codex, and are packaged as plugins with their hooks
 included.</p>
 <p><a class="md-button md-button--primary" href="https://github.com/LightconeResearch/agent-skills"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>GitHub</title><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></span> <strong>View on GitHub</strong></a></p>
 <h2 id="plugins">Plugins<a class="headerlink" href="#plugins" title="Permanent link">&para;</a></h2>
@@ -604,33 +683,25 @@ included.</p>
 <td><strong><a href="astra/"><code>astra</code></a></strong></td>
 <td>ASTRA authoring guidance and validation hooks.</td>
 </tr>
-<tr>
-<td><strong><a href="reproduction/"><code>reproduction</code></a></strong></td>
-<td>Paper assessment, reproduction, and figure comparison, with ASTRA bundled.</td>
-</tr>
 </tbody>
 </table>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<p>First, pick a plugin:</p>
-<ul>
-<li><code>astra</code> if you want to write and validate ASTRA analyses.</li>
-<li><code>reproduction</code> if you want to assess and reproduce papers and compare the
-  results. It already includes ASTRA.</li>
-</ul>
-<p>The commands below install <code>astra</code>. Use <code>reproduction@lightcone-research</code>
-instead if you want the full reproduction toolkit.</p>
+<p>The only prerequisite is
+<a href="https://docs.astral.sh/uv/getting-started/installation/"><code>uv</code></a>: plugins with
+Python dependencies install them on first use.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Claude Code</label><label for="__tabbed_1_2">Claude App</label><label for="__tabbed_1_3">Codex CLI</label><label for="__tabbed_1_4">Codex App</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>claude<span class="w"> </span>plugin<span class="w"> </span>marketplace<span class="w"> </span>add<span class="w"> </span>LightconeResearch/agent-skills
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>claude<span class="w"> </span>plugin<span class="w"> </span>install<span class="w"> </span>astra@lightcone-research
 </span></code></pre></div>
+<p>Then invoke <code>/astra:astra</code> in a session.</p>
 </div>
 <div class="tabbed-block">
 <p>Go to <strong>Customize → Plugins</strong>, click <strong>Add</strong>, then choose
 <strong>Add marketplace → Add from repo</strong>. Paste
-<code>https://github.com/LightconeResearch/agent-skills</code>, pick a plugin, and call
-it with <code>/astra:astra</code> or <code>/reproduction:reproduce</code>.</p>
+<code>https://github.com/LightconeResearch/agent-skills</code>, pick <code>astra</code>, and call
+it with <code>/astra:astra</code>.</p>
 </div>
 <div class="tabbed-block">
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>codex<span class="w"> </span>plugin<span class="w"> </span>marketplace<span class="w"> </span>add<span class="w"> </span>LightconeResearch/agent-skills
@@ -640,17 +711,15 @@ it with <code>/astra:astra</code> or <code>/reproduction:reproduce</code>.</p>
 </div>
 <div class="tabbed-block">
 <p>Click the arrow beside <strong>Create</strong> and open <strong>Plugins</strong>. Install the
-<code>LightconeResearch/agent-skills</code> marketplace, search for <code>astra</code> or
-<code>reproduction</code>, and install one. Then call <code>/astra:astra</code> or
-<code>/reproduction:reproduce</code>.</p>
+<code>LightconeResearch/agent-skills</code> marketplace, search for <code>astra</code>, and
+install it. Then call <code>/astra:astra</code>.</p>
 </div>
 </div>
 </div>
-<h2 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>ASTRA:</strong> <a href="https://github.com/LightconeResearch/agent-skills/tree/main/skills/astra"><code>astra</code></a></li>
-<li><strong>Reproduction:</strong> <a href="https://github.com/LightconeResearch/agent-skills/tree/main/skills/assess-reproducibility"><code>assess-reproducibility</code></a>, <a href="https://github.com/LightconeResearch/agent-skills/tree/main/skills/reproduce"><code>reproduce</code></a>, and <a href="https://github.com/LightconeResearch/agent-skills/tree/main/skills/figure-comparison"><code>figure-comparison</code></a></li>
-</ul>
+<h2 id="tutorial">Tutorial<a class="headerlink" href="#tutorial" title="Permanent link">&para;</a></h2>
+<p>New to ASTRA? <a href="getting-started/">Get started</a> by working through a complete
+analysis — fitting ΛCDM to 580 Type Ia supernovae — with an agent doing the
+work and ASTRA keeping the record.</p>
 
 
 
