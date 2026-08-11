@@ -34,8 +34,8 @@ required.
 
 ## 2. Inspect the measurement environment
 
-Tie every measurement to its hardware and execution shape. Before launching a
-pilot, distinguish these environments:
+Before launching a pilot, distinguish these environments so the pilot stays
+within currently available resources:
 
 - **Existing SLURM allocation (`SLURM_JOB_ID` is set):** the agent is already
   running inside a compute allocation. Pilot commands and plain `lc run` reuse
@@ -59,9 +59,10 @@ Use `SLURM_CPUS_ON_NODE`, `SLURM_MEM_PER_NODE`, `SLURM_GPUS_ON_NODE`, and
 memory, and GPUs with platform-appropriate tools such as `nproc`, `free -b`,
 and `nvidia-smi`, but first establish that the host is not a cluster login node.
 
-Record the CPU/GPU model, node shape, process/thread count, container, precision,
-and other hardware-sensitive settings with the evidence. Current capacity bounds
-safe pilot design; it does not decide how a later production run should execute.
+Record the process/thread count, container, precision, and workload settings that
+can change the result. Use current capacity only to keep the pilot safe; hardware
+provenance, hardware profiles, and cross-machine calibration are outside this
+workflow.
 
 ## 3. Decide whether to measure
 
@@ -81,15 +82,15 @@ because the user asked for an estimate.
    epochs, steps, simulations, or another decision/config value.
 2. Choose 2-3 points that finish quickly in the current allocation and are
    large enough to get past startup overhead.
-3. Keep algorithm, container, precision, batch size, and hardware fixed while
-   varying one scale axis. If job shape changes, treat it as a separate model.
+3. Keep algorithm, container, precision, batch size, and execution environment
+   fixed while varying one scale axis. If job shape changes, treat it as a
+   separate model.
 4. Prefer provenance-tracked pilot universes when the scale is already an ASTRA
    decision. Otherwise run an isolated command with a temporary output path;
    never overwrite canonical `results/`.
 5. Measure walltime and peak resident memory with `/usr/bin/time -v`. For GPU
    jobs, sample per-process memory with `nvidia-smi` during the run. Record the
-   exact command, scale, node shape, exit status, elapsed time, peak RSS, and
-   peak GPU memory.
+   exact command, scale, exit status, elapsed time, peak RSS, and peak GPU memory.
 
 Store raw measurements in `.lightcone/estimates.json`, merging rather than
 overwriting prior entries. Include the timestamp, output/universe, scale axis,
@@ -130,7 +131,7 @@ names such as `mem_mb` or `gpus_per_task`. Preserve unrelated spec content, then
 validate:
 
 ```bash
-astra validate astra.yaml
+uvx astra-tools@x.y.z validate astra.yaml
 ```
 
 Fix validation errors before returning the estimate. Resource estimates do not
@@ -141,7 +142,7 @@ basis.
 
 Conclude with a compact table:
 
-| Output / universe | Evidence | Hardware shape | Declared resources | Confidence |
+| Output / universe | Evidence | Pilot setup | Declared resources | Confidence |
 |---|---|---|---|---|
 
 Call out the extrapolation model, safety factor, QoS-cap risk, missing

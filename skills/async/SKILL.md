@@ -5,11 +5,11 @@ description: >
   memory, GPU, and walltime requirements and record them in ASTRA
   recipe.resources when requested or when declarations are missing, stale, or
   uncertain; immediately before every production lc run or submission, inspect
-  the unresolved DAG and classify explicit expensive output boundaries for
-  synchronous execution in the current local or SLURM allocation versus lc run
-  --async. Use when asked to estimate or size a Lightcone job, prepare async
-  execution, run, queue, submit, detach, resume, survive a session, or choose
-  sync versus async execution.
+  the unresolved DAG, check whether it fits the current local or SLURM
+  environment, and select lc run --async only on a supported configured site.
+  Use when asked to estimate or size a Lightcone job, prepare async execution,
+  run, queue, submit, detach, resume, survive a session, or choose an execution
+  environment.
 ---
 
 # Prepare Lightcone Async Jobs
@@ -19,15 +19,19 @@ decision. Load only the workflow required for the current request.
 
 ## Prerequisites
 
-1. Confirm the CLIs resolve:
+1. Confirm the Lightcone CLI and uv's pinned runner resolve:
 
    ```bash
    command -v lc
-   command -v astra
+   command -v uvx
+   uvx astra-tools@x.y.z --help
    ```
 
-   If either is missing, tell the user to run `uv tool install lightcone-cli`
-   and stop.
+   If `lc` is missing, tell the user to run
+   `uv tool install lightcone-cli` and stop. If `uvx` is missing, ask the user
+   to install uv from https://docs.astral.sh/uv/getting-started/installation/
+   and stop. Never run a bare `astra` found on `PATH`; use the pinned `uvx`
+   invocation throughout this skill.
 
 2. Work from the project containing `astra.yaml` and discover the installed
    command surface rather than guessing:

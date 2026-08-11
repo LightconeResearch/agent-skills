@@ -1,4 +1,4 @@
-# Classify Async Execution
+# Classify Production Execution
 
 Choose the execution mode from fresh environment facts. Treat resource estimates
 as reusable inputs and classification as ephemeral: repeat this workflow whenever
@@ -20,6 +20,10 @@ Confirm that `lc run --async` is available from the command surface discovered
 by the main skill. If it is unavailable, record that limitation and continue the
 classification. If the result is asynchronous, stop and recommend upgrading
 lightcone-cli. Never substitute a hand-written `sbatch` command.
+
+Async v1 is available only when Lightcone detects a configured NERSC Perlmutter
+site. A local Slurm client, account string, or reachable remote scheduler does
+not make `lc run --async` available from an unrecognized local host.
 
 Identify the exact outputs and universes the user intends to materialize. Inspect
 the root and relevant sub-analysis specs, universe files, and `lc status --json`.
@@ -53,12 +57,34 @@ Use this execution model as an invariant:
 | Environment | Plain `lc run` | `lc run --async` |
 |---|---|---|
 | SLURM compute allocation (`SLURM_JOB_ID` set) | Reuses the current allocation; starts the scheduler and `srun` workers inside it; does not queue or acquire new resources | Submits a separate batch allocation |
-| Cluster login/submit node without an allocation | Prohibited for compute work | Allowed; submission itself may run here |
-| Non-cluster local machine | Runs on local resources | Only valid when a SLURM backend/account is configured and reachable |
+| Recognized cluster login/submit node without an allocation | Prohibited for compute work | Allowed; submission itself may run here |
+| Non-cluster local machine | Runs on local resources when the pending DAG fits | Unsupported in v1; does not provide detached local execution |
 
-Do not equate “outside SLURM” with “local machine.” First determine whether the
-host is a known/configured cluster login or submit node using site configuration,
-hostname, and available scheduler commands.
+Do not use `SLURM_JOB_ID` to decide whether async submission is available: login
+nodes legitimately have no allocation. First inspect Lightcone's configured site,
+then use the same read-only reachability probe as the CLI when the site is unknown:
+
+```bash
+command -v sinfo
+sinfo --noheader --format='%P'
+```
+
+Classify the result explicitly:
+
+- configured Perlmutter site: async is supported from login or compute nodes;
+- `sinfo` succeeds but the site is unrecognized: SLURM is reachable, but async v1
+  remains unsupported because QoS, node shapes, and shared paths are unknown;
+- `sinfo` is absent, times out, or cannot contact a controller: treat the host as
+  local for execution planning.
+
+Use `SLURM_JOB_ID` only after this distinction to determine whether plain `lc run`
+will reuse a current compute allocation.
+
+On a non-cluster local machine, classification remains a production-fit and
+safety check, not a choice between local sync and async. Determine whether the
+pending DAG fits the host and whether remaining coupled to the current process is
+acceptable. If either condition fails, direct the user to a supported cluster or
+larger environment; never present local `--async` as a fallback.
 
 When `SLURM_JOB_ID` is set, collect the current synchronous budget immediately
 before deciding:
@@ -81,8 +107,8 @@ For synchronous execution, require all of the following:
    launches distributed work.
 2. The requested CPU/GPU concurrency fits the current allocation or local host.
 3. The conservative runtime for the unresolved required sub-DAG fits the
-   allocation's remaining walltime, including pending upstream work, startup,
-   and shutdown margin.
+   allocation's remaining walltime or the acceptable local run window, including
+   pending upstream work, startup, and shutdown margin.
 4. The work may remain coupled to the current agent/allocation lifetime.
 
 Use the recorded padded `time_limit` values and DAG structure. Do not compare
@@ -95,19 +121,23 @@ Return one of these decisions:
 
 - **Synchronous:** all rules and conservative total runtime fit the current
   allocation or local host, with adequate margin and acceptable lifetime coupling.
-- **Asynchronous:** the agent is on a cluster login node, the job does not fit
-  the current allocation, remaining walltime is insufficient, or the work must
-  survive the current session/allocation.
+- **Asynchronous:** Lightcone detects a supported configured async site and the
+  agent is on its login node, the job does not fit the current allocation,
+  remaining walltime is insufficient, or the work must survive the current
+  session/allocation.
+- **Move to a supported environment:** the current host is local or otherwise
+  lacks a supported async policy, and the job does not fit safely or must detach.
 - **Estimate first:** declared resources are missing, stale, or too uncertain.
 
-On a local machine without a configured SLURM backend, recommend a larger local
-or interactive allocation instead of claiming async submission will work. If
-several Perlmutter shapes are valid, prefer the smallest shape that fits `shared`;
-use a larger `regular` shape only when measured speedup or memory need justifies it.
+On a local machine, recommend a larger local machine or moving to a supported
+cluster instead of claiming async submission will work. If several Perlmutter
+shapes are valid, prefer the smallest shape that fits `shared`; use a larger
+`regular` shape only when measured speedup or memory need justifies it.
 
 Treat `lc` preflight failures as authoritative. If plain `lc run` reports that
 declared resources or walltime cannot fit, preserve its diagnostic and use the
-copyable `lc run --async ...` retry it provides.
+copyable `lc run --async ...` retry it provides only when the current site
+supports async submission.
 
 When an expensive boundary has cheap dependents, classify the boundary now and
 mark those dependents **deferred**. After the async job materializes the boundary,
@@ -127,7 +157,7 @@ command without running or submitting it. If execution was requested, always use
 # Reuse the current allocation or local host
 lc run <output> --universe <universe>
 
-# Submit a detached SLURM allocation
+# Submit a detached SLURM allocation from a supported configured site
 lc run --async <output> --universe <universe>
 
 # Observe materialization and queued/running state
@@ -138,12 +168,13 @@ lc run <downstream-output> --universe <universe>
 ```
 
 Pass `--account` when requested or when configuration does not supply one.
-Submission may originate on a login or compute node. Never forward a hand-built
-whole-analysis submission in place of an explicit output target. Do not call
-`sbatch`, `srun`, Snakemake, or `podman-hpc` yourself. The submitted batch job
-must enter the same plain `lc run` path so container wrapping—including
-`podman-hpc`—validation, locking, and manifests stay identical to synchronous
-execution.
+Submission may originate on a login or compute node of a supported site. Do not
+run `lc run --async` on a local machine or describe it as background local
+execution. Never forward a hand-built whole-analysis submission in place of an
+explicit output target. Do not call `sbatch`, `srun`, Snakemake, or `podman-hpc`
+yourself. The submitted batch job must enter the same plain `lc run` path so
+container wrapping—including `podman-hpc`—validation, locking, and manifests
+stay identical to synchronous execution.
 
 ## Result
 
