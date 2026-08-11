@@ -5,7 +5,7 @@
     "email": "info@lightconeresearch.org"
   },
   "metadata": {
-    "description": "Agent skills for Lightcone Research — ASTRA authoring and validation."
+    "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction."
   },
   "plugins": [
     {
@@ -13,6 +13,12 @@
       "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
       "version": "0.0.3",
       "source": "./plugins/astra"
+    },
+    {
+      "name": "reproduction",
+      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
+      "version": "0.0.3",
+      "source": "./plugins/reproduction"
     }
   ]
 }

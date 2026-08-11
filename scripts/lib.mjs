@@ -161,7 +161,7 @@ export function closureAgents(pluginName, byName) {
 /** Transitive hooks closure — the distinct hooks.json paths across the closure,
  *  in dependency-first order (a dependency's hooks precede the plugin's own).
  *  A plugin owns at most one hooks.json, but its closure can bundle several
- *  (a bundling plugin inherits its dependencies'), so the list is merged at build time by
+ *  (e.g. `reproduction` inherits `astra`'s), so the list is merged at build time by
  *  mergeHooks() — hook groups concatenate per event, and the shared scripts tree
  *  flattens under one `hooks/scripts/` dir (canonical script basenames are unique
  *  across plugins, which mergeHooks asserts). */
@@ -317,7 +317,7 @@ export function buildArtifacts(model) {
     // byte-for-byte from hooks/<plugin>/scripts/* into hooks/scripts/*, which is
     // where each hooks.json command resolves them (${CLAUDE_PLUGIN_ROOT}/hooks/
     // scripts/…). The manifest itself is a single byte-copy when the closure has
-    // one source, or a generated merge when it inherits more (a plugin bundling
+    // one source, or a generated merge when it inherits more (e.g. reproduction +
     // astra); the merged file is drift-checked like any other generated output.
     if (closHooks.length) {
       dirs.push(`plugins/${p.name}/hooks`);

@@ -3,7 +3,7 @@
   "marketplace": {
     "name": "lightcone-research",
     "displayName": "Lightcone Research Skills",
-    "description": "Agent skills for Lightcone Research — ASTRA authoring and validation.",
+    "description": "Agent skills for Lightcone Research — ASTRA and scientific paper reproduction.",
     "repo": "LightconeResearch/agent-skills",
     "owner": {
       "name": "Lightcone Research",
@@ -24,6 +24,19 @@
         "astra-tools": "0.2.13"
       },
       "dependencies": []
+    },
+    {
+      "name": "reproduction",
+      "version": "0.0.3",
+      "description": "Scientific paper replication workflows: assess candidate papers for reproducibility (`assess-reproducibility`), carry out a complete independently verified replication (`reproduce`), and compare reproduced figures, tables, and values with the originals (`figure-comparison`). Bundles the ASTRA reference and validation hooks, so this plugin is self-contained for reproduction work.",
+      "skills": [
+        "assess-reproducibility",
+        "reproduce",
+        "figure-comparison"
+      ],
+      "dependencies": [
+        "astra"
+      ]
     }
   ]
 }
