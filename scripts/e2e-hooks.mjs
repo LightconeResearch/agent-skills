@@ -213,8 +213,13 @@ function codexLeg() {
       "codex",
       sc,
       (p) => codex(p, []),
-      // workspace-write so apply_patch on astra.yaml is allowed in the sandbox.
-      (p) => codex(p, ["--sandbox", "workspace-write"]),
+      // danger-full-access, not workspace-write: Codex's bubblewrap sandbox
+      // cannot initialize on GitHub Actions runners (AppArmor blocks the
+      // unprivileged-userns loopback setup: "bwrap: loopback: Failed
+      // RTM_NEWADDR: Operation not permitted"), which fails every apply_patch
+      // before PostToolUse can ever fire. The throwaway CI VM / scratch dir is
+      // the isolation boundary here, and the prompt is ours.
+      (p) => codex(p, ["--sandbox", "danger-full-access"]),
     );
   } finally {
     rmSync(sc.scratch, { recursive: true, force: true });
