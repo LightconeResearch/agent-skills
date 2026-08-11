@@ -118,19 +118,9 @@ Open **Plugins** from the arrow beside **Create**, then search for and install
 
 ## ✨ Skills
 
-An **ASTRA** analysis (`astra.yaml`) is a machine-readable record of a
-scientific analysis that sits between the code and the paper: the inputs, the
-outputs, and every consequential methodological decision — with its reasoning —
-at the level needed to make the scientific claims verifiable and reproducible.
-Making the decision space explicit lets alternative defensible choices be
-explored systematically (as *universes*) rather than silently baked in.
-
 | Skill | What it does |
 |---|---|
-| [`astra`](skills/astra) | Teaches the agent to author and revise an `astra.yaml`: the judgment a schema can't carry — what deserves to be a decision, when to split a sub-analysis, how to back claims with verifiable evidence. The `astra` CLI serves the format briefing (`astra guide`) and the field-level grammar (`astra spec <term>`), and the plugin's hooks load the skill whenever the agent touches an ASTRA file and validate it on save. |
-
-See the [ASTRA docs page](docs/astra.md) for a hands-on tutorial that
-reproduces a classic dark-energy measurement as an ASTRA analysis.
+| [`astra`](skills/astra) | Teaches the agent to author and revise an `astra.yaml`: the judgment a schema can't carry — what deserves to be a decision, when to split a sub-analysis, how to back claims with verifiable evidence. |
 
 ## 📄 License
 
