@@ -6,8 +6,8 @@
 # Auth comes from two repository secrets:
 #   CLAUDE_CODE_OAUTH_TOKEN — Claude Code leg (headless `claude -p`). Already
 #     present: the Claude GitHub app installed it (claude.yml uses it too).
-#   CODEX_API_KEY — Codex leg (`codex exec`). Create it under Settings →
-#     Secrets and variables → Actions → New repository secret.
+#   OPENAI_API_KEY — Codex leg (`codex exec`), created manually under
+#     Settings → Secrets and variables → Actions.
 # A missing secret FAILS the job (a forgotten key must not silently green the
 # check). Consequence: PRs from forks fail these legs — GitHub never exposes
 # secrets to forks.
@@ -44,5 +44,5 @@ jobs:
       - name: Run e2e hook-dispatch tests
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: node scripts/e2e-hooks.mjs
