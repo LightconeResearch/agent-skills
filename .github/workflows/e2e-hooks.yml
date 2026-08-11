@@ -3,10 +3,11 @@
 # Codex, run real headless sessions, and assert the plugin hooks actually fire
 # (SessionStart and PostToolUse), observed through a stubbed `uvx` sentinel.
 #
-# Needs two repository secrets (Settings → Secrets and variables → Actions →
-# New repository secret):
-#   ANTHROPIC_API_KEY — for the Claude Code leg (headless `claude -p`)
-#   CODEX_API_KEY     — for the Codex leg (`codex exec`)
+# Auth comes from two repository secrets:
+#   CLAUDE_CODE_OAUTH_TOKEN — Claude Code leg (headless `claude -p`). Already
+#     present: the Claude GitHub app installed it (claude.yml uses it too).
+#   CODEX_API_KEY — Codex leg (`codex exec`). Create it under Settings →
+#     Secrets and variables → Actions → New repository secret.
 # A missing secret FAILS the job (a forgotten key must not silently green the
 # check). Consequence: PRs from forks fail these legs — GitHub never exposes
 # secrets to forks.
@@ -42,6 +43,6 @@ jobs:
 
       - name: Run e2e hook-dispatch tests
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
         run: node scripts/e2e-hooks.mjs
