@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prepare Lightcone Async Jobs"
+  short_description: "Estimate resources and classify DAG boundaries"
+  default_prompt: "Use $async to estimate resources and classify explicit expensive Lightcone output boundaries for synchronous or asynchronous execution."

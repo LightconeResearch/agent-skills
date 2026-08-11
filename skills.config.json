@@ -3,7 +3,7 @@
   "marketplace": {
     "name": "lightcone-research",
     "displayName": "Lightcone Research Skills",
-    "description": "Agent skills for Lightcone Research — ASTRA authoring and validation.",
+    "description": "Agent skills for Lightcone Research — ASTRA authoring, validation, and Lightcone execution.",
     "repo": "LightconeResearch/agent-skills",
     "owner": {
       "name": "Lightcone Research",
@@ -24,6 +24,17 @@
         "astra-tools": "0.2.13"
       },
       "dependencies": []
+    },
+    {
+      "name": "lightcone",
+      "version": "0.0.3",
+      "description": "Prepare Lightcone jobs for asynchronous execution: estimate recipe resources and classify synchronous execution in the current local or SLURM allocation versus detached submission with lc run --async. Bundles the ASTRA authoring skill and validation hooks.",
+      "skills": [
+        "async"
+      ],
+      "dependencies": [
+        "astra"
+      ]
     }
   ]
 }

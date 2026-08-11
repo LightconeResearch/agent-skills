@@ -16,6 +16,19 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Development"
+    },
+    {
+      "name": "lightcone",
+      "description": "Prepare Lightcone jobs for asynchronous execution: estimate recipe resources and classify synchronous execution in the current local or SLURM allocation versus detached submission with lc run --async. Bundles the ASTRA authoring skill and validation hooks.",
+      "source": {
+        "source": "local",
+        "path": "./plugins/lightcone"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
     }
   ]
 }

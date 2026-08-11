@@ -1,0 +1,12 @@
+{
+  "name": "lightcone",
+  "version": "0.0.3",
+  "description": "Prepare Lightcone jobs for asynchronous execution: estimate recipe resources and classify synchronous execution in the current local or SLURM allocation versus detached submission with lc run --async. Bundles the ASTRA authoring skill and validation hooks.",
+  "author": {
+    "name": "Lightcone Research",
+    "email": "info@lightconeresearch.org"
+  },
+  "homepage": "https://github.com/LightconeResearch/agent-skills",
+  "repository": "https://github.com/LightconeResearch/agent-skills",
+  "license": "BSD-3-Clause"
+}

@@ -5,7 +5,7 @@
     "email": "info@lightconeresearch.org"
   },
   "metadata": {
-    "description": "Agent skills for Lightcone Research — ASTRA authoring and validation."
+    "description": "Agent skills for Lightcone Research — ASTRA authoring, validation, and Lightcone execution."
   },
   "plugins": [
     {
@@ -13,6 +13,12 @@
       "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
       "version": "0.0.3",
       "source": "./plugins/astra"
+    },
+    {
+      "name": "lightcone",
+      "description": "Prepare Lightcone jobs for asynchronous execution: estimate recipe resources and classify synchronous execution in the current local or SLURM allocation versus detached submission with lc run --async. Bundles the ASTRA authoring skill and validation hooks.",
+      "version": "0.0.3",
+      "source": "./plugins/lightcone"
     }
   ]
 }
