@@ -1,0 +1,56 @@
+# Live end-to-end hook-dispatch tests (scripts/e2e-hooks.mjs): install the
+# marketplace + astra plugin into throwaway config homes for Claude Code and
+# Codex, run real headless sessions, and assert the plugin hooks actually fire
+# (SessionStart and PostToolUse), observed through a stubbed `uvx` sentinel.
+#
+# Auth comes from two repository secrets:
+#   CLAUDE_CODE_OAUTH_TOKEN — Claude Code leg (headless `claude -p`). Already
+#     present: the Claude GitHub app installed it (claude.yml uses it too).
+#   OPENAI_API_KEY — Codex leg (`codex exec`), created manually under
+#     Settings → Secrets and variables → Actions.
+# A missing secret FAILS the job (a forgotten key must not silently green the
+# check). Consequence: PRs from forks fail these legs — GitHub never exposes
+# secrets to forks.
+name: e2e-hooks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-hooks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Latest of both CLIs on purpose: this repo changes rarely but the
+      # harnesses ship weekly, and hook dispatch has regressed upstream before
+      # (openai/codex#16430). Running `latest` makes this workflow the early
+      # warning for that class of breakage.
+      - name: Install harness CLIs
+        run: npm install -g @anthropic-ai/claude-code @openai/codex
+
+      # The astra hooks shell out to `uvx astra-tools@<pin>` for real (the
+      # spec declares no stubs), so the runner needs uv — a missing uv shows
+      # up as the hooks' degraded messages and fails the forbid_context check.
+      - name: Install uv (real astra toolchain for hooks)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run e2e hook-dispatch tests
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node scripts/e2e-hooks.mjs

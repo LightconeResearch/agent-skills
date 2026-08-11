@@ -1,0 +1,107 @@
+# E2E hook-dispatch test spec for the astra plugin, executed by
+# scripts/e2e-hooks.mjs against BOTH harnesses (Claude Code and Codex).
+# Add a sibling <plugin>.yaml to cover another plugin — no runner changes.
+#
+# How a spec works: the runner installs `plugin` from this repo's marketplace
+# into a throwaway config home, creates the `project` files in a temp dir,
+# prepends the `stubs` binaries to PATH, then runs one real headless session
+# per test and checks every configured piece of EVIDENCE that the hook fired:
+#
+#   1. expect_context — a marker substring the hook itself injects into the
+#      conversation (its additionalContext), searched in the harness's session
+#      trace (Claude: the stream-json output; Codex: the session rollout file
+#      under $CODEX_HOME/sessions/). Works for ANY hook, including ones that
+#      never shell out to a binary. Keep markers ASCII — traces JSON-escape
+#      non-ASCII characters.
+#   2. forbid_context — degraded-path markers that must NOT appear: hooks that
+#      catch their own errors and inject an apologetic message instead of
+#      failing would otherwise slip through. This is how a broken tool CLI
+#      inside a hook turns the test red.
+#   3. expect_stub_call — a substring that must appear in a new stub
+#      invocation-log line. Only for hooks that delegate to a stubbed binary.
+#
+# Model output is never asserted; the model is only a means to trigger events.
+#
+# Any `<tool>@x.y.z` placeholder in this file is substituted with the plugin's
+# pinned tool version from skills.config.json, exactly like the build does for
+# hook scripts — specs never hardcode a version.
+#
+# Test fields:
+#   name              label for output
+#   event             hook event under test (labeling/documentation)
+#   prompt            the headless session's prompt — keep it mechanical
+#   expect_context    substring of the hook's injected context that must be in
+#                     the session trace
+#   forbid_context    substring (or list of substrings) that must NOT be in the
+#                     session trace
+#   expect_stub_call  substring that must appear in a new stub-log line
+#                     (each test needs expect_context and/or expect_stub_call)
+#   edits_file        (optional) file the model must edit to trigger the event.
+#                     Grants the session write access, and separates the two
+#                     failure modes: file edited but evidence missing → dispatch
+#                     is broken; file never edited → inconclusive, retried up to
+#                     `attempts` times, then failed as such.
+#   attempts          (optional, default 1) total tries for inconclusive runs
+#
+# Top-level fields: plugin (required), tests (required), project (fixture
+# files), stubs (optional PATH stubs: {stdout, exit}), setup (optional shell
+# commands run in the project dir before the tests — e.g. toolchain warmup).
+
+plugin: astra
+
+# A genuinely minimal VALID spec (checked against the pinned astra-tools
+# validator), not just a marker file: the stubbed tests only need the file to
+# exist, but a valid fixture keeps the door open to running these same tests
+# against the real toolchain by removing the `stubs` block.
+project:
+  astra.yaml: |
+    version: "0.0.13"
+    name: "E2E fixture"
+    description: "Minimal valid analysis used as the e2e project fixture."
+
+    inputs:
+      - id: primary_data
+        type: data
+        description: "Placeholder input."
+
+    outputs:
+      - id: main_result
+        type: metric
+        description: "Placeholder output."
+        inputs: [primary_data]
+        recipe:
+          command: python analyze.py --data {inputs.primary_data} --out {output}
+
+# No stubs: this spec runs the REAL toolchain. Both astra hooks delegate to
+# `uvx astra-tools@<pin>`, so a broken uv install, an unresolvable pin, or a
+# crashing CLI all surface — the hooks catch those and inject degraded
+# messages, which forbid_context turns into failures. Warm the pinned
+# environment once up front so the first hook invocation isn't racing its
+# 90-second timeout against a cold download.
+setup:
+  - uvx astra-tools@x.y.z --help
+
+tests:
+  - name: session-start-primer
+    event: SessionStart
+    prompt: "Reply with exactly: OK"
+    # The primer splices real `astra info` output, which opens with the
+    # analysis name from the fixture — proof the pinned CLI ran and parsed it.
+    expect_context: E2E fixture
+    forbid_context:
+      - Could not run       # `astra info` failed
+      - is not installed    # uv missing on the runner
+
+  - name: validate-on-save
+    event: PostToolUse
+    prompt: >-
+      A file named astra.yaml exists in the current directory. Append the
+      comment line `# e2e-touch` to the end of astra.yaml using your file
+      editing tool. Do nothing else, and do not explain.
+    edits_file: astra.yaml
+    attempts: 2
+    # Only real, successful validation of the (still valid) fixture says this.
+    expect_context: ASTRA validation passed
+    forbid_context:
+      - validation FAILED   # spec rejected
+      - not validated       # uv missing, or the toolchain crashed
