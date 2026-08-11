@@ -1,0 +1,53 @@
+# E2E hook-dispatch test spec for the astra plugin, executed by
+# scripts/e2e-hooks.mjs against BOTH harnesses (Claude Code and Codex).
+# Add a sibling <plugin>.yaml to cover another plugin — no runner changes.
+#
+# How a spec works: the runner installs `plugin` from this repo's marketplace
+# into a throwaway config home, creates the `project` files in a temp dir,
+# prepends the `stubs` binaries to PATH, then runs one real headless session
+# per test. Each stub appends "<name> <argv>" to an invocation log; a test
+# passes when a NEW log line contains `expect_stub_call`, which proves the
+# whole dispatch chain ran (event fired → matcher matched → plugin root
+# resolved → packaged hook script executed). Model output is never asserted.
+#
+# Test fields:
+#   name              label for output
+#   event             hook event under test (documentation; shown in messages)
+#   prompt            the headless session's prompt — keep it mechanical
+#   expect_stub_call  substring that must appear in a new stub-log line
+#   edits_file        (optional) file the model must edit to trigger the event.
+#                     Grants the session write access, and separates the two
+#                     failure modes: file edited but no stub call → dispatch is
+#                     broken; file never edited → inconclusive, retried up to
+#                     `attempts` times, then failed as such.
+#   attempts          (optional, default 1) total tries for inconclusive runs
+
+plugin: astra
+
+project:
+  astra.yaml: |
+    id: e2e-test
+
+# Both astra hooks delegate to `uvx astra-tools@<pin> …`; rc 0 plus a
+# JSON-encoded string on stdout makes each hook take its happy path and emit
+# benign context, so the session itself is undisturbed.
+stubs:
+  uvx:
+    stdout: '"e2e stub: ok"'
+    exit: 0
+
+tests:
+  - name: session-start-primer
+    event: SessionStart
+    prompt: "Reply with exactly: OK"
+    expect_stub_call: info --json
+
+  - name: validate-on-save
+    event: PostToolUse
+    prompt: >-
+      A file named astra.yaml exists in the current directory. Append the
+      comment line `# e2e-touch` to the end of astra.yaml using your file
+      editing tool. Do nothing else, and do not explain.
+    edits_file: astra.yaml
+    attempts: 2
+    expect_stub_call: validate astra.yaml --json
