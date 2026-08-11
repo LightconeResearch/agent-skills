@@ -1,0 +1,46 @@
+# Live end-to-end hook-dispatch tests (scripts/e2e-hooks.mjs): install the
+# marketplace + astra plugin into throwaway config homes for Claude Code and
+# Codex, run real headless sessions, and assert the plugin hooks actually fire
+# (SessionStart and PostToolUse), observed through a stubbed `uvx` sentinel.
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions →
+# New repository secret):
+#   ANTHROPIC_API_KEY — for the Claude Code leg (headless `claude -p`)
+#   CODEX_API_KEY     — for the Codex leg (`codex exec`)
+# A leg whose secret is absent is skipped with a warning annotation instead of
+# failing, so PRs from forks (which never see secrets) stay green.
+name: e2e-hooks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-hooks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Latest of both CLIs on purpose: this repo changes rarely but the
+      # harnesses ship weekly, and hook dispatch has regressed upstream before
+      # (openai/codex#16430). Running `latest` makes this workflow the early
+      # warning for that class of breakage.
+      - name: Install harness CLIs
+        run: npm install -g @anthropic-ai/claude-code @openai/codex
+
+      - name: Run e2e hook-dispatch tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+        run: node scripts/e2e-hooks.mjs
