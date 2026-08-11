@@ -24,9 +24,28 @@
 
 plugin: astra
 
+# A genuinely minimal VALID spec (checked against the pinned astra-tools
+# validator), not just a marker file: the stubbed tests only need the file to
+# exist, but a valid fixture keeps the door open to running these same tests
+# against the real toolchain by removing the `stubs` block.
 project:
   astra.yaml: |
-    id: e2e-test
+    version: "0.0.13"
+    name: "E2E fixture"
+    description: "Minimal valid analysis used as the e2e project fixture."
+
+    inputs:
+      - id: primary_data
+        type: data
+        description: "Placeholder input."
+
+    outputs:
+      - id: main_result
+        type: metric
+        description: "Placeholder output."
+        inputs: [primary_data]
+        recipe:
+          command: python analyze.py --data {inputs.primary_data} --out {output}
 
 # Both astra hooks delegate to `uvx astra-tools@<pin> …`; rc 0 plus a
 # JSON-encoded string on stdout makes each hook take its happy path and emit
