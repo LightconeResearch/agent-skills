@@ -18,19 +18,13 @@
 ---
 
 Agent skills for the [Lightcone Research](https://github.com/LightconeResearch)
-stack. The skills follow the open
-[Agent Skills standard](https://agentskills.io) (a `SKILL.md` plus optional
-`references/`, `scripts/`, and `assets/`), so they work across Claude Code, Codex,
-and other compatible agents — and are also packaged as Claude Code and Codex
-**plugins** for hooks that plain skills can't carry.
-
-> [!TIP]
-> **New here?** Get started by running `claude plugin marketplace add LightconeResearch/agent-skills && claude plugin install astra@lightcone-research` and ask your agent to help author an `astra.yaml`.
+stack, packaged as plugins to work across Claude Code, Codex,
+and other compatible agents.
 
 ## 📦 Prerequisites
 
 Some plugins have Python dependencies that install themselves on first use.
-The only prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/).
+The only prerequisite is `uv`: [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## 🛒 Add the marketplace
 
@@ -127,38 +121,6 @@ Open **Plugins** from the arrow beside **Create**, then search for and install
 | Skill | What it does |
 |---|---|
 | [`astra`](skills/astra) | Authoring an `astra.yaml` — orientation and judgment (what deserves to be a decision, when to split a sub-analysis); the field-level grammar comes from `astra spec <term>`. |
-
-## 🗂️ Repository layout
-
-```
-skills/                     Canonical skills — one dir per skill (single source of truth)
-hooks/astra/                ASTRA validate-on-save and activate-on-read hooks
-skills.config.json          Source of truth for how skills compose into plugins
-scripts/build.mjs           Regenerates every per-target file from the above
-scripts/validate.mjs        Frontmatter checks + generated-file drift check (npm test)
-.claude-plugin/             Generated — Claude Code marketplace manifest
-.agents/plugins/            Generated — Codex marketplace manifest
-plugins/                    Generated — self-contained per-plugin dirs both harnesses
-                            install (full skills+hooks closure copied from source)
-manifest.json               Generated — registry of all skills/plugins
-scripts/smoke.mjs           Install smoke tests — real claude/codex + tmux (npm run smoke)
-```
-
-The per-target manifests and the `plugins/` tree are **generated** from
-`skills.config.json` + `skills/`. Don't edit them by hand — run `npm run build` and
-commit the result. `npm test` fails if they drift. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## ✅ Verifying install
-
-`npm test` runs frontmatter validation and the generated-file drift check. For the
-real thing — installing each plugin into a throwaway environment and confirming it
-loads — run the smoke suite (needs `claude`, `codex`, and `tmux` on PATH; no LLM/API
-calls):
-
-```bash
-npm run smoke            # CLI install (both harnesses) + interactive tmux install (Claude)
-npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
-```
 
 ## 📄 License
 

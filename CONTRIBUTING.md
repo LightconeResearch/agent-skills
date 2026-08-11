@@ -111,6 +111,15 @@ astra-spec is deliberately unpinned; the astra-tools release resolves it).
   would produce — packaged copies compared with the bundling plugin's tool
   pins applied (drift check).
 
+For the real thing — installing each plugin into a throwaway environment and
+confirming it loads — run the smoke suite (needs `claude`, `codex`, and `tmux`
+on PATH; no LLM/API calls):
+
+```bash
+npm run smoke            # CLI install (both harnesses) + interactive tmux install (Claude)
+npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
+```
+
 ## Local testing of the install paths
 
 ```bash
