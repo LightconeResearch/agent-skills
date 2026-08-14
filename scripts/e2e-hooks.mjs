@@ -32,11 +32,14 @@
 // (see tests/astra.yaml for the field docs). Three evidence checks:
 //
 //   1. expect_context — a marker the hook injects into the conversation,
-//      searched in the harness's session trace (Claude: the stream-json
-//      output of the run; Codex: the rollout-*.jsonl the session persists
-//      under $CODEX_HOME/sessions/, where injected context lands as a
-//      developer message). Fully general: works for hooks that never run a
-//      binary.
+//      searched in the harness's session trace. Claude: the stream-json
+//      output PLUS the session transcripts persisted under the throwaway
+//      config's projects/ dir — the stream carries hook events only for
+//      session-scoped events like SessionStart, while injected PostToolUse
+//      context lands only in the transcript (as a hook_additional_context
+//      attachment). Codex: the rollout-*.jsonl the session persists under
+//      $CODEX_HOME/sessions/, where injected context lands as a developer
+//      message. Fully general: works for hooks that never run a binary.
 //   2. forbid_context — degraded-path markers that must NOT appear. Hooks
 //      that catch their own errors and inject an apologetic message instead
 //      of failing (the astra hooks do) would otherwise pass a weak marker
@@ -81,6 +84,15 @@ const skip = (m) => {
 };
 const have = (bin) => spawnSync("sh", ["-c", `command -v ${bin}`]).status === 0;
 const tail = (s, n = 2000) => (s || "").trim().slice(-n);
+// Every .jsonl under dir, recursively — how both harnesses' persisted
+// session traces are found (Claude transcripts, Codex rollouts).
+const jsonlUnder = (dir) =>
+  existsSync(dir)
+    ? readdirSync(dir, { recursive: true })
+        .map(String)
+        .filter((f) => f.endsWith(".jsonl"))
+        .map((f) => join(dir, f))
+    : [];
 
 function run(bin, argv, { cwd, env = {}, timeout = 120_000, input } = {}) {
   const r = spawnSync(bin, argv, {
@@ -212,10 +224,16 @@ function makeScratch(prefix, spec) {
   const stubLog = join(scratch, "stub-invocations.log");
   mkdirSync(project);
   mkdirSync(bin);
-  for (const [rel, content] of Object.entries(spec.project || {})) {
-    mkdirSync(dirname(join(project, rel)), { recursive: true });
-    writeFileSync(join(project, rel), content);
-  }
+  // Owns "what a pristine fixture is": called once here and again between
+  // test attempts. Overwrites the declared fixture files; extra files a
+  // session created are left alone.
+  const resetProject = () => {
+    for (const [rel, content] of Object.entries(spec.project || {})) {
+      mkdirSync(dirname(join(project, rel)), { recursive: true });
+      writeFileSync(join(project, rel), content);
+    }
+  };
+  resetProject();
   for (const [name, cfg] of Object.entries(spec.stubs || {})) {
     writeFileSync(
       join(bin, name),
@@ -226,7 +244,7 @@ function makeScratch(prefix, spec) {
   }
   const stubCalls = () =>
     existsSync(stubLog) ? readFileSync(stubLog, "utf8").trim().split("\n") : [];
-  return { scratch, project, bin, stubCalls };
+  return { scratch, project, bin, stubCalls, resetProject };
 }
 
 // Run one spec's tests against one harness. `session(test)` runs a fresh
@@ -254,14 +272,10 @@ function runSpecTests(harness, spec, sc, session) {
     const attempts = t.attempts || 1;
     const editPath = t.edits_file ? join(sc.project, t.edits_file) : null;
     for (let attempt = 1; attempt <= attempts; attempt++) {
-      // Restore the fixture files so attempts are independent: a prior
-      // attempt's edit would otherwise leave the requested change already in
-      // place, and the model then (reasonably) declines to repeat it —
-      // misclassifying a retry as "model never edited".
-      for (const [rel, content] of Object.entries(spec.project || {})) {
-        mkdirSync(dirname(join(sc.project, rel)), { recursive: true });
-        writeFileSync(join(sc.project, rel), content);
-      }
+      // Reset fixtures so attempts are independent: a prior attempt's edit
+      // would otherwise leave the requested change already in place, and
+      // the model then (reasonably) declines to repeat it.
+      sc.resetProject();
       const before = sc.stubCalls().length;
       const pre = editPath && existsSync(editPath) ? readFileSync(editPath, "utf8") : null;
       const r = session(t);
@@ -277,22 +291,18 @@ function runSpecTests(harness, spec, sc, session) {
         pass(`${label}: ${t.event} hook fired (all evidence observed)`);
         break;
       }
-      const post = editPath && existsSync(editPath) ? readFileSync(editPath, "utf8") : null;
-      if (editPath && pre === post) {
-        // The model never made the triggering edit, so the hook never got its
-        // chance — inconclusive rather than broken.
-        if (attempt < attempts) continue;
-        fail(`${label}: model never edited ${t.edits_file} in ${attempts} attempts (exit ${r.status}) — ${t.event} untested.\n${tail(r.out)}`);
-        break;
-      }
-      // The event had its chance (edit happened, or none was needed) and
-      // evidence is still missing: this is what this suite exists to catch.
-      // Sessions are stochastic, though — e.g. the model can satisfy the
-      // edit through a tool the hook matcher doesn't cover — so burn the
-      // remaining attempts before declaring dispatch broken. Real breakage
-      // fails every attempt anyway.
+      // Sessions are stochastic (the model can skip the edit, or make it
+      // through a tool the hook matcher doesn't cover), so retry every
+      // failure mode until attempts run out — real dispatch breakage fails
+      // every attempt anyway. On the last attempt, distinguish "the model
+      // never made the triggering edit" (inconclusive: the hook never got
+      // its chance) from "the event fired and evidence is missing" (what
+      // this suite exists to catch).
       if (attempt < attempts) continue;
-      fail(`${label}: ${t.event} hook evidence missing — ${missing.join("; ")} (exit ${r.status}).\n${tail(r.out)}`);
+      const post = editPath && existsSync(editPath) ? readFileSync(editPath, "utf8") : null;
+      fail(editPath && pre === post
+        ? `${label}: model never edited ${t.edits_file} in ${attempts} attempts (exit ${r.status}) — ${t.event} untested.\n${tail(r.out)}`
+        : `${label}: ${t.event} hook evidence missing — ${missing.join("; ")} (exit ${r.status}).\n${tail(r.out)}`);
       break;
     }
   }
@@ -319,24 +329,12 @@ function claudeLeg() {
       const ins = run("claude", ["plugin", "install", `${spec.plugin}@${MARKET}`, "--scope", "user"], { env: baseEnv });
       if (!/Successfully installed plugin/i.test(ins.out)) { fail(`${spec.plugin}: install failed: ${tail(ins.out)}`); continue; }
       const sc = makeScratch(`e2e-cc-${spec.plugin}-`, spec);
-      // The stream-json output alone is NOT a sufficient trace: PostToolUse
-      // hooks emit no hook_started/hook_response stream events, and their
-      // injected additionalContext is not echoed into the stream either —
-      // it only surfaced there when the model happened to repeat the hook
-      // feedback in its visible output, which made these tests a coin flip.
-      // The context IS persisted deterministically in the session
-      // transcript under <config>/projects/ (as a hook_additional_context
-      // attachment), so — mirroring the Codex rollout files — a test's
-      // trace is the stream output plus the transcripts its session
-      // created.
+      // Claude's trace is the stream output PLUS the session transcripts
+      // persisted under <config>/projects/: injected PostToolUse context
+      // never reaches the stream, only the transcript (see the evidence
+      // notes in the file header).
       const projectsDir = join(baseEnv.CLAUDE_CONFIG_DIR, "projects");
-      const transcripts = () =>
-        existsSync(projectsDir)
-          ? readdirSync(projectsDir, { recursive: true })
-              .map(String)
-              .filter((f) => f.endsWith(".jsonl"))
-              .map((f) => join(projectsDir, f))
-          : [];
+      const transcripts = () => jsonlUnder(projectsDir);
       try {
         runSpecTests("claude", spec, sc, (t) => {
           const preFiles = new Set(transcripts());
@@ -394,13 +392,7 @@ function codexLeg() {
       // hook-injected context lands as a developer message. The trace for a
       // test is the content of the rollout files its session created.
       const sessionsDir = join(baseEnv.CODEX_HOME, "sessions");
-      const rollouts = () =>
-        existsSync(sessionsDir)
-          ? readdirSync(sessionsDir, { recursive: true })
-              .map(String)
-              .filter((f) => f.endsWith(".jsonl"))
-              .map((f) => join(sessionsDir, f))
-          : [];
+      const rollouts = () => jsonlUnder(sessionsDir);
       try {
         runSpecTests("codex", spec, sc, (t) => {
           const preFiles = new Set(rollouts());
