@@ -27,13 +27,14 @@
     },
     {
       "name": "lightcone",
-      "version": "0.0.1",
-      "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers project structure, the development workflow (write & debug, integrate recipes, materialize with `lc run`), status interpretation and failure diagnosis, publishing, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
+      "version": "0.0.2",
+      "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (probe with `lc run`, integrate recipes, commit, `lc materialize`), status interpretation (current/behind/stale) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
       "skills": [
         "lightcone"
       ],
       "tools": {
-        "lightcone-cli": "0.4.0"
+        "$comment": "The rebuilt CLI (PR #190) has no tagged release yet, so the pin is a main-branch commit sha substituted into the skill's `git+https://...lightcone-cli@x.y.z` form. Once a release is tagged and published, replace the sha with the version and change the skill's invocations back to `uvx --from lightcone-cli@x.y.z lc`.",
+        "lightcone-cli": "4fa2d1b4e5afaee81dfbfab1a64149d2792f85b3"
       },
       "dependencies": [
         "astra"
