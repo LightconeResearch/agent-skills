@@ -93,29 +93,33 @@ Two more things `lc materialize` requires up front:
 ### Pin the annex plumbing (run after every `lc init`)
 
 git-annex serves the repo through git's filter config and four hooks,
-which `git annex init` writes assuming `git-annex` is on PATH. Keep the
-whole toolchain uvx-only by converging them to the pinned invocation —
-idempotent, a no-op once applied:
+which `git annex init` writes assuming `git-annex` is on PATH. When the
+machine has git-annex, that stock plumbing is correct — leave it alone.
+When it doesn't, pin the invocation into the repo itself instead of
+installing anything. Either way, make a missing filter loud. Run this
+after every `lc init` (idempotent, a no-op once applied):
 
 ```bash
-LC_ANNEX="uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z git-annex"
-git config filter.annex.process "$LC_ANNEX filter-process"
 git config filter.annex.required true
-for h in .git/hooks/pre-commit .git/hooks/post-checkout .git/hooks/post-merge .git/hooks/post-receive; do
-  [ -f "$h" ] || continue
-  sed "s|git annex |$LC_ANNEX |g" "$h" > "$h.tmp" && mv "$h.tmp" "$h" && chmod +x "$h"
-done
+if ! command -v git-annex >/dev/null; then
+  LC_ANNEX="uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z git-annex"
+  git config filter.annex.process "$LC_ANNEX filter-process"
+  for h in .git/hooks/pre-commit .git/hooks/post-checkout .git/hooks/post-merge .git/hooks/post-receive; do
+    [ -f "$h" ] || continue
+    sed "s|git annex |$LC_ANNEX |g" "$h" > "$h.tmp" && mv "$h.tmp" "$h" && chmod +x "$h"
+  done
+fi
 ```
 
 With this in place, plain `git add` / `git commit` work for you and for
 the user's own terminal alike, with uv as the machine's only prerequisite;
 `required=true` turns a missing filter into a hard
 `fatal: clean filter 'annex' failed` instead of git silently staging
-annexed bytes into history (the remedy is re-running this snippet). Run it
-after every `lc init` — a fresh clone included, since `.git/config` and
-hooks are local state that doesn't travel with the repository. In the rare
-case this document says to run `git annex <cmd>` yourself, spell it with
-the same pinned prefix:
+annexed bytes into history (the remedy is re-running this snippet, which
+then pins). Run it after every `lc init` — a fresh clone included, since
+`.git/config` and hooks are local state that doesn't travel with the
+repository. And when this document says to run `git annex <cmd>` yourself
+on a machine without git-annex, spell it with the same pinned prefix:
 `uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z git-annex <cmd>`.
 
 ## Orient before anything else
