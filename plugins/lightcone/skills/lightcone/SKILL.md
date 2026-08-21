@@ -3,17 +3,18 @@ name: lightcone
 description: >
   Companion for working with the user on a Lightcone project — an ASTRA
   analysis (astra.yaml) executed with the `lc` CLI. Covers the project model
-  (a uv project: pyproject.toml + uv.lock + astra.yaml, direct or
-  containerized, stored as a DataLad dataset), the development workflow
-  (probe with `lc run`, integrate recipes, commit, `lc materialize`),
-  status interpretation (current/behind/stale) and failure diagnosis,
-  publishing the RO-Crate view — and how to engage the user at each phase:
-  interview to scope a brand-new project, orient and summarize when resuming
-  an existing one. Invoke whenever the user wants to start, resume, plan,
-  run, debug, or discuss a Lightcone/ASTRA analysis project — "new
-  analysis", "scope a project", "resume/continue the project", "where were
-  we", "run the pipeline", "lc status/materialize/run", "publish the
-  analysis".
+  (a uv project stored as a DataLad dataset, direct or containerized), the
+  development workflow (probe with `lc run`, integrate recipes, commit,
+  `lc materialize`), status interpretation (current/behind/stale), failure
+  diagnosis, publishing, and how to engage the user at each phase: interview
+  to scope a brand-new project, orient and summarize when resuming one. Use
+  this skill whenever the user wants to start, resume, plan, run, debug, or
+  discuss a Lightcone/ASTRA analysis project — "new analysis", "scope a
+  project", "resume the project", "where were we", "run the pipeline", "lc
+  status/materialize/run", "publish the analysis" — and whenever the working
+  directory holds an astra.yaml and the user asks to run, re-run, fix, or
+  interpret an analysis, even if they never say "Lightcone", "ASTRA" or
+  "lc".
 ---
 
 # Lightcone Projects

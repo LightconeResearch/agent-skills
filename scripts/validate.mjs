@@ -16,6 +16,7 @@ import {
   PIN_PLACEHOLDER,
   UNPINNED_RE,
   PIN_SCAN_EXTS,
+  SPEC_FIELDS,
 } from "./lib.mjs";
 
 const errors = [];
@@ -29,6 +30,18 @@ for (const [dir, s] of Object.entries(skills)) {
   else if (s.name !== dir) errors.push(`skills/${dir}: name "${s.name}" must match its directory`);
   if (!s.description) errors.push(`skills/${dir}: missing 'description'`);
   else if (s.description.length > 1024) errors.push(`skills/${dir}: description exceeds 1024 chars (${s.description.length})`);
+  // Only the six fields the Agent Skills spec defines. Claude Code accepts
+  // roughly twenty more (`paths`, `argument-hint`, `context`, `model`, …),
+  // but two of this repo's three targets — the `npx skills` CLI and the
+  // Skills API packaging path — reject an unknown key with a hard error
+  // rather than ignoring it. A skill that loads here and fails to package
+  // elsewhere is the drift this check exists to catch.
+  for (const key of Object.keys(s.frontmatter || {}))
+    if (!SPEC_FIELDS.has(key))
+      errors.push(
+        `skills/${dir}: frontmatter key "${key}" is outside the Agent Skills spec ` +
+          `(${[...SPEC_FIELDS].join(", ")}) — it would fail packaging for the non-Claude targets`,
+      );
 }
 
 // 2. Every skill referenced by a plugin exists; plugin names are valid & unique.

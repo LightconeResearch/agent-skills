@@ -40,6 +40,19 @@ function filesUnder(relDir) {
 const PIN_SCAN_DIRS = ["skills", "hooks"];
 export const PIN_SCAN_EXTS = /\.(md|sh|json|ya?ml)$/;
 export const PIN_PLACEHOLDER = "x.y.z";
+
+/** The frontmatter keys the Agent Skills spec defines — the portable set.
+ *  Claude Code accepts many more, but the `npx skills` CLI and the Skills API
+ *  packaging path reject an unknown key outright, so canonical skills stay
+ *  inside this set. */
+export const SPEC_FIELDS = new Set([
+  "name",
+  "description",
+  "license",
+  "compatibility",
+  "metadata",
+  "allowed-tools",
+]);
 // A tool invocation whose placeholder survived pin substitution (the tool name
 // sits right before the separator — prose mentions of "@x.y.z" don't match).
 export const UNPINNED_RE = /[A-Za-z0-9_-]+(?:@|==)x\.y\.z/;
@@ -125,7 +138,9 @@ export function loadModel() {
     try { st = statSync(skillMd); } catch { continue; }
     if (!st.isFile()) continue;
     const fm = parseFrontmatter(readFileSync(skillMd, "utf8"));
-    skills[name] = { dir: name, name: fm.name, description: fm.description || "" };
+    // `frontmatter` keeps every key as authored, so the validator can hold
+    // the file to the spec's field set rather than only the fields we read.
+    skills[name] = { dir: name, name: fm.name, description: fm.description || "", frontmatter: fm };
   }
   return { config, skills };
 }
