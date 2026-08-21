@@ -41,33 +41,43 @@ Wherever this document says "validate the spec", "cache a paper", or
 
 ## Prerequisites
 
-Always invoke `lc` through uv's pinned runner, exactly as written in this
-document:
+The engine is a tool the user installs once, on their machine:
 
 ```bash
-uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z lc <command>
+uv tool install lightcone-cli
 ```
 
-Never run a bare `lc` found on PATH — its version is unknown and may not
-match what this skill assumes. (`uvx` caches the environment, so repeated
-calls are fast. If `uvx` is missing, ask the user to install uv:
-https://docs.astral.sh/uv/getting-started/installation/ — never install it
-yourself.) When unsure of a command's syntax, discover it with `--help`
-rather than guessing. The `astra` CLI has its own pinned invocation — take
-it from the astra skill, never from memory or PATH.
+That single install is the whole setup. It puts `lc` on PATH for you *and*
+for the user's own terminal and batch scripts, and it carries `git-annex`
+with it — which their plain `git add` needs in a Lightcone project, since
+the repository routes large files through the annex filter.
 
-Two more things `lc materialize` requires up front:
+**Check before driving it, and check the version, not just the presence:**
 
-- **A git committer identity.** If missing, have the user set
-  `git config --global user.name` / `user.email`.
-- **Annex plumbing pinned into the repo.** Plain `git add`/`git commit` in
-  a Lightcone project invoke git-annex through the repo's filter config and
-  hooks. git-annex does not need to be on PATH — pin the invocation into
-  the repo itself (see **Pin the annex plumbing** below) immediately after
-  every `lc init`. Until that's done, a missing git-annex makes `git add`
-  exit 0 while printing `git-annex: command not found` and staging annexed
-  files' raw bytes into git history — treat that error as a hard stop,
-  never commit past it.
+```bash
+lc --version            # this skill assumes lightcone-cli==x.y.z or newer
+```
+
+- **Not installed** — say what that costs and ask before acting: nothing in
+  the project can be materialized, published, or diagnosed until the engine
+  is there. Offer to run `uv tool install lightcone-cli` for them, and wait
+  for an answer. **Never install it unasked** — it puts software on the
+  user's machine, not just in this project.
+- **Older than the version above** — the verbs and status vocabulary
+  changed in the rebuild, so following this skill against an older engine
+  produces errors rather than results. Ask whether to run
+  `uv tool upgrade lightcone-cli`.
+- **`lc` missing after an install** — uv puts it in `~/.local/bin`; have
+  the user run `uv tool update-shell` (or check for a shell alias shadowing
+  `lc` with `type lc`).
+
+When unsure of a command's syntax, discover it with `--help` rather than
+guessing. The `astra` CLI is invoked differently — through a pinned `uvx`
+runner — so take its exact form from the astra skill, never from memory or
+PATH.
+
+`lc materialize` also needs **a git committer identity**; if missing, have
+the user set `git config --global user.name` / `user.email`.
 
 ## The project model
 
@@ -89,38 +99,6 @@ Two more things `lc materialize` requires up front:
   bytes you want to inspect); never write into `results/` by hand; never
   commit outputs yourself — `lc materialize` commits each output with a
   run record that `datalad rerun` can replay.
-
-### Pin the annex plumbing (run after every `lc init`)
-
-git-annex serves the repo through git's filter config and four hooks,
-which `git annex init` writes assuming `git-annex` is on PATH. When the
-machine has git-annex, that stock plumbing is correct — leave it alone.
-When it doesn't, pin the invocation into the repo itself instead of
-installing anything. Either way, make a missing filter loud. Run this
-after every `lc init` (idempotent, a no-op once applied):
-
-```bash
-git config filter.annex.required true
-if ! command -v git-annex >/dev/null; then
-  LC_ANNEX="uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z git-annex"
-  git config filter.annex.process "$LC_ANNEX filter-process"
-  for h in .git/hooks/pre-commit .git/hooks/post-checkout .git/hooks/post-merge .git/hooks/post-receive; do
-    [ -f "$h" ] || continue
-    sed "s|git annex |$LC_ANNEX |g" "$h" > "$h.tmp" && mv "$h.tmp" "$h" && chmod +x "$h"
-  done
-fi
-```
-
-With this in place, plain `git add` / `git commit` work for you and for
-the user's own terminal alike, with uv as the machine's only prerequisite;
-`required=true` turns a missing filter into a hard
-`fatal: clean filter 'annex' failed` instead of git silently staging
-annexed bytes into history (the remedy is re-running this snippet, which
-then pins). Run it after every `lc init` — a fresh clone included, since
-`.git/config` and hooks are local state that doesn't travel with the
-repository. And when this document says to run `git annex <cmd>` yourself
-on a machine without git-annex, spell it with the same pinned prefix:
-`uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z git-annex <cmd>`.
 
 ## Orient before anything else
 
@@ -186,8 +164,7 @@ dependency-free `pyproject.toml`, `uv.lock`, `.venv`, git + git-annex +
 `.datalad/config`, `data/`, `results/`, and a MyST report skeleton
 (`myst.yml`, `index.md`). It is idempotent and never overwrites files you
 own — safe to re-run any time. It does **not** create `CLAUDE.md`; create
-one yourself. Follow it with the annex-plumbing snippet (see **Pin the
-annex plumbing** above). Then build the spec through conversation, updating
+one yourself. Then build the spec through conversation, updating
 `astra.yaml` after each phase. Announce each phase with a short stage
 banner so the user can follow.
 
@@ -362,11 +339,11 @@ output goes `behind`.
 ## CLI reference
 
 ```bash
-uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z lc init [DIR] [--check] [--json]   # Converge DIR into a standard project (idempotent)
-uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z lc status [--json]                 # Report each output's state; always exits 0
-uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z lc materialize [TARGETS...] [--check] [--refresh] [--json]  # Make outputs, committing each
-uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z lc run COMMAND...                  # Probe: run one command in the project env, sandboxed
-uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z lc build [--json]                  # Build & commit the system-layer image (containerized)
+lc init [DIR] [--check] [--json]   # Converge DIR into a standard project (idempotent)
+lc status [--json]                 # Report each output's state; always exits 0
+lc materialize [TARGETS...] [--check] [--refresh] [--json]  # Make outputs, committing each
+lc run COMMAND...                  # Probe: run one command in the project env, sandboxed
+lc build [--json]                  # Build & commit the system-layer image (containerized)
 ```
 
 That is the whole surface — there is no `--universe` (universe selection is
@@ -421,10 +398,13 @@ ones:
 - **Everything `stale` after a spec edit** — the invalidation model
   working; re-materialize. Everything `behind` after `uv add` — nothing
   invalidated; `--refresh` only when the user wants remakes.
-- **`git-annex: command not found` during `git add` (exit 0!), or
-  `fatal: clean filter 'annex' failed`** — the repo's annex plumbing isn't
-  pinned (or drifted). Re-run the **Pin the annex plumbing** snippet; in
-  the exit-0 form, `git reset` anything it staged before retrying.
+- **`git-annex: command not found` during `git add`, or `fatal: clean
+  filter 'annex' failed`** — git-annex isn't reachable from the shell, so
+  the annex filter can't run. It ships with the engine, so this means the
+  install is broken or shadowed: check `lc --version` and `type git-annex`,
+  and have the user repair it with `uv tool install --force lightcone-cli`.
+  Do not commit past this error — without the filter, `git add` can stage
+  annexed files' raw bytes into git history.
 - **`the content is not in this clone`** — annexed bytes not fetched.
   `lc materialize` fetches declared inputs itself; `git annex get <path>`
   only for bytes you want to inspect.

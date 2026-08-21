@@ -27,14 +27,15 @@
     },
     {
       "name": "lightcone",
-      "version": "0.0.2",
+      "version": "0.0.3",
       "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (probe with `lc run`, integrate recipes, commit, `lc materialize`), status interpretation (current/behind/stale) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
       "skills": [
         "lightcone"
       ],
+      "hooks": "hooks/lightcone/hooks.json",
       "tools": {
-        "$comment": "The rebuilt CLI (PR #190) has no tagged release yet, so the pin is a main-branch commit sha substituted into the skill's `git+https://...lightcone-cli@x.y.z` form. Once a release is tagged and published, replace the sha with the version and change the skill's invocations back to `uvx --from lightcone-cli@x.y.z lc`.",
-        "lightcone-cli": "4fa2d1b4e5afaee81dfbfab1a64149d2792f85b3"
+        "$comment": "Unlike astra-tools, lightcone-cli is NOT run through uvx: the user installs it once with `uv tool install lightcone-cli`, which also puts git-annex on PATH for their own git commands in a project. So this pin is a MINIMUM VERSION, not an invocation pin — the SessionStart hook and the skill compare `lc --version` against it. It names the first release carrying the rebuilt CLI (LightconeResearch/lightcone-cli#190); until that release is cut, an installed 0.4.x correctly reports as too old.",
+        "lightcone-cli": "0.5.0"
       },
       "dependencies": [
         "astra"

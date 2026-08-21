@@ -1,14 +1,16 @@
 # E2E hook-dispatch test spec for the lightcone plugin. Field-by-field
 # documentation of how specs work lives in tests/astra.yaml.
 #
-# lightcone ships no hooks of its own — it VENDORS the astra plugin (via
-# `dependencies` in skills.config.json), so byte-copies of astra's hooks are
-# packaged under plugins/lightcone/hooks/. These tests install `lightcone`
-# ALONE and re-run the astra dispatch checks against that vendored copy:
-# what they prove is that the bundling path (closure copy, hooks.json merge,
-# script flattening, pin substitution) produces a plugin whose hooks
-# actually fire. The runner gives each spec a fresh config home, so this
-# evidence cannot come from a standalone astra install.
+# lightcone ships ONE hook of its own (the engine preflight) and VENDORS the
+# astra plugin (via `dependencies` in skills.config.json), so byte-copies of
+# astra's hooks are packaged alongside it under plugins/lightcone/hooks/.
+# These tests install `lightcone` ALONE and exercise both: the astra dispatch
+# checks against the vendored copy prove the bundling path (closure copy,
+# hooks.json merge, script flattening, pin substitution) produces a plugin
+# whose hooks actually fire; the preflight check proves lightcone's own
+# SessionStart entry survives that same merge. The runner gives each spec a
+# fresh config home, so this evidence cannot come from a standalone astra
+# install.
 #
 # The `astra-tools@x.y.z` placeholder below resolves through lightcone's
 # EFFECTIVE pins — inherited from the bundled astra dependency.
@@ -62,3 +64,16 @@ tests:
     forbid_context:
       - validation FAILED   # spec rejected
       - not validated       # uv missing, or the toolchain crashed
+
+  # lightcone's own SessionStart hook, merged alongside astra's. The engine
+  # state it reports is host-dependent (absent / too old / ready), so assert
+  # only on the framing every branch emits, and forbid the shapes that mean
+  # the hook misfired: a bare `lc` that is not the engine, and — whatever it
+  # found — any suggestion that it installed or upgraded something itself.
+  - name: engine-preflight
+    event: SessionStart
+    prompt: "Reply with exactly: OK"
+    expect_context: Lightcone project
+    forbid_context:
+      - did not report a version   # `lc` on PATH but broken or not the engine
+      - Installed lightcone-cli    # the hook must never install anything
