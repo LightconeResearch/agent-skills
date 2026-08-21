@@ -92,16 +92,51 @@ fi
 found="${found//[^A-Za-z0-9._+:-]/}"
 [ -n "$found" ] || { emit "\`lc\` is on PATH but reported no readable version — the install is broken, or that \`lc\` is not the Lightcone engine. $repair_remedy"; exit 0; }
 
-# Version floor. `lc --version` can report a dev build (0.5.0.dev4+g4fa2d1b4e),
-# so compare on the release part alone: strip the local segment, then the .devN
-# suffix. `sort -V` is not PEP 440 aware — it reads 0.5.0.dev4 as NEWER than
-# 0.5.0 — so a dev build of exactly the floor is caught separately below: devN
-# precedes its own release, and is not the release the skill was written against.
-core="${found%%+*}"
-base="${core%%.dev*}"
-oldest=$(printf '%s\n%s\n' "$required" "$base" | sort -V | head -n1)
-if { [ "$base" != "$required" ] && [ "$oldest" = "$base" ]; } ||
-   { [ "$base" = "$required" ] && [ "$base" != "$core" ]; }; then
+# Version floor, in PEP 440 order — which `sort -V` does not implement. Verified:
+# sort -V puts 0.5.0 BEFORE 0.5.0.dev1, 0.5.0a1, 0.5.0b1 and 0.5.0rc1, while
+# PEP 440 has every one of those precede the release they lead up to. Left to
+# sort -V a release candidate would read as newer than its release, so a floor
+# of 0.5.0rc1 would tell someone on the final 0.5.0 they are behind.
+#
+# So split each version into its release part and a pre-release rank and
+# compare in steps: release (sort -V, correct for plain dotted numbers), then
+# rank (dev < a < b < rc < final), then the rank's own number.
+pep_split() { # $1 -> pep_rel, pep_rank, pep_num, pep_dev ("" when not a .dev build)
+    local v="${1%%+*}"
+    pep_dev=""
+    case "$v" in *.dev*) pep_dev="${v##*.dev}"; v="${v%%.dev*}" ;; esac
+    case "$v" in
+        *rc*) pep_rel="${v%%rc*}"; pep_rank=3; pep_num="${v##*rc}" ;;
+        *a*)  pep_rel="${v%%a*}";  pep_rank=1; pep_num="${v##*a}" ;;
+        *b*)  pep_rel="${v%%b*}";  pep_rank=2; pep_num="${v##*b}" ;;
+        # No pre-release segment: rank 4 for the release itself, but rank 0
+        # when it is a bare .dev build — 0.5.0.dev1 precedes 0.5.0a1, since a
+        # dev build of a release leads up to that release's own alphas.
+        *)    pep_rel="$v";        pep_num=0
+              if [ -n "$pep_dev" ]; then pep_rank=0; else pep_rank=4; fi ;;
+    esac
+    case "$pep_num" in ''|*[!0-9]*) pep_num=0 ;; esac
+    case "$pep_dev" in *[!0-9]*) pep_dev=0 ;; esac
+}
+
+precedes() { # $1 candidate, $2 floor — true when $1 comes before $2
+    local a_rel a_rank a_num a_dev b_rel b_rank b_num b_dev oldest
+    pep_split "$1"; a_rel="$pep_rel" a_rank="$pep_rank" a_num="$pep_num" a_dev="$pep_dev"
+    pep_split "$2"; b_rel="$pep_rel" b_rank="$pep_rank" b_num="$pep_num" b_dev="$pep_dev"
+    if [ "$a_rel" != "$b_rel" ]; then
+        oldest=$(printf '%s\n%s\n' "$a_rel" "$b_rel" | sort -V | head -n1)
+        [ "$oldest" = "$a_rel" ]; return
+    fi
+    [ "$a_rank" -ne "$b_rank" ] && { [ "$a_rank" -lt "$b_rank" ]; return; }
+    [ "$a_num" -ne "$b_num" ] && { [ "$a_num" -lt "$b_num" ]; return; }
+    # Same release and same pre-release: a .dev build precedes the thing it
+    # leads to, and an earlier .dev precedes a later one.
+    [ -n "$a_dev" ] && [ -z "$b_dev" ] && return 0
+    [ -z "$a_dev" ] && [ -n "$b_dev" ] && return 1
+    [ -n "$a_dev" ] && [ "$a_dev" -lt "$b_dev" ]
+}
+
+if precedes "$found" "$required"; then
     emit "The installed Lightcone engine is $found, older than the $required this skill is written against — its verbs and status vocabulary have changed, so following the skill against $found will produce errors rather than results. $upgrade_remedy"
     exit 0
 fi
