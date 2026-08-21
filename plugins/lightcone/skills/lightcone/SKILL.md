@@ -39,6 +39,18 @@ accordingly, and driving `lc`.
 Wherever this document says "validate the spec", "cache a paper", or
 "generate a universe", the exact commands are the astra skill's.
 
+## Further reading
+
+Each of these loads only when you read it, so reach for the one the moment
+its trigger applies:
+
+| Read | When |
+|---|---|
+| `references/scoping.md` | The project has no spec, or only `lc init`'s placeholder — you are about to interview the user |
+| `references/literature.md` | Scoping reaches the literature pass, or the user wants decisions grounded in published work |
+| `references/diagnosis.md` | A command refuses, a recipe exits non-zero, or `lc status` says something unexpected |
+| `references/publishing.md` | The user wants to share, archive, deposit, or cite the analysis |
+
 ## Prerequisites
 
 The engine is a tool the user installs once, on their machine:
@@ -78,18 +90,14 @@ lc --version            # this skill assumes lightcone-cli==0.5.0rc1 or newer
 
 **Who runs that remedy depends on whether anyone is there to ask.** The
 session-start hook works this out and says which case you are in; when it
-hasn't spoken, judge it yourself:
-
-- **A person is in the session** — say what the missing engine costs, offer
-  to run the command, and wait for an answer. **Never install or upgrade
-  unasked**: it puts software on the user's machine, not just in this
-  project, and they may be running other projects against the version
-  they have.
-- **Nobody is** (a headless `claude -p` run, a scheduled job, CI) — a
-  question there is answered by no one, so asking only strands the run.
-  Run the remedy directly, and state plainly in your final message what you
-  changed on the machine. If permissions refuse the command, say that the
-  engine is missing and name what to allow, rather than working around it.
+hasn't spoken, judge it yourself. With a person in the session, say what the
+missing engine costs, offer to run the command, and wait — **never install
+or upgrade unasked**, since it puts software on the user's machine, not just
+in this project. In a headless run (`claude -p`, a scheduled job, CI) a
+question is answered by no one, so run the remedy directly and say plainly
+in your final message what you changed on the machine; if permissions refuse
+it, report that the engine is missing and name what to allow rather than
+working around it.
 
 Some things stay the user's in **either** mode, because no one else can do
 them: setting their git identity, and any step that needs a browser sign-in
@@ -99,9 +107,6 @@ When unsure of a command's syntax, discover it with `--help` rather than
 guessing. The `astra` CLI is invoked differently — through a pinned `uvx`
 runner — so take its exact form from the astra skill, never from memory or
 PATH.
-
-`lc materialize` also needs **a git committer identity**; if missing, have
-the user set `git config --global user.name` / `user.email`.
 
 ## The project model
 
@@ -140,7 +145,8 @@ where the project is, then match how you engage:
 
 1. **Look for `astra.yaml`** in the working directory.
 2. **No spec (or a freshly scaffolded placeholder)** → this is a new project.
-   Switch to **Scoping** below: interview the user; don't start writing code.
+   Read `references/scoping.md` and interview the user; don't start writing
+   code.
 3. **Spec exists** → read `astra.yaml` and `CLAUDE.md`, then check the
    directory is workable with `lc init --check --json`. If it reports
    anything to create or repair — which a fresh clone always will, since
@@ -188,90 +194,7 @@ Pick the mode per task, not once per session.
   and build iteratively instead.
 - **Keep `CLAUDE.md` current.** It carries the context that isn't in the spec
   and would be lost after `/clear` — update its Project Notes when
-  conversation produces durable context. After a long scoping session,
-  recommend `/clear`: everything needed to continue lives in `astra.yaml`
-  and `CLAUDE.md`.
-
-## Scoping a new project
-
-Scaffold first if needed: `lc init [DIR]` converges the directory into a
-standard project — `astra.yaml` placeholder, `universes/baseline.yaml`, a
-dependency-free `pyproject.toml`, `uv.lock`, `.venv`, git + git-annex +
-`.datalad/config`, `data/`, `results/`, and a MyST report skeleton
-(`myst.yml`, `index.md`). It is idempotent and never overwrites files you
-own — safe to re-run any time. It does **not** create `CLAUDE.md`; create
-one yourself. Then build the spec through conversation, updating
-`astra.yaml` after each phase. Announce each phase with a short stage
-banner so the user can follow.
-
-**You are a specification agent in this mode, not an implementation agent** —
-create or modify only `astra.yaml`, `universes/*`, and `CLAUDE.md`, and write
-no Python/R/implementation code until scoping is done.
-
-### 1. Research question
-
-> "What are you trying to learn? Describe the question in your own words."
-
-Sharpen it: what would a clear answer look like, and why does it matter?
-"Analyze this data" is not a research question — push back until it is. Set
-`name` in `astra.yaml`. (Leave the scaffolded `description` TODO for the
-finalize step — written too early it goes stale.)
-
-### 2. Analysis structure
-
-> "Walk me through your analysis step by step. What goes in, what comes out?"
-
-- **Default to a single analysis.** Split into sub-analyses only when each
-  part is genuinely a self-contained product with materially different
-  inputs and outputs (training + evaluation is usually *one* analysis — the
-  product is the validated estimator). The full splitting judgment is the
-  astra skill's; when a split does seem warranted, confirm the stage
-  boundaries with the user before restructuring.
-- **One output per output.** A single metric, a single plot, or a single
-  artifact each — never a bundle like "performance_metrics".
-
-Update `astra.yaml` with `inputs` and `outputs`.
-
-### 3. Literature deep dive (optional per section)
-
-Offer a literature pass; skip straight to decision identification if
-declined.
-
-- **Collect** — ask for papers the user already has in mind, search for a
-  *limited* set of directly relevant ones (~2 per topic, max 10 per
-  section), and present the list via `AskUserQuestion` with a one-line
-  relevance note each for the user to approve.
-- **Extract** — cache each approved paper with the astra skill's evidence
-  workflow, then spawn **one subagent per paper** (all in parallel) to read
-  the cached PDF and return candidate prior insights — verbatim quotes with
-  their locating context — and the decisions they might inform. Give each
-  subagent the analysis context, the paper's DOI and cached-PDF path, and
-  the target decisions. Never read a PDF in the main context — it consumes
-  too much of it. Write extracted insights to `astra.yaml` as they land and
-  synthesize by topic for the user.
-- **Identify decisions** — from conversation and literature: what could be
-  done differently and still be defensible? Where did papers disagree? Where
-  was the user uncertain? Probe the blind spots analysts neglect — data
-  exclusion, variable operationalization, inference criteria — not just
-  method choices. Write candidates to `astra.yaml` as a batch for review.
-- **Review** — confirm or set each decision's `default`; drop rejected ones.
-
-Every extracted quote must survive the astra skill's evidence verification
-before scoping is done — never fabricate one.
-
-### 4. Finalize
-
-1. Checkpoint: "Anything else that should inform this analysis?"
-2. Validate the spec per the astra skill — verifying evidence too, if any
-   was extracted — and iterate until clean.
-3. Generate only a `baseline` universe unless the user asks for more
-   (universe commands: astra skill).
-4. Replace the `description:` TODO with a short orientation paragraph now
-   that structure is stable.
-5. Fill `CLAUDE.md`'s Project Notes with conversation context that isn't in
-   the spec.
-6. Show a summary table (decisions / outputs / prior insights per section),
-   confirm with the user, and recommend `/clear` before implementation.
+  conversation produces durable context.
 
 ## Development workflow
 
@@ -302,9 +225,9 @@ Three overlapping phases:
    sweeping those into a commit gives them bytes with no run record — the
    foreign write this skill warns about, which lands the output as `stale`.
    Discard them instead; the dirty-tree refusal separates the two lists for
-   you. `lc materialize` refuses on a dirty tree, remakes
-   whatever is `stale` (dependencies included), and commits each output as
-   it lands. Bare `lc materialize` takes every output in every universe;
+   you. `lc materialize` refuses on a dirty tree, remakes whatever is
+   `stale` (dependencies included), and commits each output as it lands.
+   Bare `lc materialize` takes every output in every universe;
    `lc materialize fit` narrows to one output across universes;
    `lc materialize robust/fit` to one universe's output. Re-running is
    idempotent. Done when `lc materialize --check` passes (it exits 1 while
@@ -326,6 +249,9 @@ Outputs land at `results/<universe>/<output_id>/`, with the manifest at
 `<output_dir>/.lightcone-manifest.json`. A sub-analysis output uses its
 qualified id as the directory name: `results/<universe>/<sub>.<output_id>/`.
 
+When a recipe needs a system tool the environment doesn't have, the project
+can be containerized — see `references/diagnosis.md`.
+
 ### Spec–Code Invariant
 
 **`astra.yaml` must always reflect the code and vice versa.** When one
@@ -340,42 +266,6 @@ output's identity — **editing a script in `src/` does not, by itself, make
 its outputs `stale`.** When code changes should cascade, declare the script
 as one of the output's ASTRA `inputs:` so its content is part of the
 provenance.
-
-### Creating sub-analyses
-
-Each sub-analysis is just another `astra.yaml` nested in a directory:
-
-1. Create `analyses/<name>/` with its own `astra.yaml` (and optionally
-   `src/`, `universes/baseline.yaml`).
-2. Add a `path:` entry under the parent's `analyses:`
-   (`analyses: { my_sub: { path: ./analyses/my_sub } }`).
-3. Add `<name>: { universe: baseline }` to each existing parent universe
-   file.
-
-Wire inputs and decisions to the parent or siblings with `from:` references
-— the grammar is in the astra skill's spec reference.
-
-### Containerizing (when recipes need system tools)
-
-When a recipe needs more than Python packages (a system library, a compiler,
-`latex`…), declare a system layer in `pyproject.toml` — never write a
-Containerfile:
-
-```toml
-[tool.lightcone.image]
-base = "docker.io/library/debian@sha256:..."  # optional; must be digest-pinned
-apt-install = ["libfftw3-dev"]
-run-commands = ["curl -L ... | tar xz"]
-env = { OMP_NUM_THREADS = "1" }
-```
-
-Declaring the table switches the project to containerized mode: recipes run
-inside a content-addressed image that `lc build` builds and commits into
-the repository (`lc materialize` also builds it on demand; `lc run` never
-does — it asks for `lc build` first). Requires podman or docker
-(`podman-hpc` on NERSC). Confirm with the user before containerizing: it
-requires a runtime, the first build takes minutes, and every existing
-output goes `behind`.
 
 ## CLI reference
 
@@ -392,8 +282,8 @@ the `<universe>/<output>` target form), no `--force` (nothing suppresses or
 forces a rebuild; a `stale` output is always remade), no `--verbose`
 (`--json` is the machine form; notes go to stderr), no `lc verify` and no
 `lc export` (foreign writes are detected from git history, and the RO-Crate
-is maintained in-repo by `lc materialize` — see Publishing). Machine
-consumers use `--json`; the pass/fail gate is `lc materialize --check`.
+is maintained in-repo by `lc materialize`). Machine consumers use `--json`;
+the pass/fail gate is `lc materialize --check`.
 
 ## Status interpretation
 
@@ -418,96 +308,32 @@ Exactly three states:
 An engine (`lc`) upgrade invalidates nothing — the engine version is
 recorded in manifests but is not part of any output's identity.
 
-## Failure diagnosis
+When something refuses or fails, read `references/diagnosis.md`; every `lc`
+refusal carries its own remedy, and the two you will meet most are a dirty
+tree (commit your edits, discard stray `results/` files) and being outside
+the project root (`cd` there, and `lc init` in a fresh clone).
 
-`lc` refusals are designed to be pasted: each names the problem and carries
-its remedy — follow the remedy rather than working around it. The common
-ones:
+## Gotchas
 
-- **`uncommitted changes in ...`** — every materialization is committed
-  with the code that produced it. Commit your edits; the refusal itself
-  separates files to commit from stray `results/` files to discard.
-- **`... is not a Lightcone project`** — `lc` uses the invocation
-  directory; `cd` to the project root. In a fresh clone, run `lc init` once
-  to rebuild `.venv` and the annex.
-- **Recipe fails with `Permission denied` / `No module named ...`** — read
-  the sandbox note on stderr. `ModuleNotFoundError` → `uv add`, commit,
-  re-run. Reading outside the project → declare the path as an ASTRA
-  input. Writing outside `{output}` → write scratch files to
-  `tempfile.mkdtemp()` instead. A blocked system tool → `apt-install` in
-  `[tool.lightcone.image]`. Reproduce cheaply with `lc run <command>`.
-- **Everything `stale` after a spec edit** — the invalidation model
-  working; re-materialize. Everything `behind` after `uv add` — nothing
-  invalidated; `--refresh` only when the user wants remakes.
-- **`git-annex: command not found` during `git add`, or `fatal: clean
-  filter 'annex' failed`** — git-annex isn't reachable from the shell, so
-  the annex filter can't run. It ships with the engine, so this means the
-  install is broken or shadowed: check `lc --version` and `type git-annex`,
-  and have the user repair it with
-  `uv tool install --force lightcone-cli==0.5.0rc1`.
-  In a fresh clone, `lc init` is the other half of the answer — it restores
-  the annex settings the clone did not carry. Do not commit past this error
-  either way: without the filter, `git add` stages annexed files' raw bytes
-  into git history.
-- **`the content is not in this clone`** — annexed bytes not fetched.
-  `lc materialize` fetches declared inputs itself; `git annex get <path>`
-  only for bytes you want to inspect.
-- **Login-node refusal (NERSC etc.)** — `lc materialize` runs on compute
-  nodes; the refusal prints the center's own `salloc`/`sbatch` lines to
-  copy. `lc status`, `lc materialize --check`, `lc run`, and `lc build`
-  work anywhere. Inside a multi-node allocation the run spans nodes by
-  itself — there is no `--jobs` and nothing to configure.
-- **Containerized** — `image absent` → `lc build`; no runtime → ask the
-  user to install podman (or docker); architecture mismatch → build where
-  the architecture matches (e.g. a NERSC login node), commit, push.
+Facts that defy a reasonable assumption — the ones worth knowing before you
+trip over them:
 
-## Publishing
-
-The project itself is the publishable object — there is no export step.
-Declaring a license turns on the publication view:
-
-1. Add an SPDX `license` (e.g. `license = "CC-BY-4.0"`) under `[project]`
-   in `pyproject.toml`, and set authorship in the spec per the astra skill.
-2. Commit, then run `lc materialize` — nothing is remade; it converges
-   `ro-crate-metadata.json` (a Workflow/Provenance Run RO-Crate rendered
-   from repository state) and commits it. `lc status`'s `crate:` line says
-   whether the view is current.
-3. Gate: the astra skill's validation passes, `lc materialize --check`
-   passes, and `ro-crate-metadata.json` exists.
-4. Deposit is an archive of the repository: `git archive` (or
-   `datalad export-archive`), pushed to wherever the user publishes. A
-   durable copy of the bytes additionally needs `git push` and a
-   `git annex copy --to <remote>` — that second one is a git-annex command,
-   so walk the user through it rather than running it yourself.
-
-## Anti-patterns
-
-- **Re-interviewing on resume** — the spec and `CLAUDE.md` already answer
-  the scoping questions; summarize state and ask what's *next* instead.
-- **Skipping orientation** — acting before reading `astra.yaml` and running
-  `lc status` on an existing project.
-- **Writing code during scoping** — the spec comes first; implementation
-  starts after finalize.
-- **Waiting to write** — update `astra.yaml` as each decision crystallizes,
-  not in bulk at the end.
-- **Chat dumps** — decisions and findings belong in the file for review, not
-  pasted wholesale into the conversation.
-- **Reading PDFs in the main context** — always delegate paper extraction
-  to one subagent per paper.
-- **Skipping verification** — if quotes were extracted, run the astra
-  skill's evidence verification before calling scoping done.
-- **Bypassing `lc`** — direct scheduler/container/git-annex invocations,
-  hand-placed files in `results/`, or treating a probe run as a
-  materialized result.
-- **Working in an unconverged clone** — cloning carries neither the
-  environment nor the annex settings that keep `git add` honest; `lc init`
-  is the first command in a new clone, not an afterthought.
-- **Fighting the sandbox or the invalidation model** — a denial's remedy
-  (declare the input, the package, or the system tool) is the fix; there
-  is no `--force` and no sandbox opt-out, by design.
-- **`pip install` in any form** — the lock is the environment; use
+- **A probe run is not a result.** An output is not done until
+  `lc materialize` produces it, however well the script ran under `lc run`.
+- **Editing code does not invalidate outputs.** The recipe string is the
+  identity; declare a script as an ASTRA input when its changes should
+  cascade.
+- **`lc status` is a report, not a gate.** It always exits 0. The gate is
+  `lc materialize --check`.
+- **`behind` is not a problem.** An environment move is reported and left
+  alone by design; only `--refresh` remakes those.
+- **Never `git add -A` in a project.** It sweeps a probe's stray `results/`
+  files into a commit with no run record, which lands the output `stale`.
+- **A fresh clone needs `lc init`** before any git command touches it.
+- **`pip install` reaches nothing.** The lock is the environment; use
   `uv add`.
-- **Hardcoding decision values in scripts** — every decision is a CLI flag
-  wired through `{decisions.<id>}`.
-- **Running the whole DAG at once** — materialize one output at a time
-  while integrating.
+- **Don't re-interview on resume.** The spec and `CLAUDE.md` already answer
+  the scoping questions; summarize state and ask what's *next*.
+- **Don't fight the sandbox or the invalidation model.** A denial's remedy
+  (declare the input, the package, or the system tool) is the fix; there is
+  no `--force` and no sandbox opt-out, by design.
