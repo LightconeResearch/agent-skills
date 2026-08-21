@@ -14,6 +14,7 @@ included.
 | Plugin | What it provides |
 |---|---|
 | **[`astra`](astra.md)** | ASTRA authoring guidance and validation hooks. |
+| **`lightcone`** | Companion for a whole Lightcone project — scoping, the `lc` execution workflow, publishing. Bundles `astra`, so installing it alone gives the full stack. |
 
 ## Install
 

@@ -94,11 +94,22 @@ const jsonlUnder = (dir) =>
         .map((f) => join(dir, f))
     : [];
 
+// `CI` is dropped from every child so the suite's own environment does not
+// decide behaviour under test: the lightcone plugin's SessionStart hook reads
+// it as "nobody can be asked here" and tells the session to install
+// lightcone-cli itself. This is only half a guard — the Claude leg's sessions
+// are genuinely headless, so `claude` exports CLAUDE_CODE_ENTRYPOINT=sdk-cli
+// to its own hook children and that path is taken anyway (observed: the
+// session attempts `uv tool install lightcone-cli` and is refused by the
+// permission system). Anything relying on those sessions NOT mutating the
+// runner has to come from permissions, not from this scrub.
+const { CI: _ci, ...PARENT_ENV } = process.env;
+
 function run(bin, argv, { cwd, env = {}, timeout = 120_000, input } = {}) {
   const r = spawnSync(bin, argv, {
     cwd,
     encoding: "utf8",
-    env: { ...process.env, ...env },
+    env: { ...PARENT_ENV, ...env },
     input,
     timeout,
   });
