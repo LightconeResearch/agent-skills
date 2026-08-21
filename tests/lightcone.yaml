@@ -80,9 +80,12 @@ tests:
     expect_context: Lightcone project
     forbid_context:
       - did not report a version  # `lc` on PATH but broken or not the engine
-      # The runner strips CI from the harness env (see e2e-hooks.mjs) so these
-      # sessions take the interactive path. Seeing the autonomous remedy here
-      # would mean that scrub regressed — and on the Codex leg, which runs
-      # --sandbox danger-full-access, it is an instruction the session under
-      # test could actually carry out on the runner.
-      - No one can be asked
+    # Which remedy the hook names — ask a person, or act because none is
+    # there — is deliberately NOT asserted here. These are real headless
+    # sessions, so the Claude leg's own harness sets
+    # CLAUDE_CODE_ENTRYPOINT=sdk-cli for its hook children (the runner cannot
+    # override what the harness exports to its own children), and the hook
+    # correctly reports the autonomous remedy; Codex exports no such variable
+    # and correctly gets the interactive one. Asserting either way would fail
+    # one leg. Mode selection is covered offline in scripts/test-hooks.mjs,
+    # where the environment is controlled exactly.
