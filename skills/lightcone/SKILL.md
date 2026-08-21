@@ -48,6 +48,7 @@ its trigger applies:
 |---|---|
 | `references/scoping.md` | The project has no spec, or only `lc init`'s placeholder — you are about to interview the user |
 | `references/literature.md` | Scoping reaches the literature pass, or the user wants decisions grounded in published work |
+| `references/extraction-brief.md` | You are about to spawn the per-paper subagents — hand each one this file |
 | `references/diagnosis.md` | A command refuses, a recipe exits non-zero, or `lc status` says something unexpected |
 | `references/publishing.md` | The user wants to share, archive, deposit, or cite the analysis |
 

@@ -31,6 +31,8 @@ no Python/R/implementation code until scoping is done.
 
 ## 1. Research question
 
+Stage banner: **RESEARCH QUESTION**
+
 > "What are you trying to learn? Describe the question in your own words."
 
 Sharpen it: what would a clear answer look like, and why does it matter?
@@ -39,6 +41,8 @@ Sharpen it: what would a clear answer look like, and why does it matter?
 finalize step — written too early it goes stale.)
 
 ## 2. Analysis structure
+
+Stage banner: **ANALYSIS STRUCTURE**
 
 > "Walk me through your analysis step by step. What goes in, what comes out?"
 
@@ -55,6 +59,8 @@ Update `astra.yaml` with `inputs` and `outputs`.
 
 ## 3. Literature deep dive
 
+Stage banner: **DEEP DIVE — [SECTION NAME]**
+
 Optional per section. Offer a literature pass; skip straight to decision
 identification if declined. The full procedure — collecting papers,
 fanning out one subagent per paper, identifying and reviewing decisions —
@@ -65,17 +71,44 @@ before scoping is done — never fabricate one.
 
 ## 4. Finalize
 
+Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
+
 1. Checkpoint: "Anything else that should inform this analysis?"
 2. Validate the spec per the astra skill — verifying evidence too, if any
    was extracted — and iterate until clean.
 3. Generate only a `baseline` universe unless the user asks for more
    (universe commands: astra skill).
 4. Replace the `description:` TODO with a short orientation paragraph now
-   that structure is stable.
-5. Fill `CLAUDE.md`'s Project Notes with conversation context that isn't in
-   the spec.
-6. Show a summary table (decisions / outputs / prior insights per section),
-   confirm with the user, and recommend `/clear` before implementation.
+   that structure is stable — what the analysis is and how its pieces fit
+   together. Keep it brief; per-element prose belongs on each input, output,
+   decision and option.
+5. **Repoint the report.** `lc init` scaffolds `index.md` against the
+   *placeholder* spec: it references `decisions.example_method` (both an
+   inline `{astra}` mention and an `:::{astra}` block) and
+   `outputs.main_result`. Those ids no longer exist once scoping has
+   replaced the boilerplate, and a MyST build fails on them. Swap them for
+   one representative top-level decision id and one representative
+   top-level output id from the finished spec. **Only the reference ids** —
+   leave the TODO narrative under Introduction / Methods / Results for the
+   user to write.
+6. Write `CLAUDE.md`. It carries what the spec cannot: how to work in this
+   project, and the conversation context that would be lost after `/clear`.
+   A useful one has a short orientation paragraph (what the analysis is,
+   where the spec lives), the handful of commands this project actually uses
+   day to day, and a `## Project Notes` section holding the scoping
+   outcome — constraints the user mentioned, avenues considered and
+   rejected, data quirks. The spec stays the source of truth for structure,
+   decisions and evidence; don't restate it here.
+7. Show a summary table, confirm with the user, and recommend `/clear`
+   before implementation — everything needed to continue is now in
+   `astra.yaml` and `CLAUDE.md`.
+
+   ```
+   | Section      | Decisions | Outputs | Prior insights |
+   |--------------|-----------|---------|----------------|
+   | (top-level)  | 3         | 2       | 5              |
+   | sub_analysis | 2         | 1       | 0              |
+   ```
 
 ## Creating sub-analyses
 
