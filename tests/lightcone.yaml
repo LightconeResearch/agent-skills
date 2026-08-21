@@ -49,8 +49,13 @@ tests:
     prompt: "Reply with exactly: OK"
     expect_context: E2E fixture
     forbid_context:
-      - Could not run       # `astra info` failed
-      - is not installed    # uv missing on the runner
+      - Could not run                # `astra info` failed
+      # Scoped to uv on purpose: lightcone's own SessionStart hook injects
+      # into this same trace, and "The Lightcone engine is not installed" is
+      # its CORRECT output on a runner that has no `lc`. A bare "is not
+      # installed" marker would fail on it.
+      # (uv missing on the runner)
+      - "`uv` is not installed"
 
   - name: validate-on-save
     event: PostToolUse
@@ -68,12 +73,16 @@ tests:
   # lightcone's own SessionStart hook, merged alongside astra's. The engine
   # state it reports is host-dependent (absent / too old / ready), so assert
   # only on the framing every branch emits, and forbid the shapes that mean
-  # the hook misfired: a bare `lc` that is not the engine, and — whatever it
-  # found — any suggestion that it installed or upgraded something itself.
+  # something went wrong.
   - name: engine-preflight
     event: SessionStart
     prompt: "Reply with exactly: OK"
     expect_context: Lightcone project
     forbid_context:
-      - did not report a version   # `lc` on PATH but broken or not the engine
-      - Installed lightcone-cli    # the hook must never install anything
+      - did not report a version  # `lc` on PATH but broken or not the engine
+      # The runner strips CI from the harness env (see e2e-hooks.mjs) so these
+      # sessions take the interactive path. Seeing the autonomous remedy here
+      # would mean that scrub regressed — and on the Codex leg, which runs
+      # --sandbox danger-full-access, it is an instruction the session under
+      # test could actually carry out on the runner.
+      - No one can be asked

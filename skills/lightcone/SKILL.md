@@ -277,8 +277,13 @@ Three overlapping phases:
    Everything a command references must be listed in that output's
    `inputs:` / `decisions:` lists — dependencies between outputs come from
    `inputs:` declarations.
-3. **Materialize** — commit your edits (`git add -A && git commit`), then
-   `lc materialize [TARGETS...]`. It refuses on a dirty tree, remakes
+3. **Materialize** — commit your own edits, then `lc materialize
+   [TARGETS...]`. Commit by path (`git add src/ astra.yaml && git commit`),
+   never `git add -A`: a probe may have left files under `results/`, and
+   sweeping those into a commit gives them bytes with no run record — the
+   foreign write this skill warns about, which lands the output as `stale`.
+   Discard them instead; the dirty-tree refusal separates the two lists for
+   you. `lc materialize` refuses on a dirty tree, remakes
    whatever is `stale` (dependencies included), and commits each output as
    it lands. Bare `lc materialize` takes every output in every universe;
    `lc materialize fit` narrows to one output across universes;
@@ -449,8 +454,9 @@ Declaring a license turns on the publication view:
    passes, and `ro-crate-metadata.json` exists.
 4. Deposit is an archive of the repository: `git archive` (or
    `datalad export-archive`), pushed to wherever the user publishes. A
-   durable copy of the data is `git push` plus `git annex copy --to
-   <remote>` — offer to help set that up.
+   durable copy of the bytes additionally needs `git push` and a
+   `git annex copy --to <remote>` — that second one is a git-annex command,
+   so walk the user through it rather than running it yourself.
 
 ## Anti-patterns
 

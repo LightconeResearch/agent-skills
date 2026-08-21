@@ -1,7 +1,8 @@
 # Live end-to-end hook-dispatch tests (scripts/e2e-hooks.mjs): install the
-# marketplace + astra plugin into throwaway config homes for Claude Code and
-# Codex, run real headless sessions, and assert the plugin hooks actually fire
-# (SessionStart and PostToolUse), observed through a stubbed `uvx` sentinel.
+# marketplace and one plugin per spec (astra, lightcone) into throwaway config
+# homes for Claude Code and Codex, run real headless sessions, and assert the
+# plugin hooks actually fire (SessionStart and PostToolUse), observed through a
+# stubbed `uvx` sentinel.
 #
 # Auth comes from two repository secrets:
 #   CLAUDE_CODE_OAUTH_TOKEN — Claude Code leg (headless `claude -p`). Already
@@ -26,7 +27,10 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Two specs x two harnesses, each spec now up to 3 tests and one of them
+    # retried up to 3 times, every session capped at 300s — worst case grew
+    # well past the original 25.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 

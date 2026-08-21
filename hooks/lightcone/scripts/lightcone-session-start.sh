@@ -84,6 +84,14 @@ if [ $rc -ne 0 ] || [ -z "$found" ] || [ "$found" = "$version_line" ]; then
     exit 0
 fi
 
+# Past this point the version is spliced into the JSON envelope, and it came
+# from whatever binary answered to `lc` — so keep it to characters a version
+# can be made of. An unescaped quote or backslash would produce a line that
+# does not parse, which the harness drops silently: the hook would look like
+# it never fired, in exactly the case (a foreign `lc`) it exists to report.
+found="${found//[^A-Za-z0-9._+:-]/}"
+[ -n "$found" ] || { emit "\`lc\` is on PATH but reported no readable version — the install is broken, or that \`lc\` is not the Lightcone engine. $repair_remedy"; exit 0; }
+
 # Version floor. `lc --version` can report a dev build (0.5.0.dev4+g4fa2d1b4e),
 # so compare on the release part alone: strip the local segment, then the .devN
 # suffix. `sort -V` is not PEP 440 aware — it reads 0.5.0.dev4 as NEWER than

@@ -200,6 +200,74 @@ try {
   assertSilent("session/elsewhere", run("astra-session-start.sh", "{}", {}, scratch), before);
 
   console.log("✓ ASTRA hook shims: prefilter, uvx delegation, and JSON splicing all behave.");
+
+  // --- lightcone engine preflight -----------------------------------------
+  // The PACKAGED copy is under test, not the canonical one: the version floor
+  // arrives by pin substitution, so only the packaged script carries a real
+  // number to compare against. `npm test` fails on drift between the two, so
+  // testing the generated copy still tests the source.
+  //
+  // Versions are chosen relative to the floor without arithmetic: 0.0.1 is
+  // below any floor, 999.0.0 above any, and "<floor>.dev1" is the floor's own
+  // pre-release — the case `sort -V` gets backwards.
+  const lcScript = join(ROOT, "plugins/lightcone/hooks/scripts/lightcone-session-start.sh");
+  const floor = JSON.parse(readFileSync(join(ROOT, "skills.config.json"), "utf8")).plugins.find(
+    (p) => p.name === "lightcone",
+  ).tools["lightcone-cli"];
+  const lcBin = join(scratch, "lc-bin");
+  mkdirSync(lcBin);
+  const lcPath = join(lcBin, "lc");
+
+  // No ...process.env: a real CI= or CLAUDE_CODE_ENTRYPOINT= in the ambient
+  // environment would otherwise decide the mode these cases are asserting.
+  function runLc({ version, env = {}, cwd = project } = {}) {
+    if (version === undefined) rmSync(lcPath, { force: true });
+    else if (version === "broken") writeFileSync(lcPath, "#!/bin/sh\nexit 127\n", { mode: 0o755 });
+    // Single-quoted in sh so a version carrying " or \ reaches the hook
+    // intact instead of being eaten by the fake's own quoting.
+    else writeFileSync(lcPath, `#!/bin/sh\nprintf '%s\\n' 'lc, version ${version}'\n`, { mode: 0o755 });
+    const r = spawnSync("bash", [lcScript], {
+      cwd,
+      encoding: "utf8",
+      input: "{}",
+      env: { PATH: `${lcBin}:/usr/bin:/bin`, ...env },
+    });
+    if (r.status !== 0) throw new Error(`lightcone hook: exited ${r.status}\n${r.stdout}${r.stderr}`);
+    return r.stdout;
+  }
+  const lcContext = (label, opts) => parsedContext(label, runLc(opts), "SessionStart");
+  const TUI = { CLAUDE_CODE_ENTRYPOINT: "cli" };
+  const HEADLESS = { CLAUDE_CODE_ENTRYPOINT: "sdk-cli" };
+
+  // Outside a Lightcone project → silent, whatever the engine state.
+  if (runLc({ version: floor, cwd: scratch }) !== "")
+    throw new Error("lightcone/elsewhere: expected no output");
+
+  // Engine state.
+  assertIncludes("lc/absent", lcContext("lc/absent", { env: TUI }), "is not installed");
+  assertIncludes("lc/broken", lcContext("lc/broken", { version: "broken", env: TUI }), "not the Lightcone engine");
+  assertIncludes("lc/old", lcContext("lc/old", { version: "0.0.1", env: TUI }), `older than the ${floor}`);
+  assertIncludes("lc/ready", lcContext("lc/ready", { version: floor, env: TUI }), "Engine ready");
+  assertIncludes("lc/newer", lcContext("lc/newer", { version: "999.0.0", env: TUI }), "Engine ready");
+  // The floor's own pre-release precedes it — `sort -V` reads it as newer.
+  assertIncludes(
+    "lc/dev-of-floor",
+    lcContext("lc/dev-of-floor", { version: `${floor}.dev1+gabc123`, env: TUI }),
+    `older than the ${floor}`,
+  );
+
+  // Mode: ask where a person is, act where none can be, and default to
+  // asking when the launcher is unrecognized.
+  assertIncludes("lc/tui", lcContext("lc/tui", { env: TUI }), "Ask the user");
+  assertIncludes("lc/headless", lcContext("lc/headless", { env: HEADLESS }), "No one can be asked");
+  assertIncludes("lc/ci", lcContext("lc/ci", { env: { ...TUI, CI: "true" } }), "No one can be asked");
+  assertIncludes("lc/unknown-harness", lcContext("lc/unknown-harness", { env: {} }), "Ask the user");
+
+  // A foreign `lc` whose version carries JSON metacharacters must not break
+  // the envelope — parsedContext throws if the line no longer parses.
+  lcContext("lc/hostile-version", { version: '1.0"x\\y', env: TUI });
+
+  console.log("✓ lightcone preflight: engine states, version floor, and ask/act mode all behave.");
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

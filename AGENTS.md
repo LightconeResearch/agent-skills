@@ -3,8 +3,9 @@
 This repository is the **source of truth for the Lightcone Research agent skills**.
 It is not an application — it packages `SKILL.md`-based skills for three install
 targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
-from a single canonical source. One plugin: `astra` (spec reference). Plugin
-skills are namespaced by plugin name (e.g. `/astra:astra`).
+from a single canonical source. Two plugins: `astra` (spec reference) and
+`lightcone` (project companion, which bundles `astra`). Plugin skills are
+namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 
 ## Where things live
 
