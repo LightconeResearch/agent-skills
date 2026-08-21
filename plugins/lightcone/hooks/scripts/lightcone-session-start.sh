@@ -10,9 +10,10 @@
 # Three deliberate constraints:
 #   - It only speaks inside a Lightcone project (./astra.yaml). A plugin that
 #     announces itself in unrelated repositories is noise, not help.
-#   - It NEVER installs anything. A hook runs without a permission prompt, so
-#     an install here would mutate the user's machine with no moment of
-#     consent. It reports; the skill asks; the user decides.
+#   - It NEVER installs anything itself. A hook runs without a permission
+#     prompt, so an install here would mutate the user's machine with no
+#     moment of consent. It reports; the agent acts; who consents depends on
+#     whether anyone is there to consent (see the mode probe below).
 #   - The floor version comes from the bundling plugin's `tools` pin in
 #     skills.config.json: canonical sources write the lightcone-cli==0.5.0
 #     placeholder and `npm run build` substitutes the pin into the packaged
@@ -41,12 +42,35 @@ cat >/dev/null # consume the payload; everything needed comes from the cwd
 required_spec="lightcone-cli==0.5.0"
 required="${required_spec##*==}"
 
+# Is anyone there to answer? A headless run (`claude -p`, an SDK embed, CI)
+# has nobody to ask, and a question there only stalls the run — so it acts and
+# reports instead. The default leans the cautious way on purpose: assume a
+# human is present unless something positively says otherwise, because a
+# needless question costs a stalled task while a needless install puts
+# software on somebody's machine they never agreed to.
+# Verified: the interactive TUI sets CLAUDE_CODE_ENTRYPOINT=cli, `claude -p`
+# sets sdk-cli. An unset value means a harness we don't know (Codex, say),
+# where a human is the safer assumption.
+autonomous=0
+case "${CLAUDE_CODE_ENTRYPOINT:-}" in sdk-*) autonomous=1 ;; esac
+[ -n "${CI:-}" ] && autonomous=1
+
+if [ "$autonomous" -eq 1 ]; then
+    install_remedy="No one can be asked in this session, so do it: run \`uv tool install lightcone-cli\`, then say in your final message that you installed it."
+    upgrade_remedy="No one can be asked in this session, so do it: run \`uv tool upgrade lightcone-cli\`, then say in your final message that you upgraded it."
+    repair_remedy="No one can be asked in this session, so do it: run \`uv tool install --force lightcone-cli\`, then say in your final message that you repaired the install."
+else
+    install_remedy="Ask the user whether to install it with \`uv tool install lightcone-cli\`, and wait for an answer. Never install it unasked."
+    upgrade_remedy="Ask the user whether to upgrade with \`uv tool upgrade lightcone-cli\`, and wait for an answer. Never upgrade it unasked."
+    repair_remedy="Ask the user whether to repair it with \`uv tool install --force lightcone-cli\`, and wait for an answer."
+fi
+
 emit() { # $1: the engine-state paragraph
     printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Lightcone project — the execution layer for ./astra.yaml\\n%s\\nActivate the lightcone skill to work on this project.\\n"}}\n' "$1"
 }
 
 if ! command -v lc &>/dev/null; then
-    emit "The Lightcone engine is not installed, so nothing here can be materialized, published, or diagnosed — \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. Ask the user whether to install it with \`uv tool install lightcone-cli\` (this also puts \`git-annex\` on PATH, which their own \`git add\` needs in a Lightcone project). Never install it without asking."
+    emit "The Lightcone engine is not installed, so nothing here can be materialized, published, or diagnosed — \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. The install also puts \`git-annex\` on PATH, which the user's own \`git add\` needs in a Lightcone project. $install_remedy"
     exit 0
 fi
 
@@ -56,7 +80,7 @@ rc=$?
 found="${version_line##* }"
 
 if [ $rc -ne 0 ] || [ -z "$found" ] || [ "$found" = "$version_line" ]; then
-    emit "\`lc\` is on PATH but \`lc --version\` did not report a version (exit $rc) — the install is broken or is not the Lightcone engine. Ask the user to repair it with \`uv tool install --force lightcone-cli\`."
+    emit "\`lc\` is on PATH but \`lc --version\` did not report a version (exit $rc) — the install is broken, or that \`lc\` is not the Lightcone engine. $repair_remedy"
     exit 0
 fi
 
@@ -70,7 +94,7 @@ base="${core%%.dev*}"
 oldest=$(printf '%s\n%s\n' "$required" "$base" | sort -V | head -n1)
 if { [ "$base" != "$required" ] && [ "$oldest" = "$base" ]; } ||
    { [ "$base" = "$required" ] && [ "$base" != "$core" ]; }; then
-    emit "The installed Lightcone engine is $found, older than the $required this skill is written against — its verbs and status vocabulary have changed, so following the skill against $found will produce errors. Ask the user whether to upgrade with \`uv tool upgrade lightcone-cli\`. Never upgrade it without asking."
+    emit "The installed Lightcone engine is $found, older than the $required this skill is written against — its verbs and status vocabulary have changed, so following the skill against $found will produce errors rather than results. $upgrade_remedy"
     exit 0
 fi
 

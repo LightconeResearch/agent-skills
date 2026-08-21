@@ -58,18 +58,35 @@ the repository routes large files through the annex filter.
 lc --version            # this skill assumes lightcone-cli==x.y.z or newer
 ```
 
-- **Not installed** — say what that costs and ask before acting: nothing in
-  the project can be materialized, published, or diagnosed until the engine
-  is there. Offer to run `uv tool install lightcone-cli` for them, and wait
-  for an answer. **Never install it unasked** — it puts software on the
-  user's machine, not just in this project.
+- **Not installed** — nothing in the project can be materialized,
+  published, or diagnosed until the engine is there. Remedy:
+  `uv tool install lightcone-cli`.
 - **Older than the version above** — the verbs and status vocabulary
   changed in the rebuild, so following this skill against an older engine
-  produces errors rather than results. Ask whether to run
+  produces errors rather than results. Remedy:
   `uv tool upgrade lightcone-cli`.
-- **`lc` missing after an install** — uv puts it in `~/.local/bin`; have
-  the user run `uv tool update-shell` (or check for a shell alias shadowing
-  `lc` with `type lc`).
+- **`lc` missing right after an install** — uv puts it in `~/.local/bin`;
+  have the user run `uv tool update-shell` (or check for a shell alias
+  shadowing `lc` with `type lc`).
+
+**Who runs that remedy depends on whether anyone is there to ask.** The
+session-start hook works this out and says which case you are in; when it
+hasn't spoken, judge it yourself:
+
+- **A person is in the session** — say what the missing engine costs, offer
+  to run the command, and wait for an answer. **Never install or upgrade
+  unasked**: it puts software on the user's machine, not just in this
+  project, and they may be running other projects against the version
+  they have.
+- **Nobody is** (a headless `claude -p` run, a scheduled job, CI) — a
+  question there is answered by no one, so asking only strands the run.
+  Run the remedy directly, and state plainly in your final message what you
+  changed on the machine. If permissions refuse the command, say that the
+  engine is missing and name what to allow, rather than working around it.
+
+Some things stay the user's in **either** mode, because no one else can do
+them: setting their git identity, and any step that needs a browser sign-in
+or a credential. Those stop the work and get reported, never automated.
 
 When unsure of a command's syntax, discover it with `--help` rather than
 guessing. The `astra` CLI is invoked differently — through a pinned `uvx`
