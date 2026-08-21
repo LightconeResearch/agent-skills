@@ -44,13 +44,19 @@ Wherever this document says "validate the spec", "cache a paper", or
 The engine is a tool the user installs once, on their machine:
 
 ```bash
-uv tool install lightcone-cli
+uv tool install lightcone-cli==x.y.z
 ```
 
 That single install is the whole setup. It puts `lc` on PATH for you *and*
 for the user's own terminal and batch scripts, and it carries `git-annex`
 with it — which their plain `git add` needs in a Lightcone project, since
 the repository routes large files through the annex filter.
+
+**Name the version, exactly as written above.** It is the engine this skill
+was written against, so the install does not depend on what the index
+currently calls latest — and while the release line is a pre-release, a
+bare `uv tool install lightcone-cli` quietly resolves to an *older* stable
+release instead.
 
 **Check before driving it, and check the version, not just the presence:**
 
@@ -60,11 +66,12 @@ lc --version            # this skill assumes lightcone-cli==x.y.z or newer
 
 - **Not installed** — nothing in the project can be materialized,
   published, or diagnosed until the engine is there. Remedy:
-  `uv tool install lightcone-cli`.
+  `uv tool install lightcone-cli==x.y.z`.
 - **Older than the version above** — the verbs and status vocabulary
   changed in the rebuild, so following this skill against an older engine
-  produces errors rather than results. Remedy:
-  `uv tool upgrade lightcone-cli`.
+  produces errors rather than results. Remedy: the same command; it
+  replaces an older install in place. (Not `uv tool upgrade`, which will
+  not move onto a pre-release.) A *newer* engine is fine and needs nothing.
 - **`lc` missing right after an install** — uv puts it in `~/.local/bin`;
   have the user run `uv tool update-shell` (or check for a shell alias
   shadowing `lc` with `type lc`).
@@ -436,7 +443,8 @@ ones:
   filter 'annex' failed`** — git-annex isn't reachable from the shell, so
   the annex filter can't run. It ships with the engine, so this means the
   install is broken or shadowed: check `lc --version` and `type git-annex`,
-  and have the user repair it with `uv tool install --force lightcone-cli`.
+  and have the user repair it with
+  `uv tool install --force lightcone-cli==x.y.z`.
   In a fresh clone, `lc init` is the other half of the answer — it restores
   the annex settings the clone did not carry. Do not commit past this error
   either way: without the filter, `git add` stages annexed files' raw bytes

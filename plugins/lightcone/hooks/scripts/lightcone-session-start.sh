@@ -15,7 +15,7 @@
 #     moment of consent. It reports; the agent acts; who consents depends on
 #     whether anyone is there to consent (see the mode probe below).
 #   - The floor version comes from the bundling plugin's `tools` pin in
-#     skills.config.json: canonical sources write the lightcone-cli==0.5.0
+#     skills.config.json: canonical sources write the lightcone-cli==0.5.0rc1
 #     placeholder and `npm run build` substitutes the pin into the packaged
 #     copies. Nothing here is a number a contributor should hand-edit.
 #
@@ -39,7 +39,7 @@ cat >/dev/null # consume the payload; everything needed comes from the cwd
 [ -f astra.yaml ] || exit 0
 
 # The `==` form is what the pin substitution rewrites; the floor is its tail.
-required_spec="lightcone-cli==0.5.0"
+required_spec="lightcone-cli==0.5.0rc1"
 required="${required_spec##*==}"
 
 # Is anyone there to answer? A headless run (`claude -p`, an SDK embed, CI)
@@ -56,13 +56,13 @@ case "${CLAUDE_CODE_ENTRYPOINT:-}" in sdk-*) autonomous=1 ;; esac
 [ -n "${CI:-}" ] && autonomous=1
 
 if [ "$autonomous" -eq 1 ]; then
-    install_remedy="No one can be asked in this session, so do it: run \`uv tool install lightcone-cli\`, then say in your final message that you installed it."
-    upgrade_remedy="No one can be asked in this session, so do it: run \`uv tool upgrade lightcone-cli\`, then say in your final message that you upgraded it."
-    repair_remedy="No one can be asked in this session, so do it: run \`uv tool install --force lightcone-cli\`, then say in your final message that you repaired the install."
+    install_remedy="No one can be asked in this session, so do it: run \`uv tool install $required_spec\`, then say in your final message that you installed it."
+    upgrade_remedy="No one can be asked in this session, so do it: run \`uv tool install $required_spec\` (which replaces the older install), then say in your final message that you upgraded it."
+    repair_remedy="No one can be asked in this session, so do it: run \`uv tool install --force $required_spec\`, then say in your final message that you repaired the install."
 else
-    install_remedy="Ask the user whether to install it with \`uv tool install lightcone-cli\`, and wait for an answer. Never install it unasked."
-    upgrade_remedy="Ask the user whether to upgrade with \`uv tool upgrade lightcone-cli\`, and wait for an answer. Never upgrade it unasked."
-    repair_remedy="Ask the user whether to repair it with \`uv tool install --force lightcone-cli\`, and wait for an answer."
+    install_remedy="Ask the user whether to install it with \`uv tool install $required_spec\`, and wait for an answer. Never install it unasked."
+    upgrade_remedy="Ask the user whether to run \`uv tool install $required_spec\`, which replaces the older install, and wait for an answer. Never upgrade it unasked."
+    repair_remedy="Ask the user whether to repair it with \`uv tool install --force $required_spec\`, and wait for an answer."
 fi
 
 emit() { # $1: the engine-state paragraph

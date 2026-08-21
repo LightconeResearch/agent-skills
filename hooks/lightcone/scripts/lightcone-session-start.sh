@@ -56,13 +56,13 @@ case "${CLAUDE_CODE_ENTRYPOINT:-}" in sdk-*) autonomous=1 ;; esac
 [ -n "${CI:-}" ] && autonomous=1
 
 if [ "$autonomous" -eq 1 ]; then
-    install_remedy="No one can be asked in this session, so do it: run \`uv tool install lightcone-cli\`, then say in your final message that you installed it."
-    upgrade_remedy="No one can be asked in this session, so do it: run \`uv tool upgrade lightcone-cli\`, then say in your final message that you upgraded it."
-    repair_remedy="No one can be asked in this session, so do it: run \`uv tool install --force lightcone-cli\`, then say in your final message that you repaired the install."
+    install_remedy="No one can be asked in this session, so do it: run \`uv tool install $required_spec\`, then say in your final message that you installed it."
+    upgrade_remedy="No one can be asked in this session, so do it: run \`uv tool install $required_spec\` (which replaces the older install), then say in your final message that you upgraded it."
+    repair_remedy="No one can be asked in this session, so do it: run \`uv tool install --force $required_spec\`, then say in your final message that you repaired the install."
 else
-    install_remedy="Ask the user whether to install it with \`uv tool install lightcone-cli\`, and wait for an answer. Never install it unasked."
-    upgrade_remedy="Ask the user whether to upgrade with \`uv tool upgrade lightcone-cli\`, and wait for an answer. Never upgrade it unasked."
-    repair_remedy="Ask the user whether to repair it with \`uv tool install --force lightcone-cli\`, and wait for an answer."
+    install_remedy="Ask the user whether to install it with \`uv tool install $required_spec\`, and wait for an answer. Never install it unasked."
+    upgrade_remedy="Ask the user whether to run \`uv tool install $required_spec\`, which replaces the older install, and wait for an answer. Never upgrade it unasked."
+    repair_remedy="Ask the user whether to repair it with \`uv tool install --force $required_spec\`, and wait for an answer."
 fi
 
 emit() { # $1: the engine-state paragraph
