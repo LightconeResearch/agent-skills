@@ -60,12 +60,14 @@ Two more things `lc materialize` requires up front:
 
 - **A git committer identity.** If missing, have the user set
   `git config --global user.name` / `user.email`.
-- **`git-annex` on PATH for your own git commands.** The pinned `lc`
-  environment bundles it for lc's use, but plain `git add`/`git commit` in
-  a Lightcone project run the git-annex filter too. If git fails with a
-  git-annex filter error, install the CLI as a host tool (same pin):
-  `uv tool install "lightcone-cli @ git+https://github.com/LightconeResearch/lightcone-cli@x.y.z"`
-  — it puts both `lc` and `git-annex` on PATH.
+- **Annex plumbing pinned into the repo.** Plain `git add`/`git commit` in
+  a Lightcone project invoke git-annex through the repo's filter config and
+  hooks. git-annex does not need to be on PATH — pin the invocation into
+  the repo itself (see **Pin the annex plumbing** below) immediately after
+  every `lc init`. Until that's done, a missing git-annex makes `git add`
+  exit 0 while printing `git-annex: command not found` and staging annexed
+  files' raw bytes into git history — treat that error as a hard stop,
+  never commit past it.
 
 ## The project model
 
@@ -87,6 +89,34 @@ Two more things `lc materialize` requires up front:
   bytes you want to inspect); never write into `results/` by hand; never
   commit outputs yourself — `lc materialize` commits each output with a
   run record that `datalad rerun` can replay.
+
+### Pin the annex plumbing (run after every `lc init`)
+
+git-annex serves the repo through git's filter config and four hooks,
+which `git annex init` writes assuming `git-annex` is on PATH. Keep the
+whole toolchain uvx-only by converging them to the pinned invocation —
+idempotent, a no-op once applied:
+
+```bash
+LC_ANNEX="uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z git-annex"
+git config filter.annex.process "$LC_ANNEX filter-process"
+git config filter.annex.required true
+for h in .git/hooks/pre-commit .git/hooks/post-checkout .git/hooks/post-merge .git/hooks/post-receive; do
+  [ -f "$h" ] || continue
+  sed "s|git annex |$LC_ANNEX |g" "$h" > "$h.tmp" && mv "$h.tmp" "$h" && chmod +x "$h"
+done
+```
+
+With this in place, plain `git add` / `git commit` work for you and for
+the user's own terminal alike, with uv as the machine's only prerequisite;
+`required=true` turns a missing filter into a hard
+`fatal: clean filter 'annex' failed` instead of git silently staging
+annexed bytes into history (the remedy is re-running this snippet). Run it
+after every `lc init` — a fresh clone included, since `.git/config` and
+hooks are local state that doesn't travel with the repository. In the rare
+case this document says to run `git annex <cmd>` yourself, spell it with
+the same pinned prefix:
+`uvx --from git+https://github.com/LightconeResearch/lightcone-cli@x.y.z git-annex <cmd>`.
 
 ## Orient before anything else
 
@@ -152,7 +182,8 @@ dependency-free `pyproject.toml`, `uv.lock`, `.venv`, git + git-annex +
 `.datalad/config`, `data/`, `results/`, and a MyST report skeleton
 (`myst.yml`, `index.md`). It is idempotent and never overwrites files you
 own — safe to re-run any time. It does **not** create `CLAUDE.md`; create
-one yourself. Then build the spec through conversation, updating
+one yourself. Follow it with the annex-plumbing snippet (see **Pin the
+annex plumbing** above). Then build the spec through conversation, updating
 `astra.yaml` after each phase. Announce each phase with a short stage
 banner so the user can follow.
 
@@ -386,6 +417,10 @@ ones:
 - **Everything `stale` after a spec edit** — the invalidation model
   working; re-materialize. Everything `behind` after `uv add` — nothing
   invalidated; `--refresh` only when the user wants remakes.
+- **`git-annex: command not found` during `git add` (exit 0!), or
+  `fatal: clean filter 'annex' failed`** — the repo's annex plumbing isn't
+  pinned (or drifted). Re-run the **Pin the annex plumbing** snippet; in
+  the exit-0 form, `git reset` anything it staged before retrying.
 - **`the content is not in this clone`** — annexed bytes not fetched.
   `lc materialize` fetches declared inputs itself; `git annex get <path>`
   only for bytes you want to inspect.
