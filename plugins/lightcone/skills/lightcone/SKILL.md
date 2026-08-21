@@ -116,6 +116,15 @@ the user set `git config --global user.name` / `user.email`.
   bytes you want to inspect); never write into `results/` by hand; never
   commit outputs yourself — `lc materialize` commits each output with a
   run record that `datalad rerun` can replay.
+- **A fresh clone is not yet a working project.** Some of what a project
+  needs lives in `.git/` and the working tree, which cloning does not
+  carry: the annex initialization, the filter settings and hooks that route
+  large files, and the `.venv`. **Run `lc init` once in a new clone**,
+  before anything else touches the repository. Until then a plain `git add`
+  can stage annexed files' raw bytes into history instead of pointers, and
+  recipes have no environment to run in. `lc init` is idempotent and
+  repairs only what it manages, so re-running it in a clone you are unsure
+  about costs nothing.
 
 ## Orient before anything else
 
@@ -126,7 +135,10 @@ where the project is, then match how you engage:
 2. **No spec (or a freshly scaffolded placeholder)** → this is a new project.
    Switch to **Scoping** below: interview the user; don't start writing code.
 3. **Spec exists** → read `astra.yaml` and `CLAUDE.md`, then check the
-   directory is workable with `lc init --check --json` and read
+   directory is workable with `lc init --check --json`. If it reports
+   anything to create or repair — which a fresh clone always will, since
+   the environment and the annex plumbing never travel with one — run
+   `lc init` to converge it before doing anything else. Then read
    `lc status` (for a large spec, the astra skill's CLI reference has an
    `info` command that summarizes structure). Do **not** re-interview the
    user about things the spec already answers.
@@ -425,8 +437,10 @@ ones:
   the annex filter can't run. It ships with the engine, so this means the
   install is broken or shadowed: check `lc --version` and `type git-annex`,
   and have the user repair it with `uv tool install --force lightcone-cli`.
-  Do not commit past this error — without the filter, `git add` can stage
-  annexed files' raw bytes into git history.
+  In a fresh clone, `lc init` is the other half of the answer — it restores
+  the annex settings the clone did not carry. Do not commit past this error
+  either way: without the filter, `git add` stages annexed files' raw bytes
+  into git history.
 - **`the content is not in this clone`** — annexed bytes not fetched.
   `lc materialize` fetches declared inputs itself; `git annex get <path>`
   only for bytes you want to inspect.
@@ -477,6 +491,9 @@ Declaring a license turns on the publication view:
 - **Bypassing `lc`** — direct scheduler/container/git-annex invocations,
   hand-placed files in `results/`, or treating a probe run as a
   materialized result.
+- **Working in an unconverged clone** — cloning carries neither the
+  environment nor the annex settings that keep `git add` honest; `lc init`
+  is the first command in a new clone, not an afterthought.
 - **Fighting the sandbox or the invalidation model** — a denial's remedy
   (declare the input, the package, or the system tool) is the fix; there
   is no `--force` and no sandbox opt-out, by design.
