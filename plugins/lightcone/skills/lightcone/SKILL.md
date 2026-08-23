@@ -75,9 +75,10 @@ release instead.
 **Before driving `lc`, know it is present and new enough.** There are two
 ways to know that, and the cheap one is often already done for you:
 
-- **You have seen `Engine ready: lc <version>` in this session.** That is
-  this exact check, already run by the plugin's session-start hook. Take it
-  and move on — **don't spend a round trip repeating `lc --version`.**
+- **You have seen `Lightcone CLI ready: lc <version>` in this session.**
+  That is this exact check, already run by the plugin's session-start hook.
+  Take it and move on — **don't spend a round trip repeating
+  `lc --version`.**
 - **You have seen the hook report a problem** — not installed, too old,
   broken. It names the remedy and who should run it; follow it as written
   rather than re-deriving it.
@@ -143,8 +144,8 @@ where the project is, then match how you engage:
 1. **Know the engine is usable**, per Prerequisites above — including in an
    empty directory, since scoping ends in `lc init` and a missing engine
    blocks that as surely as it blocks a run. If the hook already said
-   `Engine ready`, this step costs nothing; if it said nothing at all, it
-   costs one `lc --version`.
+   `Lightcone CLI ready`, this step costs nothing; if it said nothing at
+   all, it costs one `lc --version`.
 2. **Look for `astra.yaml`** in the working directory.
 3. **No spec (or a freshly scaffolded placeholder)** → this is a new project.
    Read `references/scoping.md` and interview the user; don't start writing

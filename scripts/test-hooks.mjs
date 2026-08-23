@@ -272,7 +272,7 @@ try {
     assertIncludes(
       label,
       parsedContext(label, runLc({ version: floor, cwd: cwdArg, env: TUI }), "SessionStart"),
-      `Engine ready: lc ${floor}`,
+      `Lightcone CLI ready: lc ${floor}`,
     );
 
   // …and no *other* state may carry that sentence, or the skill would skip
@@ -283,16 +283,16 @@ try {
     ["lc/no-false-ok-old", { version: "0.0.1" }],
   ]) {
     const ctx = parsedContext(label, runLc({ ...opts, env: TUI }), "SessionStart");
-    if (ctx.includes("Engine ready"))
+    if (ctx.includes("Lightcone CLI ready"))
       throw new Error(`${label}: emitted the all-clear for an unusable engine\n${ctx}`);
   }
 
   // Engine state.
   assertIncludes("lc/absent", lcContext("lc/absent", { env: TUI }), "is not installed");
-  assertIncludes("lc/broken", lcContext("lc/broken", { version: "broken", env: TUI }), "not the Lightcone engine");
+  assertIncludes("lc/broken", lcContext("lc/broken", { version: "broken", env: TUI }), "not the Lightcone CLI");
   assertIncludes("lc/old", lcContext("lc/old", { version: "0.0.1", env: TUI }), `older than the ${floor}`);
-  assertIncludes("lc/ready", lcContext("lc/ready", { version: floor, env: TUI }), "Engine ready");
-  assertIncludes("lc/newer", lcContext("lc/newer", { version: "999.0.0", env: TUI }), "Engine ready");
+  assertIncludes("lc/ready", lcContext("lc/ready", { version: floor, env: TUI }), "Lightcone CLI ready");
+  assertIncludes("lc/newer", lcContext("lc/newer", { version: "999.0.0", env: TUI }), "Lightcone CLI ready");
   // PEP 440 ordering, which `sort -V` gets backwards: every pre-release of the
   // floor precedes it, and a release candidate floor is satisfied by the
   // release it led to. Each case names the floor it is judged against.
@@ -322,7 +322,7 @@ try {
       runLc({ version: installed, env: TUI, lcScript: scriptWithFloor(floorV) }),
       "SessionStart",
     );
-    assertIncludes(label, ctx, ok ? "Engine ready" : `older than the ${floorV}`);
+    assertIncludes(label, ctx, ok ? "Lightcone CLI ready" : `older than the ${floorV}`);
   }
 
   // Mode: ask where a person is, act where none can be, and default to
