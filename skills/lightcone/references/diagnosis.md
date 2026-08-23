@@ -5,12 +5,34 @@ reports something you did not expect. `lc` refusals are designed to be
 pasted: each names the problem and carries its remedy — follow the remedy
 rather than working around it.
 
+- [The engine itself](#the-engine-itself)
 - [Refusals before a run starts](#refusals-before-a-run-starts)
 - [A recipe fails](#a-recipe-fails)
 - [Reaching for a system tool: containerizing](#reaching-for-a-system-tool-containerizing)
 - [Unexpected status](#unexpected-status)
 - [Clones, annex, and bytes](#clones-annex-and-bytes)
 - [HPC and venues](#hpc-and-venues)
+
+## The engine itself
+
+What `lc --version` told you, and what each answer needs. Every remedy is
+the same command with a different flag, because `uv tool install` at an
+exact version installs when nothing is there and replaces an older install
+in place.
+
+| Outcome | What it means | Remedy |
+|---|---|---|
+| Nothing on PATH | The engine was never installed | `uv tool install lightcone-cli==x.y.z` |
+| A version below the floor | The rebuild changed the verbs and the status vocabulary, so the skill's instructions will produce errors rather than results | `uv tool install lightcone-cli==x.y.z` — **not** `uv tool upgrade`, which will not move onto a pre-release |
+| A version above the floor | Nothing. Newer is fine | — |
+| `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==x.y.z` |
+| `lc` not found right after installing | uv put it in `~/.local/bin`, which is not on PATH | `uv tool update-shell`, or check for a shell alias with `type lc` |
+
+Who runs it: offer and wait where a person can answer, act and report where
+none can. Never install or upgrade unasked — it is the user's machine, and
+they may be running other projects against the version they have. If
+permissions refuse the command in a headless run, report that the engine is
+missing and name what to allow rather than working around it.
 
 ## Refusals before a run starts
 

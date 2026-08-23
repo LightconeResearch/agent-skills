@@ -159,10 +159,18 @@ if precedes "$found" "$required"; then
     exit 0
 fi
 
-# A healthy engine is worth saying only where there is a project to point it
-# at. Everywhere else this is somebody's unrelated repository that happens to
-# have the plugin installed, and the right amount to say is nothing.
-[ "$in_project" -eq 1 ] || exit 0
-
-emit "Engine ready: lc $found. Run \`lc status\` to see what state the analysis's outputs are in."
+# Say "Engine ready: lc <version>" in both cases, in exactly those words: the
+# skill treats that sentence as the answer to its own preflight and skips
+# running `lc --version` a second time. Silence cannot carry that meaning —
+# the agent has no way to tell a healthy engine from a hook that never fired
+# (another harness, hooks turned off, a subagent that missed session start),
+# and a signal that is ambiguous is not a signal.
+#
+# Outside a project the line is kept to one sentence, since its only job
+# there is to spare that round trip.
+if [ "$in_project" -eq 1 ]; then
+    emit "Engine ready: lc $found. Run \`lc status\` to see what state the analysis's outputs are in."
+else
+    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Engine ready: lc %s (Lightcone plugin active; this directory holds no astra.yaml yet).\\n"}}\n' "$found"
+fi
 exit 0

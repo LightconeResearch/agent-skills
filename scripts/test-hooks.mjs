@@ -252,18 +252,40 @@ try {
   const HEADLESS = { CLAUDE_CODE_ENTRYPOINT: "sdk-cli" };
 
   // Outside a Lightcone project the engine is still checked — the skill's
-  // first job is often to create a project from nothing — but a healthy
-  // engine there is not worth announcing.
-  if (runLc({ version: floor, cwd: scratch, env: TUI }) !== "")
-    throw new Error("lightcone/elsewhere-ready: expected no output");
-  const elsewhere = parsedContext(
+  // first job is often to create a project from nothing.
+  const elsewhereAbsent = parsedContext(
     "lc/elsewhere-absent",
     runLc({ cwd: scratch, env: TUI }),
     "SessionStart",
   );
-  assertIncludes("lc/elsewhere-absent", elsewhere, "no astra.yaml");
-  assertIncludes("lc/elsewhere-absent", elsewhere, "is not installed");
-  assertIncludes("lc/elsewhere-absent", elsewhere, "lc init");
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "no astra.yaml");
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "is not installed");
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "lc init");
+
+  // The all-clear is phrased identically in and out of a project, because
+  // the skill matches on that sentence to skip its own `lc --version`.
+  // Silence would be indistinguishable from a hook that never ran.
+  for (const [label, cwdArg] of [
+    ["lc/ok-signal-in-project", project],
+    ["lc/ok-signal-elsewhere", scratch],
+  ])
+    assertIncludes(
+      label,
+      parsedContext(label, runLc({ version: floor, cwd: cwdArg, env: TUI }), "SessionStart"),
+      `Engine ready: lc ${floor}`,
+    );
+
+  // …and no *other* state may carry that sentence, or the skill would skip
+  // a check it needed to run.
+  for (const [label, opts] of [
+    ["lc/no-false-ok-absent", {}],
+    ["lc/no-false-ok-broken", { version: "broken" }],
+    ["lc/no-false-ok-old", { version: "0.0.1" }],
+  ]) {
+    const ctx = parsedContext(label, runLc({ ...opts, env: TUI }), "SessionStart");
+    if (ctx.includes("Engine ready"))
+      throw new Error(`${label}: emitted the all-clear for an unusable engine\n${ctx}`);
+  }
 
   // Engine state.
   assertIncludes("lc/absent", lcContext("lc/absent", { env: TUI }), "is not installed");

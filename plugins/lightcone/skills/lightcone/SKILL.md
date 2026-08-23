@@ -72,38 +72,33 @@ currently calls latest — and while the release line is a pre-release, a
 bare `uv tool install lightcone-cli` quietly resolves to an *older* stable
 release instead.
 
-**Check before driving it, and check the version, not just the presence:**
+**Before driving `lc`, know it is present and new enough.** There are two
+ways to know that, and the cheap one is often already done for you:
 
-```bash
-lc --version            # this skill assumes lightcone-cli==0.5.0rc1 or newer
-```
+- **You have seen `Engine ready: lc <version>` in this session.** That is
+  this exact check, already run by the plugin's session-start hook. Take it
+  and move on — **don't spend a round trip repeating `lc --version`.**
+- **You have seen the hook report a problem** — not installed, too old,
+  broken. It names the remedy and who should run it; follow it as written
+  rather than re-deriving it.
+- **You have seen neither.** Assume nothing and run the check yourself:
 
-- **Not installed** — nothing in the project can be materialized,
-  published, or diagnosed until the engine is there. Remedy:
-  `uv tool install lightcone-cli==0.5.0rc1`.
-- **Older than the version above** — the verbs and status vocabulary
-  changed in the rebuild, so following this skill against an older engine
-  produces errors rather than results. Remedy: the same command; it
-  replaces an older install in place. (Not `uv tool upgrade`, which will
-  not move onto a pre-release.) A *newer* engine is fine and needs nothing.
-- **`lc` missing right after an install** — uv puts it in `~/.local/bin`;
-  have the user run `uv tool update-shell` (or check for a shell alias
-  shadowing `lc` with `type lc`).
+  ```bash
+  lc --version            # this skill assumes lightcone-cli==0.5.0rc1 or newer
+  ```
 
-**Who runs that remedy depends on whether anyone is there to ask.** The
-session-start hook works this out and says which case you are in; when it
-hasn't spoken, judge it yourself. With a person in the session, say what the
-missing engine costs, offer to run the command, and wait — **never install
-or upgrade unasked**, since it puts software on the user's machine, not just
-in this project. In a headless run (`claude -p`, a scheduled job, CI) a
-question is answered by no one, so run the remedy directly and say plainly
-in your final message what you changed on the machine; if permissions refuse
-it, report that the engine is missing and name what to allow rather than
-working around it.
+  Silence is not an all-clear. The skill also ships without that hook —
+  installed on its own, or through a harness that doesn't run hooks — and a
+  subagent never sees session start. Remedies for each outcome are in
+  `references/diagnosis.md`.
 
-Some things stay the user's in **either** mode, because no one else can do
-them: setting their git identity, and any step that needs a browser sign-in
-or a credential. Those stop the work and get reported, never automated.
+However the check happened, the consent rule is the same: with a person in
+the session, say what a missing engine costs, offer to run the command, and
+wait — **never install or upgrade unasked**, since it puts software on the
+user's machine, not just in this project. In a headless run the question
+reaches no one, so run the remedy and say plainly what you changed. Some
+things stay the user's in either mode because no one else can do them:
+their git identity, and anything needing a browser sign-in or a credential.
 
 When unsure of a command's syntax, discover it with `--help` rather than
 guessing. The `astra` CLI is invoked differently — through a pinned `uvx`
@@ -145,11 +140,11 @@ PATH.
 This skill can be invoked at any point in a project's life. First determine
 where the project is, then match how you engage:
 
-1. **Check the engine first**, per Prerequisites above — including in an
-   empty directory. Scoping a new project ends in `lc init`, so a missing or
-   too-old engine blocks the work just as surely there as in an existing
-   project, and it is cheaper to say so before the interview than after it.
-   The session-start hook usually has this already.
+1. **Know the engine is usable**, per Prerequisites above — including in an
+   empty directory, since scoping ends in `lc init` and a missing engine
+   blocks that as surely as it blocks a run. If the hook already said
+   `Engine ready`, this step costs nothing; if it said nothing at all, it
+   costs one `lc --version`.
 2. **Look for `astra.yaml`** in the working directory.
 3. **No spec (or a freshly scaffolded placeholder)** → this is a new project.
    Read `references/scoping.md` and interview the user; don't start writing
