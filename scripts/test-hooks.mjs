@@ -251,9 +251,19 @@ try {
   const TUI = { CLAUDE_CODE_ENTRYPOINT: "cli" };
   const HEADLESS = { CLAUDE_CODE_ENTRYPOINT: "sdk-cli" };
 
-  // Outside a Lightcone project → silent, whatever the engine state.
-  if (runLc({ version: floor, cwd: scratch }) !== "")
-    throw new Error("lightcone/elsewhere: expected no output");
+  // Outside a Lightcone project the engine is still checked — the skill's
+  // first job is often to create a project from nothing — but a healthy
+  // engine there is not worth announcing.
+  if (runLc({ version: floor, cwd: scratch, env: TUI }) !== "")
+    throw new Error("lightcone/elsewhere-ready: expected no output");
+  const elsewhere = parsedContext(
+    "lc/elsewhere-absent",
+    runLc({ cwd: scratch, env: TUI }),
+    "SessionStart",
+  );
+  assertIncludes("lc/elsewhere-absent", elsewhere, "no astra.yaml");
+  assertIncludes("lc/elsewhere-absent", elsewhere, "is not installed");
+  assertIncludes("lc/elsewhere-absent", elsewhere, "lc init");
 
   // Engine state.
   assertIncludes("lc/absent", lcContext("lc/absent", { env: TUI }), "is not installed");

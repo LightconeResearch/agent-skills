@@ -145,11 +145,16 @@ PATH.
 This skill can be invoked at any point in a project's life. First determine
 where the project is, then match how you engage:
 
-1. **Look for `astra.yaml`** in the working directory.
-2. **No spec (or a freshly scaffolded placeholder)** → this is a new project.
+1. **Check the engine first**, per Prerequisites above — including in an
+   empty directory. Scoping a new project ends in `lc init`, so a missing or
+   too-old engine blocks the work just as surely there as in an existing
+   project, and it is cheaper to say so before the interview than after it.
+   The session-start hook usually has this already.
+2. **Look for `astra.yaml`** in the working directory.
+3. **No spec (or a freshly scaffolded placeholder)** → this is a new project.
    Read `references/scoping.md` and interview the user; don't start writing
    code.
-3. **Spec exists** → read `astra.yaml` and `CLAUDE.md`, then check the
+4. **Spec exists** → read `astra.yaml` and `CLAUDE.md`, then check the
    directory is workable with `lc init --check --json`. If it reports
    anything to create or repair — which a fresh clone always will, since
    the environment and the annex plumbing never travel with one — run

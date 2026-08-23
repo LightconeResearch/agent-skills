@@ -8,8 +8,13 @@
 # skill that is about to drive it?
 #
 # Three deliberate constraints:
-#   - It only speaks inside a Lightcone project (./astra.yaml). A plugin that
-#     announces itself in unrelated repositories is noise, not help.
+#   - The ENGINE check is not gated on there being a project. The skill's
+#     first job is often to create one from nothing, and an engine that is
+#     missing or too old blocks that just as surely as it blocks a run — so
+#     waiting for ./astra.yaml to appear would withhold the warning exactly
+#     when it is most useful. What IS gated is the noise: with no project
+#     here and a healthy engine there is nothing to say, so it says nothing
+#     rather than announcing itself in every unrelated repository.
 #   - It NEVER installs anything itself. A hook runs without a permission
 #     prompt, so an install here would mutate the user's machine with no
 #     moment of consent. It reports; the agent acts; who consents depends on
@@ -21,22 +26,34 @@
 #
 # Self-contained on purpose — no sourcing, no jq/sed/awk.
 #
-#   SessionStart ──▶ ./astra.yaml present? ──no──▶ exit silent
-#                          │yes
-#                          ▼
-#                       lc present? ──no──▶ inject "not installed, ask to install"
-#                          │yes
-#                          ▼
-#                    lc --version parses? ──no──▶ inject "unreadable, ask to reinstall"
-#                          │yes
-#                          ▼
-#                    version >= floor? ──no──▶ inject "too old, ask to upgrade"
-#                          │yes
-#                          ▼
-#                       inject "engine ready (version)"
+#   SessionStart ──▶ lc present? ──no──▶ inject "not installed, ask to install"
+#                        │yes
+#                        ▼
+#                  lc --version parses? ──no──▶ inject "unreadable, ask to repair"
+#                        │yes
+#                        ▼
+#                  version >= floor? ──no──▶ inject "too old, ask to upgrade"
+#                        │yes
+#                        ▼
+#                  ./astra.yaml here? ──no──▶ exit silent (nothing to report)
+#                        │yes
+#                        ▼
+#                     inject "engine ready (version)"
 
 cat >/dev/null # consume the payload; everything needed comes from the cwd
-[ -f astra.yaml ] || exit 0
+
+# Whether this directory is already a project changes the framing, and
+# whether a healthy engine is worth mentioning at all — not whether the
+# engine gets checked.
+if [ -f astra.yaml ]; then
+    where="Lightcone project — the execution layer for ./astra.yaml"
+    closing="Activate the lightcone skill to work on this project."
+    in_project=1
+else
+    where="Lightcone plugin active — this directory holds no astra.yaml, so there is no project here yet."
+    closing="Activate the lightcone skill to scope one, or to work on a project elsewhere."
+    in_project=0
+fi
 
 # The `==` form is what the pin substitution rewrites; the floor is its tail.
 required_spec="lightcone-cli==0.5.0rc1"
@@ -66,11 +83,12 @@ else
 fi
 
 emit() { # $1: the engine-state paragraph
-    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Lightcone project — the execution layer for ./astra.yaml\\n%s\\nActivate the lightcone skill to work on this project.\\n"}}\n' "$1"
+    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s\\n%s\\n%s\\n"}}\n' \
+        "$where" "$1" "$closing"
 }
 
 if ! command -v lc &>/dev/null; then
-    emit "The Lightcone engine is not installed, so nothing here can be materialized, published, or diagnosed — \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. The install also puts \`git-annex\` on PATH, which the user's own \`git add\` needs in a Lightcone project. $install_remedy"
+    emit "The Lightcone engine is not installed, so nothing can be scoped into a project, materialized, published, or diagnosed — \`lc init\`, \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. The install also puts \`git-annex\` on PATH, which the user's own \`git add\` needs in a Lightcone project. $install_remedy"
     exit 0
 fi
 
@@ -140,6 +158,11 @@ if precedes "$found" "$required"; then
     emit "The installed Lightcone engine is $found, older than the $required this skill is written against — its verbs and status vocabulary have changed, so following the skill against $found will produce errors rather than results. $upgrade_remedy"
     exit 0
 fi
+
+# A healthy engine is worth saying only where there is a project to point it
+# at. Everywhere else this is somebody's unrelated repository that happens to
+# have the plugin installed, and the right amount to say is nothing.
+[ "$in_project" -eq 1 ] || exit 0
 
 emit "Engine ready: lc $found. Run \`lc status\` to see what state the analysis's outputs are in."
 exit 0
