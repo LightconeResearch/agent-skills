@@ -2,9 +2,8 @@
 name: lightcone
 description: >
   Companion for working with the user on a Lightcone project — an ASTRA
-  analysis (astra.yaml) executed with the `lc` CLI. Covers the project model
-  (a uv project stored as a DataLad dataset, direct or containerized), the
-  development workflow (probe with `lc run`, integrate recipes, commit,
+  analysis (astra.yaml) executed with the `lc` CLI. Covers the project model,
+  the development workflow (probe with `lc run`, integrate recipes, commit,
   `lc materialize`), status interpretation (current/behind/stale), failure
   diagnosis, publishing, and how to engage the user at each phase: interview
   to scope a brand-new project, orient and summarize when resuming one. Use
@@ -120,12 +119,17 @@ PATH.
   *containerized* the moment `pyproject.toml` declares a
   `[tool.lightcone.image]` table (recipes run in a content-addressed image
   committed into the repository). Deleting the table is the way back.
-- **The project is a DataLad dataset**: git carries history, git-annex
-  carries the bytes, behind ordinary `git add` / `git commit`. Never run a
-  git-annex command yourself (exception: `git annex get <path>` to fetch
-  bytes you want to inspect); never write into `results/` by hand; never
-  commit outputs yourself — `lc materialize` commits each output with a
-  run record that `datalad rerun` can replay.
+- **Large files are handled by git-annex, already set up.** Everything
+  under `data/` and `results/` is routed to the annex by configuration the
+  project carries, so a plain `git add` / `git commit` does the right thing
+  anywhere in the tree — the pointer goes into git, the bytes into the
+  annex. You never run a git-annex command yourself; the one exception is
+  `git annex get <path>`, to fetch bytes you want to inspect.
+- **`lc materialize` commits the outputs it makes**, each one together with
+  a record of the code and inputs behind it. So don't commit results
+  yourself, and never write into `results/` by hand: a file that arrives
+  any other way carries no such record, and the next run notices and
+  remakes the output.
 - **A fresh clone is not yet a working project.** Some of what a project
   needs lives in `.git/` and the working tree, which cloning does not
   carry: the annex initialization, the filter settings and hooks that route

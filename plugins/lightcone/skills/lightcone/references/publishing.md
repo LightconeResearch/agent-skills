@@ -14,8 +14,8 @@ no bundle directory. Declaring a license turns on the publication view:
    whether the view is current.
 3. Gate: the astra skill's validation passes, `lc materialize --check`
    passes, and `ro-crate-metadata.json` exists.
-4. Deposit is an archive of the repository: `git archive` (or
-   `datalad export-archive`), pushed to wherever the user publishes.
+4. Deposit is an archive of the repository — `git archive` — pushed to
+   wherever the user publishes.
 
 A durable copy of the *bytes* additionally needs `git push` and a
 `git annex copy --to <remote>`. That second one is a git-annex command, so

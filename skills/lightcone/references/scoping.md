@@ -16,8 +16,8 @@ code is written yet. For the literature pass inside phase 3, read
 
 Scaffold first if needed: `lc init [DIR]` converges the directory into a
 standard project — `astra.yaml` placeholder, `universes/baseline.yaml`, a
-dependency-free `pyproject.toml`, `uv.lock`, `.venv`, git + git-annex +
-`.datalad/config`, `data/`, `results/`, and a MyST report skeleton
+dependency-free `pyproject.toml`, `uv.lock`, `.venv`, a git repository with
+git-annex already set up, `data/`, `results/`, and a MyST report skeleton
 (`myst.yml`, `index.md`). It is idempotent and never overwrites files you
 own — safe to re-run any time. It does **not** create `CLAUDE.md`; create
 one yourself.
