@@ -42,11 +42,10 @@ uv tool install lightcone-cli==x.y.z
 Name that version. While the line is a pre-release, a bare
 `uv tool install lightcone-cli` resolves to an older stable release.
 
-Know it is usable before driving it — including in an empty directory,
-since scoping ends in `lc init`:
-
+Before doing anything else, evaluate whether the `lc` CLI is present through this
+checklist:
 - **Seen `Lightcone CLI ready: lc <version>` this session?** That is this
-  check, already run by the session-start hook. Don't repeat it.
+  check, already run by the session-start hook. Don't repeat it. You are all good.
 - **Seen the hook report a problem?** It names the remedy and who runs it.
 - **Seen neither?** Run `lc --version` yourself — this skill assumes
   `lightcone-cli==x.y.z` or newer. Silence is not an all-clear: the skill
@@ -55,8 +54,7 @@ since scoping ends in `lc init`:
 
 Where a person can answer, offer and wait — **never install or upgrade
 unasked**, it is their machine. Where none can (headless, CI), act and say
-what you changed. Their git identity and any browser sign-in stay theirs in
-either case.
+what you changed.
 
 ## Make an output
 
