@@ -251,16 +251,48 @@ try {
   const TUI = { CLAUDE_CODE_ENTRYPOINT: "cli" };
   const HEADLESS = { CLAUDE_CODE_ENTRYPOINT: "sdk-cli" };
 
-  // Outside a Lightcone project → silent, whatever the engine state.
-  if (runLc({ version: floor, cwd: scratch }) !== "")
-    throw new Error("lightcone/elsewhere: expected no output");
+  // Outside a Lightcone project the engine is still checked — the skill's
+  // first job is often to create a project from nothing.
+  const elsewhereAbsent = parsedContext(
+    "lc/elsewhere-absent",
+    runLc({ cwd: scratch, env: TUI }),
+    "SessionStart",
+  );
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "no astra.yaml");
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "is not installed");
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "lc init");
+
+  // The all-clear is phrased identically in and out of a project, because
+  // the skill matches on that sentence to skip its own `lc --version`.
+  // Silence would be indistinguishable from a hook that never ran.
+  for (const [label, cwdArg] of [
+    ["lc/ok-signal-in-project", project],
+    ["lc/ok-signal-elsewhere", scratch],
+  ])
+    assertIncludes(
+      label,
+      parsedContext(label, runLc({ version: floor, cwd: cwdArg, env: TUI }), "SessionStart"),
+      `Lightcone CLI ready: lc ${floor}`,
+    );
+
+  // …and no *other* state may carry that sentence, or the skill would skip
+  // a check it needed to run.
+  for (const [label, opts] of [
+    ["lc/no-false-ok-absent", {}],
+    ["lc/no-false-ok-broken", { version: "broken" }],
+    ["lc/no-false-ok-old", { version: "0.0.1" }],
+  ]) {
+    const ctx = parsedContext(label, runLc({ ...opts, env: TUI }), "SessionStart");
+    if (ctx.includes("Lightcone CLI ready"))
+      throw new Error(`${label}: emitted the all-clear for an unusable engine\n${ctx}`);
+  }
 
   // Engine state.
   assertIncludes("lc/absent", lcContext("lc/absent", { env: TUI }), "is not installed");
-  assertIncludes("lc/broken", lcContext("lc/broken", { version: "broken", env: TUI }), "not the Lightcone engine");
+  assertIncludes("lc/broken", lcContext("lc/broken", { version: "broken", env: TUI }), "not the Lightcone CLI");
   assertIncludes("lc/old", lcContext("lc/old", { version: "0.0.1", env: TUI }), `older than the ${floor}`);
-  assertIncludes("lc/ready", lcContext("lc/ready", { version: floor, env: TUI }), "Engine ready");
-  assertIncludes("lc/newer", lcContext("lc/newer", { version: "999.0.0", env: TUI }), "Engine ready");
+  assertIncludes("lc/ready", lcContext("lc/ready", { version: floor, env: TUI }), "Lightcone CLI ready");
+  assertIncludes("lc/newer", lcContext("lc/newer", { version: "999.0.0", env: TUI }), "Lightcone CLI ready");
   // PEP 440 ordering, which `sort -V` gets backwards: every pre-release of the
   // floor precedes it, and a release candidate floor is satisfied by the
   // release it led to. Each case names the floor it is judged against.
@@ -290,7 +322,7 @@ try {
       runLc({ version: installed, env: TUI, lcScript: scriptWithFloor(floorV) }),
       "SessionStart",
     );
-    assertIncludes(label, ctx, ok ? "Engine ready" : `older than the ${floorV}`);
+    assertIncludes(label, ctx, ok ? "Lightcone CLI ready" : `older than the ${floorV}`);
   }
 
   // Mode: ask where a person is, act where none can be, and default to

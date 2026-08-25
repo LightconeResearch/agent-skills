@@ -8,8 +8,12 @@
 # skill that is about to drive it?
 #
 # Three deliberate constraints:
-#   - It only speaks inside a Lightcone project (./astra.yaml). A plugin that
-#     announces itself in unrelated repositories is noise, not help.
+#   - The check is not gated on there being a project. The skill's first job
+#     is often to create one from nothing, and a CLI that is missing or too
+#     old blocks that just as surely as it blocks a run — so waiting for
+#     ./astra.yaml to appear would withhold the warning exactly when it is
+#     most useful. Only the framing changes with a project present; the
+#     verdict is always reported.
 #   - It NEVER installs anything itself. A hook runs without a permission
 #     prompt, so an install here would mutate the user's machine with no
 #     moment of consent. It reports; the agent acts; who consents depends on
@@ -21,22 +25,35 @@
 #
 # Self-contained on purpose — no sourcing, no jq/sed/awk.
 #
-#   SessionStart ──▶ ./astra.yaml present? ──no──▶ exit silent
-#                          │yes
-#                          ▼
-#                       lc present? ──no──▶ inject "not installed, ask to install"
-#                          │yes
-#                          ▼
-#                    lc --version parses? ──no──▶ inject "unreadable, ask to reinstall"
-#                          │yes
-#                          ▼
-#                    version >= floor? ──no──▶ inject "too old, ask to upgrade"
-#                          │yes
-#                          ▼
-#                       inject "engine ready (version)"
+#   SessionStart ──▶ lc present? ──no──▶ inject "not installed, ask to install"
+#                        │yes
+#                        ▼
+#                  lc --version parses? ──no──▶ inject "unreadable, ask to repair"
+#                        │yes
+#                        ▼
+#                  version >= floor? ──no──▶ inject "too old, ask to upgrade"
+#                        │yes
+#                        ▼
+#                  inject "Lightcone CLI ready: lc <version>" — the exact
+#                  sentence the skill takes as its own preflight, so it can
+#                  skip running `lc --version` a second time. Emitted whether
+#                  or not a project is present, because silence would be
+#                  indistinguishable from a hook that never ran.
 
 cat >/dev/null # consume the payload; everything needed comes from the cwd
-[ -f astra.yaml ] || exit 0
+
+# Whether this directory is already a project changes the framing, and
+# whether a healthy engine is worth mentioning at all — not whether the
+# engine gets checked.
+if [ -f astra.yaml ]; then
+    where="Lightcone project — the execution layer for ./astra.yaml"
+    closing="Activate the lightcone skill to work on this project."
+    in_project=1
+else
+    where="Lightcone plugin active — this directory holds no astra.yaml, so there is no project here yet."
+    closing="Activate the lightcone skill to scope one, or to work on a project elsewhere."
+    in_project=0
+fi
 
 # The `==` form is what the pin substitution rewrites; the floor is its tail.
 required_spec="lightcone-cli==0.5.0rc1"
@@ -66,11 +83,12 @@ else
 fi
 
 emit() { # $1: the engine-state paragraph
-    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Lightcone project — the execution layer for ./astra.yaml\\n%s\\nActivate the lightcone skill to work on this project.\\n"}}\n' "$1"
+    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s\\n%s\\n%s\\n"}}\n' \
+        "$where" "$1" "$closing"
 }
 
 if ! command -v lc &>/dev/null; then
-    emit "The Lightcone engine is not installed, so nothing here can be materialized, published, or diagnosed — \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. The install also puts \`git-annex\` on PATH, which the user's own \`git add\` needs in a Lightcone project. $install_remedy"
+    emit "The Lightcone CLI is not installed, so nothing can be scoped into a project, materialized, published, or diagnosed — \`lc init\`, \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. The install also puts \`git-annex\` on PATH, which the user's own \`git add\` needs in a Lightcone project. $install_remedy"
     exit 0
 fi
 
@@ -80,7 +98,7 @@ rc=$?
 found="${version_line##* }"
 
 if [ $rc -ne 0 ] || [ -z "$found" ] || [ "$found" = "$version_line" ]; then
-    emit "\`lc\` is on PATH but \`lc --version\` did not report a version (exit $rc) — the install is broken, or that \`lc\` is not the Lightcone engine. $repair_remedy"
+    emit "\`lc\` is on PATH but \`lc --version\` did not report a version (exit $rc) — the install is broken, or that \`lc\` is not the Lightcone CLI. $repair_remedy"
     exit 0
 fi
 
@@ -90,7 +108,7 @@ fi
 # does not parse, which the harness drops silently: the hook would look like
 # it never fired, in exactly the case (a foreign `lc`) it exists to report.
 found="${found//[^A-Za-z0-9._+:-]/}"
-[ -n "$found" ] || { emit "\`lc\` is on PATH but reported no readable version — the install is broken, or that \`lc\` is not the Lightcone engine. $repair_remedy"; exit 0; }
+[ -n "$found" ] || { emit "\`lc\` is on PATH but reported no readable version — the install is broken, or that \`lc\` is not the Lightcone CLI. $repair_remedy"; exit 0; }
 
 # Version floor, in PEP 440 order — which `sort -V` does not implement. Verified:
 # sort -V puts 0.5.0 BEFORE 0.5.0.dev1, 0.5.0a1, 0.5.0b1 and 0.5.0rc1, while
@@ -137,9 +155,22 @@ precedes() { # $1 candidate, $2 floor — true when $1 comes before $2
 }
 
 if precedes "$found" "$required"; then
-    emit "The installed Lightcone engine is $found, older than the $required this skill is written against — its verbs and status vocabulary have changed, so following the skill against $found will produce errors rather than results. $upgrade_remedy"
+    emit "The installed Lightcone CLI is $found, older than the $required this skill is written against — its verbs and status vocabulary have changed, so following the skill against $found will produce errors rather than results. $upgrade_remedy"
     exit 0
 fi
 
-emit "Engine ready: lc $found. Run \`lc status\` to see what state the analysis's outputs are in."
+# Say "Lightcone CLI ready: lc <version>" in both cases, in exactly those words: the
+# skill treats that sentence as the answer to its own preflight and skips
+# running `lc --version` a second time. Silence cannot carry that meaning —
+# the agent has no way to tell a healthy engine from a hook that never fired
+# (another harness, hooks turned off, a subagent that missed session start),
+# and a signal that is ambiguous is not a signal.
+#
+# Outside a project the line is kept to one sentence, since its only job
+# there is to spare that round trip.
+if [ "$in_project" -eq 1 ]; then
+    emit "Lightcone CLI ready: lc $found. Run \`lc status\` to see what state the analysis's outputs are in."
+else
+    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Lightcone CLI ready: lc %s (Lightcone plugin active; this directory holds no astra.yaml yet).\\n"}}\n' "$found"
+fi
 exit 0

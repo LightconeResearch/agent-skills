@@ -51,7 +51,7 @@ tests:
     forbid_context:
       - Could not run                # `astra info` failed
       # Scoped to uv on purpose: lightcone's own SessionStart hook injects
-      # into this same trace, and "The Lightcone engine is not installed" is
+      # into this same trace, and "The Lightcone CLI is not installed" is
       # its CORRECT output on a runner that has no `lc`. A bare "is not
       # installed" marker would fail on it.
       # (uv missing on the runner)
