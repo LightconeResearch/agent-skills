@@ -16,7 +16,7 @@
     {
       "name": "lightcone",
       "path": "plugins/lightcone/skills/lightcone",
-      "description": "Companion for working with the user on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers scoping a new analysis, the write-probe-materialize loop, reading status, diagnosing failures, and publishing. Use this skill whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project — \"new analysis\", \"scope a project\", \"resume the project\", \"where were we\", \"run the pipeline\", \"lc status/materialize/run\", \"publish the analysis\" — and whenever the working directory holds an astra.yaml and the user asks to run, re-run, fix, or interpret an analysis, even if they never say \"Lightcone\", \"ASTRA\" or \"lc\".",
+      "description": "Companion for a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Use this skill whenever the user wants to scope, resume, plan, run, debug, publish or discuss such a project: \"new analysis\", \"scope a project\", \"resume the project\", \"where were we\", \"run the pipeline\", \"lc status/materialize/run\", \"publish the analysis\". Also use it whenever the working directory holds an astra.yaml and the user asks to run, re-run, fix or interpret an analysis, even if they never say \"Lightcone\", \"ASTRA\" or \"lc\". Do NOT use it for the astra.yaml format itself — schema, decisions, universes, evidence and quotes are the astra skill's.",
       "plugins": [
         "lightcone"
       ]
