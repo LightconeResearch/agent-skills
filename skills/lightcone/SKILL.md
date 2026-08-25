@@ -15,9 +15,9 @@ description: >
 
 # Lightcone projects
 
-An analysis declared in `astra.yaml` and executed by `lc`: recipes turn
+An analysis declared in `astra.yaml`, executed by `lc`, and documented in index.md: recipes turn
 declared inputs and decisions into outputs under `results/`, each committed
-with the code that produced it.
+with the code that produced it, the MyST report of the analysis is in index.md.
 
 | What you are doing | Where to go |
 |---|---|
@@ -27,6 +27,7 @@ with the code that produced it.
 | Producing an output for real | [Make an output](#make-an-output) |
 | A refusal, a failing recipe, a surprising status | `references/diagnosis.md` |
 | Papers, quotes, prior insights | `references/literature.md`, and `references/extraction-brief.md` per paper |
+| Writing or updating the report | `references/reporting.md` — MyST + `{astra}` references |
 | Sharing, archiving, citing | `references/publishing.md` |
 | Anything about `astra.yaml` itself | the `astra` skill — this one repeats none of it |
 
@@ -75,9 +76,15 @@ what you changed.
    `lc materialize --check` passes — that, not `lc status`, is the gate.
 
 Outputs land at `results/<universe>/<output_id>/` — a sub-analysis uses its
-qualified id, `results/<universe>/<sub>.<output_id>/`. Name one output at a
-time while integrating, so each intermediate can be inspected rather than
-debugged from the bottom of a long trace.
+qualified id, `results/<universe>/<sub>.<output_id>/`. Each directory carries
+a `.lightcone-manifest.json` beside the bytes — the run record: the rendered
+`recipe`, the `decisions` it ran under, `git_sha`, `lc_version`/`uv_version`,
+the `hermeticity` the sandbox enforced, timestamps, and the hashes
+(`definition_version`, `env_version`, `data_version`, `input_versions`) that
+`lc status` compares against the spec to reach its verdict. Read it to answer
+how an output came to be; never write one. Name one output at a time while
+integrating, so each intermediate can be inspected rather than debugged from
+the bottom of a long trace.
 
 Write scripts recipe-ready: one script per output, every decision a CLI flag
 (never a hardcoded option value), everything written under `{output}`.
@@ -92,6 +99,28 @@ Write scripts recipe-ready: one script per output, every decision a CLI flag
 
 Everything going `behind` after a `uv add` is normal, not damage. An `lc`
 upgrade invalidates nothing.
+
+## Ask for `--json`
+
+Every verb that reports takes `--json`, and that is the form to drive from:
+one object on stdout, with the reasons already spelled out per output —
+nothing to scrape out of a table. Read JSON; show the user the plain output
+when they want to look at something themselves.
+
+```bash
+lc status --json               # {mode, image, sandbox, crate, counts{current,behind,stale},
+                               #  outputs[{output, status, why, git_sha, data_version, foreign_write}],
+                               #  warnings}
+lc materialize --check --json  # {ok, up_to_date, planned{target: why}, made, current, behind,
+                               #  failed, blocked, warnings, notes}
+lc init --json                 # {converged, created, repaired, unchanged, blocked, warnings}
+lc build --json                # the build's result
+```
+
+`why` and `planned` carry the engine's own reason a thing is stale or is
+about to run — quote it rather than inferring one. `lc status` always exits
+0, so its JSON is the whole answer; `lc materialize --check` exits nonzero
+when anything is out of date, which is the gate.
 
 ## Keep the spec and the code in step
 
@@ -132,9 +161,13 @@ before anything long (a full multiverse, a first container build). Keep
 - **`pip install` reaches nothing.** The lock is the environment: `uv add`.
 - **Don't re-interview on resume.** The spec and `CLAUDE.md` already answer
   the scoping questions; summarize state and ask what is *next*.
-- **The flags you remember may not exist.** There is no `--universe` (use
-  the `<universe>/<output>` target), no `--force`, no `--verbose`, no
-  `lc verify` and no `lc export`. Five verbs: `init`, `status`,
-  `materialize`, `run`, `build`. Discover syntax with `--help`.
+- **Five verbs, and `--help` is the authority.** `init`, `status`,
+  `materialize`, `run`, `build`. Universes and outputs are selected by
+  target (`robust/fit`), not by a flag: there is no `--universe`, no
+  `--force`, no `--verbose`, no `lc verify` and no `lc export`.
+- **Everything runs through `lc`.** Never invoke the container runtime, the
+  sandbox or a scheduler yourself — `podman run`, `srun`, and friends
+  bypass the environment, the isolation and the run record, and whatever
+  they write into `results/` is a foreign write the next run will remake.
 - **A denial is telling you the truth.** Declare the input, the package or
   the system tool it names; there is no `--force` and no sandbox opt-out.
