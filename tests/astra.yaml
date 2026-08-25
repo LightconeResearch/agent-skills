@@ -24,9 +24,11 @@
 #
 # Model output is never asserted; the model is only a means to trigger events.
 #
-# Any `<tool>@x.y.z` placeholder in this file is substituted with the plugin's
-# pinned tool version from skills.config.json, exactly like the build does for
-# hook scripts — specs never hardcode a version.
+# Any `<tool>@x.y.z` (or `<tool>==x.y.z`) placeholder in a spec is substituted
+# with the plugin's pinned tool version from skills.config.json, exactly like
+# the build does for hook scripts, and `{pin:<tool>}` expands to the bare
+# version — for asserting on a hook that reports the version it found. Specs
+# never hardcode a version.
 #
 # Test fields:
 #   name              label for output
@@ -51,7 +53,10 @@
 #
 # Top-level fields: plugin (required), tests (required), project (fixture
 # files), stubs (optional PATH stubs: {stdout, exit}), setup (optional shell
-# commands run in the project dir before the tests — e.g. toolchain warmup).
+# commands run in the project dir before the tests — e.g. toolchain warmup, or
+# installing a CLI a hook looks for; $E2E_BIN is the scratch bin dir that comes
+# first on the sessions' PATH and is deleted afterwards, so an install aimed
+# there shadows the host's copy without touching it).
 
 plugin: astra
 

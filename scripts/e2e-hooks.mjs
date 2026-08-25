@@ -96,13 +96,12 @@ const jsonlUnder = (dir) =>
 
 // `CI` is dropped from every child so the suite's own environment does not
 // decide behaviour under test: the lightcone plugin's SessionStart hook reads
-// it as "nobody can be asked here" and tells the session to install
-// lightcone-cli itself. This is only half a guard — the Claude leg's sessions
-// are genuinely headless, so `claude` exports CLAUDE_CODE_ENTRYPOINT=sdk-cli
-// to its own hook children and that path is taken anyway (observed: the
-// session attempts `uv tool install lightcone-cli` and is refused by the
-// permission system). Anything relying on those sessions NOT mutating the
-// runner has to come from permissions, not from this scrub.
+// it as "nobody can be asked here", which changes the remedy it names when the
+// engine is missing or too old. This is only half a guard — the Claude leg's
+// sessions are genuinely headless, so `claude` exports
+// CLAUDE_CODE_ENTRYPOINT=sdk-cli to its own hook children and that path is
+// taken anyway. Anything relying on those sessions NOT mutating the runner has
+// to come from permissions, not from this scrub.
 const { CI: _ci, ...PARENT_ENV } = process.env;
 
 function run(bin, argv, { cwd, env = {}, timeout = 120_000, input } = {}) {
@@ -215,7 +214,19 @@ const specs = readdirSync(TESTS_DIR)
     const plugin = parseYamlLite(text).plugin;
     if (!plugin || !byName[plugin])
       throw new Error(`tests/${f}: \`plugin\` must name a plugin from skills.config.json`);
-    const spec = parseYamlLite(applyPins(text, pluginTools(plugin, byName)));
+    // Two substitutions, both fed from the plugin's effective pins:
+    // `<tool>@x.y.z` / `<tool>==x.y.z`, exactly what the build rewrites in
+    // hook scripts (so a `setup` command can install the very version the
+    // hooks expect), and `{pin:<tool>}` for a BARE version inside an
+    // expectation — what a hook that echoes back the version it found injects.
+    const tools = pluginTools(plugin, byName);
+    const spec = parseYamlLite(
+      applyPins(text, tools).replace(/\{pin:([\w.+-]+)\}/g, (_, tool) => {
+        if (!tools[tool])
+          throw new Error(`tests/${f}: {pin:${tool}} names no tool pinned by plugin \`${plugin}\``);
+        return tools[tool];
+      }),
+    );
     if (!spec.tests) throw new Error(`tests/${f}: missing required field \`tests\``);
     for (const t of spec.tests) {
       if (!t.expect_context && !t.expect_stub_call)
@@ -272,7 +283,12 @@ function runSpecTests(harness, spec, sc, session) {
   for (const cmd of spec.setup || []) {
     const r = run("sh", ["-c", cmd], {
       cwd: sc.project,
-      env: { PATH: `${sc.bin}:${process.env.PATH}` },
+      // $E2E_BIN is the scratch bin dir: first on the PATH the sessions and
+      // their hooks inherit, and deleted with the scratch area afterwards. A
+      // setup command that INSTALLS a binary aims it there, so the version
+      // under test shadows whatever the host has and the developer's own
+      // ~/.local/bin is left alone.
+      env: { PATH: `${sc.bin}:${process.env.PATH}`, E2E_BIN: sc.bin },
       timeout: 300_000,
     });
     if (r.status !== 0)

@@ -1,24 +1,25 @@
 # E2E hook-dispatch test spec for the lightcone plugin. Field-by-field
 # documentation of how specs work lives in tests/astra.yaml.
 #
-# lightcone ships ONE hook of its own (the engine preflight) and VENDORS the
-# astra plugin (via `dependencies` in skills.config.json), so byte-copies of
-# astra's hooks are packaged alongside it under plugins/lightcone/hooks/.
-# These tests install `lightcone` ALONE and exercise both: the astra dispatch
-# checks against the vendored copy prove the bundling path (closure copy,
-# hooks.json merge, script flattening, pin substitution) produces a plugin
-# whose hooks actually fire; the preflight check proves lightcone's own
-# SessionStart entry survives that same merge. The runner gives each spec a
-# fresh config home, so this evidence cannot come from a standalone astra
-# install.
+# Scope: lightcone's OWN hook — the SessionStart engine preflight — and
+# nothing else. lightcone VENDORS the astra plugin (via `dependencies` in
+# skills.config.json), so byte-copies of astra's hooks are packaged alongside
+# it and fire in these same sessions; but those are astra's hooks, covered
+# against a standalone install by tests/astra.yaml. What only this spec can
+# show is that lightcone's own SessionStart entry survives the bundling path
+# (closure copy, hooks.json merge, script flattening, pin substitution) and
+# actually fires in a real session.
 #
-# The `astra-tools@x.y.z` placeholder below resolves through lightcone's
-# EFFECTIVE pins — inherited from the bundled astra dependency.
+# The engine state is MADE deterministic rather than probed: `setup` installs
+# the pinned lightcone-cli into the scratch bin dir the runner puts first on
+# the sessions' PATH, so the preflight finds a real `lc` at exactly the pinned
+# version — on a CI runner and on a developer machine alike — and the version
+# it reports back is the assertion.
 
 plugin: lightcone
 
-# Same minimal VALID fixture as tests/astra.yaml (the vendored hooks run the
-# real pinned toolchain against it).
+# The hook frames its report around ./astra.yaml, so the session opens on a
+# real (minimal, valid) project — the same fixture as tests/astra.yaml.
 project:
   astra.yaml: |
     version: "0.0.13"
@@ -38,54 +39,26 @@ project:
         recipe:
           command: python analyze.py --data {inputs.primary_data} --out {output}
 
-# Warm the pinned environment so the first hook invocation isn't racing its
-# timeout against a cold download.
 setup:
-  - uvx astra-tools@x.y.z --help
+  # Both uv dirs point into $E2E_BIN — the scratch bin dir, first on the PATH
+  # the hooks inherit and deleted with the scratch area afterwards. A bare
+  # `uv tool install` would instead land `lc` in the developer's own
+  # ~/.local/bin and replace whatever version they run.
+  - 'UV_TOOL_DIR="$E2E_BIN/tools" UV_TOOL_BIN_DIR="$E2E_BIN" uv tool install lightcone-cli==x.y.z'
 
 tests:
-  - name: session-start-primer
-    event: SessionStart
-    prompt: "Reply with exactly: OK"
-    expect_context: E2E fixture
-    forbid_context:
-      - Could not run                # `astra info` failed
-      # Scoped to uv on purpose: lightcone's own SessionStart hook injects
-      # into this same trace, and "The Lightcone CLI is not installed" is
-      # its CORRECT output on a runner that has no `lc`. A bare "is not
-      # installed" marker would fail on it.
-      # (uv missing on the runner)
-      - "`uv` is not installed"
-
-  - name: validate-on-save
-    event: PostToolUse
-    prompt: >-
-      A file named astra.yaml exists in the current directory. Append the
-      comment line `# e2e-touch` to the end of astra.yaml using your file
-      editing tool. Do nothing else, and do not explain.
-    edits_file: astra.yaml
-    attempts: 3
-    expect_context: ASTRA validation passed
-    forbid_context:
-      - validation FAILED   # spec rejected
-      - not validated       # uv missing, or the toolchain crashed
-
-  # lightcone's own SessionStart hook, merged alongside astra's. The engine
-  # state it reports is host-dependent (absent / too old / ready), so assert
-  # only on the framing every branch emits, and forbid the shapes that mean
-  # something went wrong.
   - name: engine-preflight
     event: SessionStart
-    prompt: "Reply with exactly: OK"
-    expect_context: Lightcone project
+    # What a session on a Lightcone project actually opens with — and the
+    # preflight is what answers it, before `lc` is ever run.
+    prompt: >-
+      What is the status of this Lightcone project? Answer in one sentence
+      from what you already know, and do not run any commands.
+    # Only the healthy branch of the preflight says this, and only after
+    # parsing a version out of `lc --version` — so the pinned version in the
+    # marker is proof the hook ran the CLI that setup installed.
+    expect_context: "Lightcone CLI ready: lc {pin:lightcone-cli}"
     forbid_context:
-      - did not report a version  # `lc` on PATH but broken or not the engine
-    # Which remedy the hook names — ask a person, or act because none is
-    # there — is deliberately NOT asserted here. These are real headless
-    # sessions, so the Claude leg's own harness sets
-    # CLAUDE_CODE_ENTRYPOINT=sdk-cli for its hook children (the runner cannot
-    # override what the harness exports to its own children), and the hook
-    # correctly reports the autonomous remedy; Codex exports no such variable
-    # and correctly gets the interactive one. Asserting either way would fail
-    # one leg. Mode selection is covered offline in scripts/test-hooks.mjs,
-    # where the environment is controlled exactly.
+      - The Lightcone CLI is not installed   # `lc` never reached the hook's PATH
+      - did not report a version             # broken install, or a foreign `lc`
+      - older than the {pin:lightcone-cli} this skill   # install older than the pin
