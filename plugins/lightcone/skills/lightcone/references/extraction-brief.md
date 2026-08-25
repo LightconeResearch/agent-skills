@@ -42,7 +42,7 @@ once and matches everything against it:
 echo '{"quotes": [
   {"text": "…", "page": 5, "prefix": "…", "suffix": "…"},
   {"text": "…", "page": 12, "prefix": "…", "suffix": "…"}
-]}' | uvx astra-tools@0.2.13 paper verify-quotes "<DOI>"
+]}' | uvx astra-tools@0.2.17 paper verify-quotes "<DOI>"
 ```
 
 Add `--version N` for an arXiv paper. The result is JSON: each quote comes
@@ -93,7 +93,7 @@ write it into `astra.yaml` yourself.
 
 The rest of that shape is ASTRA's own, reproduced here so you need nothing
 but this file. If a field is ever rejected downstream, the authority is
-`uvx astra-tools@0.2.13 spec insight` (and `spec evidence`), which is served
+`uvx astra-tools@0.2.17 spec insight` (and `spec evidence`), which is served
 in sync with the validator — not this copy.
 
 ## Rules

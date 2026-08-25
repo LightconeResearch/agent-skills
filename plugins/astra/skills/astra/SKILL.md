@@ -25,7 +25,7 @@ Always invoke the `astra` CLI through uv's pinned runner, exactly as written
 everywhere in this document:
 
 ```bash
-uvx astra-tools@0.2.13 <command>
+uvx astra-tools@0.2.17 <command>
 ```
 
 Never run a bare `astra` found on PATH — its version is unknown and may not
@@ -38,18 +38,18 @@ yourself.)
 
 The CLI serves everything this skill deliberately does not repeat:
 
-- `uvx astra-tools@0.2.13 guide` — the complete agent briefing on the format:
+- `uvx astra-tools@0.2.17 guide` — the complete agent briefing on the format:
   core concepts, worked examples, the authoring workflow and judgment (what
   deserves to be a decision, when to split a sub-analysis, universes,
   evidence), and the format rules. **Read it before any substantial authoring
   or restructuring work.**
-- `uvx astra-tools@0.2.13 spec` — the field-level ground truth, served in sync
+- `uvx astra-tools@0.2.17 spec` — the field-level ground truth, served in sync
   with the schema the validator enforces: no argument prints the concept map;
-  `uvx astra-tools@0.2.13 spec <term>` prints one concept in full (the mode to
-  reach for while editing); `uvx astra-tools@0.2.13 spec --full` prints the
+  `uvx astra-tools@0.2.17 spec <term>` prints one concept in full (the mode to
+  reach for while editing); `uvx astra-tools@0.2.17 spec --full` prints the
   entire reference (long).
 
-Re-validate after every change: `uvx astra-tools@0.2.13 validate` with no
+Re-validate after every change: `uvx astra-tools@0.2.17 validate` with no
 argument checks every spec and universe file under the current directory
 (this plugin's hook also validates automatically when an ASTRA file is
 saved).
@@ -63,24 +63,24 @@ or an `artifact` naming an output. The `paper` utilities manage the
 literature side end to end:
 
 1. **Cache the source at authoring time** — run
-   `uvx astra-tools@0.2.13 paper add <doi>` the moment you cite a paper (pass
+   `uvx astra-tools@0.2.17 paper add <doi>` the moment you cite a paper (pass
    `--version N` to pin an arXiv revision). The PDF lands in the project's
    paper cache, so the citation stays checkable without asking the reader to
    fetch anything.
 2. **Pull exact quotes from the cached PDF** —
-   `uvx astra-tools@0.2.13 paper path <doi>` prints the cached file's path so
+   `uvx astra-tools@0.2.17 paper path <doi>` prints the cached file's path so
    you can open it and copy the supporting text *verbatim* into
    `quote.exact`; add `prefix`/`suffix` (~20–100 chars on either side) when
    the exact string occurs more than once. Write every quote as if a machine
    will look for it — one will.
 3. **Verify before you're done** —
-   `uvx astra-tools@0.2.13 paper verify-quotes <doi>` checks one paper's
-   quotes; `uvx astra-tools@0.2.13 validate astra.yaml --verify-evidence`
+   `uvx astra-tools@0.2.17 paper verify-quotes <doi>` checks one paper's
+   quotes; `uvx astra-tools@0.2.17 validate astra.yaml --verify-evidence`
    checks every quote in the spec. A quote that doesn't match the PDF fails
    validation.
 
-`uvx astra-tools@0.2.13 paper list` shows the cache;
-`uvx astra-tools@0.2.13 paper show <doi>` prints a cached paper's metadata.
+`uvx astra-tools@0.2.17 paper list` shows the cache;
+`uvx astra-tools@0.2.17 paper show <doi>` prints a cached paper's metadata.
 Artifact-backed evidence (typical for findings whose outputs aren't
 materialized yet) is reported as SKIPPED, not failed.
 
@@ -92,17 +92,17 @@ layers evolve, and the choice of runner stays yours — so don't encode
 runner-specific behavior into the spec.
 
 ```bash
-uvx astra-tools@0.2.13 init [DIRECTORY]                          # Scaffold a new analysis
-uvx astra-tools@0.2.13 validate [FILE]                           # Validate the whole project, or one file (run after every change)
-uvx astra-tools@0.2.13 validate astra.yaml --verify-evidence     # + verify insight quotes against PDFs
-uvx astra-tools@0.2.13 guide                                     # Full agent briefing on the format (read before authoring)
-uvx astra-tools@0.2.13 spec [TERM|--full]                        # Schema reference (see above)
-uvx astra-tools@0.2.13 info [--decisions|--inputs|--outputs]     # Analysis summary / element details
-uvx astra-tools@0.2.13 universe generate -n NAME [-d "desc"]     # Generate universe from defaults
-uvx astra-tools@0.2.13 universe check universes/x.yaml           # Check universe constraints
-uvx astra-tools@0.2.13 paper add DOI [--version N]               # Cache a paper (resolved from its DOI)
-uvx astra-tools@0.2.13 paper list                                # List cached papers
-uvx astra-tools@0.2.13 paper show DOI                            # Show metadata for a cached paper
-uvx astra-tools@0.2.13 paper path DOI [--version N]              # Print the cached PDF's path
-uvx astra-tools@0.2.13 paper verify-quotes DOI                   # Batch-verify quotes; reads {"quotes":[...]} JSON from stdin
+uvx astra-tools@0.2.17 init [DIRECTORY]                          # Scaffold a new analysis
+uvx astra-tools@0.2.17 validate [FILE]                           # Validate the whole project, or one file (run after every change)
+uvx astra-tools@0.2.17 validate astra.yaml --verify-evidence     # + verify insight quotes against PDFs
+uvx astra-tools@0.2.17 guide                                     # Full agent briefing on the format (read before authoring)
+uvx astra-tools@0.2.17 spec [TERM|--full]                        # Schema reference (see above)
+uvx astra-tools@0.2.17 info [--decisions|--inputs|--outputs]     # Analysis summary / element details
+uvx astra-tools@0.2.17 universe generate -n NAME [-d "desc"]     # Generate universe from defaults
+uvx astra-tools@0.2.17 universe check universes/x.yaml           # Check universe constraints
+uvx astra-tools@0.2.17 paper add DOI [--version N]               # Cache a paper (resolved from its DOI)
+uvx astra-tools@0.2.17 paper list                                # List cached papers
+uvx astra-tools@0.2.17 paper show DOI                            # Show metadata for a cached paper
+uvx astra-tools@0.2.17 paper path DOI [--version N]              # Print the cached PDF's path
+uvx astra-tools@0.2.17 paper verify-quotes DOI                   # Batch-verify quotes; reads {"quotes":[...]} JSON from stdin
 ```

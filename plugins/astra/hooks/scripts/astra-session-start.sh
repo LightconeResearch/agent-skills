@@ -38,7 +38,7 @@ if ! command -v uvx &>/dev/null; then
     exit 0
 fi
 
-header=$(uvx astra-tools@0.2.13 info --json 2>/dev/null)
+header=$(uvx astra-tools@0.2.17 info --json 2>/dev/null)
 rc=$?
 
 case "$rc:$header" in

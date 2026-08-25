@@ -84,7 +84,7 @@ Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
    *placeholder* spec: it references `decisions.example_method` (both an
    inline `{astra}` mention and an `:::{astra}` block) and
    `outputs.main_result`. Those ids no longer exist once scoping has
-   replaced the boilerplate, and a MyST build fails on them. Swap them for
+   replaced the boilerplate. Swap them for
    one representative top-level decision id and one representative
    top-level output id from the finished spec. **Only the reference ids** —
    leave the TODO narrative under Introduction / Methods / Results for the
