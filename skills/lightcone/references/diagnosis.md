@@ -5,7 +5,7 @@ reports something you did not expect. `lc` refusals are designed to be
 pasted: each names the problem and carries its remedy — follow the remedy
 rather than working around it.
 
-- [The engine itself](#the-engine-itself)
+- [The CLI itself](#the-cli-itself)
 - [Refusals before a run starts](#refusals-before-a-run-starts)
 - [A recipe fails](#a-recipe-fails)
 - [Reaching for a system tool: containerizing](#reaching-for-a-system-tool-containerizing)
@@ -13,7 +13,7 @@ rather than working around it.
 - [Clones, annex, and bytes](#clones-annex-and-bytes)
 - [HPC and venues](#hpc-and-venues)
 
-## The engine itself
+## The CLI itself
 
 What `lc --version` told you, and what each answer needs. Every remedy is
 the same command with a different flag, because `uv tool install` at an
@@ -22,7 +22,7 @@ in place.
 
 | Outcome | What it means | Remedy |
 |---|---|---|
-| Nothing on PATH | The engine was never installed | `uv tool install lightcone-cli==x.y.z` |
+| Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==x.y.z` |
 | A version below the floor | The rebuild changed the verbs and the status vocabulary, so the skill's instructions will produce errors rather than results | `uv tool install lightcone-cli==x.y.z` — **not** `uv tool upgrade`, which will not move onto a pre-release |
 | A version above the floor | Nothing. Newer is fine | — |
 | `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==x.y.z` |
@@ -31,7 +31,7 @@ in place.
 Who runs it: offer and wait where a person can answer, act and report where
 none can. Never install or upgrade unasked — it is the user's machine, and
 they may be running other projects against the version they have. If
-permissions refuse the command in a headless run, report that the engine is
+permissions refuse the command in a headless run, report that the CLI is
 missing and name what to allow rather than working around it.
 
 ## Refusals before a run starts
@@ -94,11 +94,6 @@ architecture matches (e.g. a NERSC login node), commit, push.
 
 ## Unexpected status
 
-- **Everything `stale` after a spec edit** — the invalidation model
-  working. Re-materialize.
-- **Everything `behind` after `uv add`** — nothing was invalidated; the
-  environment moved. Use `--refresh` only when the user actually wants those
-  outputs remade.
 - **An output `stale` with a reason naming a commit** — a foreign write:
   those bytes were last touched by something other than their own run
   record. Inspect that commit before remaking, in case work is about to be
@@ -108,7 +103,7 @@ architecture matches (e.g. a NERSC login node), commit, push.
 
 - **`git-annex: command not found` during `git add`, or `fatal: clean
   filter 'annex' failed`** — git-annex isn't reachable from the shell, so
-  the annex filter can't run. It ships with the engine, so this means the
+  the annex filter can't run. It ships with the CLI, so this means the
   install is broken or shadowed: check `lc --version` and `type git-annex`,
   and have the user repair it with
   `uv tool install --force lightcone-cli==x.y.z`. In a fresh clone,
