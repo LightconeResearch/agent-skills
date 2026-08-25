@@ -83,6 +83,20 @@ const skip = (m) => {
   console.log(`  \x1b[33m∅ skip\x1b[0m ${m}`);
 };
 const have = (bin) => spawnSync("sh", ["-c", `command -v ${bin}`]).status === 0;
+// Teardown must never fail the suite. Both harnesses keep working inside their
+// throwaway home after the last session returns — Codex repopulates
+// $CODEX_HOME/.tmp/plugins-clone-*/ from the marketplace, which surfaces as
+// ENOTEMPTY when the recursive walk removes a directory another process is
+// still filling — and a temp dir that outlives the run says nothing about
+// whether a hook fired. So retry the racy cases (rmSync retries exactly
+// EBUSY/EMFILE/ENFILE/ENOTEMPTY/EPERM), then leave the remains to the OS.
+const discard = (dir) => {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch (e) {
+    console.log(`  \x1b[33m∅\x1b[0m could not remove ${dir} (${e.code}) — left for the OS`);
+  }
+};
 const tail = (s, n = 2000) => (s || "").trim().slice(-n);
 // Every .jsonl under dir, recursively — how both harnesses' persisted
 // session traces are found (Claude transcripts, Codex rollouts).
@@ -387,8 +401,8 @@ function claudeLeg() {
           ].join("\n");
           return { ...r, trace };
         });
-      } finally { rmSync(sc.scratch, { recursive: true, force: true }); }
-    } finally { rmSync(cfg, { recursive: true, force: true }); }
+      } finally { discard(sc.scratch); }
+    } finally { discard(cfg); }
   }
 }
 
@@ -449,8 +463,8 @@ function codexLeg() {
             .join("\n");
           return { ...r, trace };
         });
-      } finally { rmSync(sc.scratch, { recursive: true, force: true }); }
-    } finally { rmSync(home, { recursive: true, force: true }); }
+      } finally { discard(sc.scratch); }
+    } finally { discard(home); }
   }
 }
 
