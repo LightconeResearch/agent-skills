@@ -91,6 +91,11 @@ verification_summary:
 which option each insight bears on. The caller translates it; you never
 write it into `astra.yaml` yourself.
 
+The rest of that shape is ASTRA's own, reproduced here so you need nothing
+but this file. If a field is ever rejected downstream, the authority is
+`uvx astra-tools@0.2.13 spec insight` (and `spec evidence`), which is served
+in sync with the validator — not this copy.
+
 ## Rules
 
 - Insight ids are `lowercase_with_underscores`.
@@ -109,6 +114,6 @@ write it into `astra.yaml` yourself.
 |---|---|---|
 | `not_found`, quote looks right | Paraphrased, or a typo crept in | Re-read the page and copy the text again, character for character |
 | `not_found` on a short quote | The words appear in several places | Lengthen the quote, or give more prefix/suffix |
-| Paper not in cache | The paper was never added | Cache it first, per the astra skill's evidence workflow |
+| Paper not in cache | The caller was meant to cache it before spawning you | Stop and report that; do not cache it yourself |
 | Wrong page reported | The quote exists elsewhere in the PDF | Take the page from the tool's own output |
 | Persistent `not_found` | OCR artifacts, ligatures, unicode dashes | Choose a shorter span that avoids the problem characters |

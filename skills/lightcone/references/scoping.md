@@ -14,16 +14,13 @@ code is written yet. For the literature pass inside phase 3, read
 
 ## Before you start
 
-Scaffold first if needed: `lc init [DIR]` converges the directory into a
-standard project — `astra.yaml` placeholder, `universes/baseline.yaml`, a
-dependency-free `pyproject.toml`, `uv.lock`, `.venv`, a git repository with
-git-annex already set up, `data/`, `results/`, and a MyST report skeleton
-(`myst.yml`, `index.md`). It is idempotent and never overwrites files you
-own — safe to re-run any time. It does **not** create `CLAUDE.md`; create
-one yourself.
+`lc init [DIR]` scaffolds the project — spec placeholder, baseline
+universe, uv project, git with git-annex, and a MyST report. It is
+idempotent, never overwrites what you own, and does **not** create
+`CLAUDE.md`; you write that at finalize.
 
-Then build the spec through conversation, updating `astra.yaml` after each
-phase. Announce each phase with a short stage banner so the user can follow.
+Build the spec through conversation, writing to `astra.yaml` after each
+phase. Announce each phase with its banner so the user can follow.
 
 **You are a specification agent in this mode, not an implementation agent** —
 create or modify only `astra.yaml`, `universes/*`, and `CLAUDE.md`, and write
