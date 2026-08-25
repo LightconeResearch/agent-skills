@@ -34,7 +34,7 @@ with the code that produced it, the MyST report of the analysis is in index.md.
 ## Before you drive `lc`
 
 The user installs the CLI once, on their machine, and that is the whole
-setup — it puts `lc` on their PATH and carries `git-annex` with it:
+setup — it puts `lc` on their PATH:
 
 ```bash
 uv tool install lightcone-cli==x.y.z
@@ -148,11 +148,11 @@ before anything long (a full multiverse, a first container build). Keep
 - **`lc` never walks up.** It acts on the current directory; `cd` to the
   project root.
 - **A fresh clone needs `lc init`** before any git command touches it —
-  cloning carries neither the environment nor the annex settings.
-- **Large files are already handled.** `data/` and `results/` route to
-  git-annex through config the project carries, so plain `git add` /
-  `git commit` is right anywhere in the tree. You never run a git-annex
-  command yourself, beyond `git annex get <path>` to fetch bytes to inspect.
+  cloning carries neither the environment nor the settings the project
+  needs to store its files.
+- **Large files are already handled.** `data/` and `results/` are taken
+  care of by config the project carries, so plain `git add` / `git commit`
+  is right anywhere in the tree — there is nothing else for you to run.
 - **`lc materialize` commits the outputs it makes.** Don't commit results
   yourself, and never write into `results/` by hand: bytes arriving any
   other way carry no run record, and the next run notices and remakes them.

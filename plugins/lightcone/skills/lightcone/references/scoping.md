@@ -14,9 +14,10 @@ code is written yet. For the literature pass inside phase 3, read
 
 ## Before you start
 
-`lc init [DIR]` scaffolds the project — spec placeholder, baseline
-universe, uv project, git with git-annex, and a MyST report. It is
-idempotent, never overwrites what you own, and does **not** create
+`lc init [DIR]` scaffolds the project — spec placeholder, baseline universe,
+uv project, git repository (with `data/` and `results/` backed by git-annex,
+so a plain `git add` there stores the bytes properly), and a MyST report. It
+is idempotent, never overwrites what you own, and does **not** create
 `CLAUDE.md`; you write that at finalize.
 
 Build the spec through conversation, writing to `astra.yaml` after each

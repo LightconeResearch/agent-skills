@@ -88,7 +88,7 @@ emit() { # $1: the engine-state paragraph
 }
 
 if ! command -v lc &>/dev/null; then
-    emit "The Lightcone CLI is not installed, so nothing can be scoped into a project, materialized, published, or diagnosed — \`lc init\`, \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. The install also puts \`git-annex\` on PATH, which the user's own \`git add\` needs in a Lightcone project. $install_remedy"
+    emit "The Lightcone CLI is not installed, so nothing can be scoped into a project, materialized, published, or diagnosed — \`lc init\`, \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. $install_remedy"
     exit 0
 fi
 

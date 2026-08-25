@@ -10,7 +10,7 @@ rather than working around it.
 - [A recipe fails](#a-recipe-fails)
 - [Reaching for a system tool: containerizing](#reaching-for-a-system-tool-containerizing)
 - [Unexpected status](#unexpected-status)
-- [Clones, annex, and bytes](#clones-annex-and-bytes)
+- [Clones and bytes](#clones-and-bytes)
 - [HPC and venues](#hpc-and-venues)
 
 ## The CLI itself
@@ -41,7 +41,7 @@ missing and name what to allow rather than working around it.
   separates files to commit from stray `results/` files to discard.
 - **`... is not a Lightcone project`** — `lc` uses the invocation
   directory and never walks up; `cd` to the project root. In a fresh clone,
-  run `lc init` once to rebuild `.venv` and the annex.
+  run `lc init` once to rebuild what the clone did not carry.
 - **git identity missing** — `lc materialize` needs a committer before it
   will start. The user sets `git config --global user.name` / `user.email`;
   this is theirs to do, never yours.
@@ -99,20 +99,22 @@ architecture matches (e.g. a NERSC login node), commit, push.
   record. Inspect that commit before remaking, in case work is about to be
   lost.
 
-## Clones, annex, and bytes
+## Clones and bytes
 
-- **`git-annex: command not found` during `git add`, or `fatal: clean
-  filter 'annex' failed`** — git-annex isn't reachable from the shell, so
-  the annex filter can't run. It ships with the CLI, so this means the
-  install is broken or shadowed: check `lc --version` and `type git-annex`,
-  and have the user repair it with
-  `uv tool install --force lightcone-cli==0.5.0rc1`. In a fresh clone,
-  `lc init` is the other half of the answer — it restores the annex settings
-  the clone did not carry. Do not commit past this error either way:
-  without the filter, `git add` stages annexed files' raw bytes into git
-  history.
-- **`the content is not in this clone`** — annexed bytes were never
-  fetched. `lc materialize` fetches declared inputs itself; use
+`data/` and `results/` are backed by **git-annex**, already configured by the
+project: a `git add` anywhere under either directory writes the file's bytes
+into the annex and commits a small pointer in their place, which is how a
+repository holds results and datasets without swelling. That configuration is
+the whole interface — plain `git add` / `git commit` from anywhere in the tree
+does the right thing, and there is no annex command to run to make it happen.
+
+- **A `git add` that fails on a filter** — the project's file storage is
+  not set up in this working tree. In a fresh clone, `lc init` is the
+  answer; if it persists, the install is broken and the user repairs it
+  with `uv tool install --force lightcone-cli==0.5.0rc1`. Do not commit past
+  such an error: the file would go into history in the wrong form.
+- **`the content is not in this clone`** — the pointer is here but the bytes
+  were never fetched. `lc materialize` fetches what a recipe declares; use
   `git annex get <path>` only for bytes you want to inspect yourself.
 
 ## HPC and venues
