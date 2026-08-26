@@ -19,7 +19,6 @@ Docs: <https://lightconeresearch.github.io/MySTRA/>.
   - [Name the result file](#name-the-result-file)
 - [Cross-references](#cross-references)
 - [Universes and materialization](#universes-and-materialization)
-- [Multi-page reports](#multi-page-reports)
 - [Keeping it in sync](#keeping-it-in-sync)
 
 ## Whose report it is
@@ -95,7 +94,7 @@ Dot-separated, mirroring `astra.yaml`, and always resolved **from the root
 analysis** so a path means the same thing on every page.
 
 The collections: `inputs`, `outputs`, `decisions`, `findings`,
-`prior_insights`, `analyses`, `universes`.
+`prior_insights`, `universes`.
 
 | Path | What it addresses |
 |---|---|
@@ -103,11 +102,8 @@ The collections: `inputs`, `outputs`, `decisions`, `findings`,
 | `outputs` | the whole collection — renders as a registry |
 | `decisions.algorithm.gp` | an option of a decision |
 | `findings.sig.fig1` | an evidence record of a finding |
-| `reconstruction.outputs.xi` | an output inside a sub-analysis |
-| `clustering.correlation.outputs.xi` | nested to any depth |
 
-Leading segments step into sub-analyses (no `analyses.` prefix needed); the
-first collection keyword fixes the target. Children — decision options,
+The leading collection keyword fixes the target. Children — decision options,
 evidence records — omit their own collection keyword, since each parent has
 exactly one kind of child. Labels come from a declared `label:` where there
 is one, otherwise the id.
@@ -170,21 +166,20 @@ $\Omega_\Lambda$ = {astra:value col=mean err=sigma}`outputs.constraints`   ✓
 $$\Omega_\Lambda = \text{{astra:value col=mean}`outputs.constraints`}$$    ✗
 ```
 
-### Name the result file
+### Which file a reference resolves to
 
-An output is a *directory*, so a recipe may write several files into
-`{output}`. Resolution ignores dotfiles (the run manifest never interferes)
-and then picks, in order:
+Nothing to choose: an output *is* one file, at
+`results/<universe>/<output_id>.<format>`, composed from the spec. A
+reference resolves to that path and nothing else, and the `format:` in
+`astra.yaml` is what tells the page whether it is embedding a figure, a
+table or a metric — so a `{astra}` reference is answerable from the spec
+before anything has been materialized.
 
-1. the file whose name before the extension equals the **output id**;
-2. otherwise the **alphabetically first** file.
-
-So an output `parameter_constraints` that writes `constraints.csv` and
-`summary.json` resolves to `constraints.csv` — by alphabetical luck, not by
-intent, and adding an `analysis.csv` later would silently redirect every
-value on the page. **Write the primary artifact as `<output_id>.csv` (or
-`.json`)** and the choice stops being a lottery. Secondary files alongside it
-are then free to be named anything.
+The consequence for authoring is upstream, in `astra.yaml`: an output that
+wants to be *both* a `.csv` of values and a `.png` of them is two outputs,
+not one, and only then can a page point at each. A bundle behind one id
+(`format: tar.gz`) is opaque to the report — nothing on the page can reach
+inside it.
 
 The block directive renders by target: a decision as label, rationale and
 options-as-tabs with the universe's selection marked; an output as the
@@ -216,24 +211,6 @@ current as the last `lc materialize`. Materialize before rendering anything
 you intend to show someone; a value whose output has never been made
 renders an error token, which is the correct outcome and not something to
 work around by typing the number.
-
-## Multi-page reports
-
-A page's filename maps it to an analysis scope — `index.md` is the root,
-`reconstruction.md` is that sub-analysis, `reconstruction.features.md` the
-`features` inside it. Override with frontmatter when the name cannot say it:
-
-```yaml
----
-astra_scope: reconstruction.features
----
-```
-
-(`astra_scope: ""` is the root; a list assigns several.) Scope decides which
-elements a page's themed output shows — roles and directives still resolve
-from the root on every page. List the pages under `project.toc` in
-`myst.yml`, and get navigation cards by embedding a sub-analysis
-(`:::{astra} reconstruction` / `:::{astra} analyses`).
 
 ## Keeping it in sync
 

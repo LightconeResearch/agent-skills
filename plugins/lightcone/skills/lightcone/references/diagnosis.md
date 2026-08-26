@@ -22,10 +22,10 @@ in place.
 
 | Outcome | What it means | Remedy |
 |---|---|---|
-| Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==0.5.0rc1` |
-| A version below the floor | The rebuild changed the verbs and the status vocabulary, so the skill's instructions will produce errors rather than results | `uv tool install lightcone-cli==0.5.0rc1` — **not** `uv tool upgrade`, which will not move onto a pre-release |
+| Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==0.5.0rc2` |
+| A version below the floor | The rebuild changed the verbs and the status vocabulary, so the skill's instructions will produce errors rather than results | `uv tool install lightcone-cli==0.5.0rc2` — **not** `uv tool upgrade`, which will not move onto a pre-release |
 | A version above the floor | Nothing. Newer is fine | — |
-| `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==0.5.0rc1` |
+| `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==0.5.0rc2` |
 | `lc` not found right after installing | uv put it in `~/.local/bin`, which is not on PATH | `uv tool update-shell`, or check for a shell alias with `type lc` |
 
 Who runs it: offer and wait where a person can answer, act and report where
@@ -45,6 +45,15 @@ missing and name what to allow rather than working around it.
 - **git identity missing** — `lc materialize` needs a committer before it
   will start. The user sets `git config --global user.name` / `user.email`;
   this is theirs to do, never yours.
+- **`N output(s) declare no format:`** — every executable output is
+  written to `results/<universe>/<id>.<format>`, so without one there is
+  nowhere to put it. The refusal names all of them at once; add each
+  artifact's extension (`format: png`) in a single edit.
+- **`output id ... contains a dot`** — the manifest sidecar
+  (`.<id>.manifest.json`) is recovered by partitioning the filename on its
+  first dot, so a dotted id would let two outputs share a manifest. This is
+  also what makes a **nested spec unbuildable today**: ASTRA qualifies a
+  sub-analysis's output as `<sub>.<output>`. Keep the analysis flat.
 
 ## A recipe fails
 
@@ -56,8 +65,12 @@ blocked.
   commit, re-run. Never `pip install`: an install that bypasses the lock
   reaches nothing a recipe sees.
 - **Reading outside the project** → declare the path as an ASTRA input.
-- **Writing outside `{output}`** → a recipe writes only its own output
-  directory. Send scratch files to `tempfile.mkdtemp()` instead.
+- **Writing outside its results directory** → a recipe may write only
+  inside the directory its output lands in. Send scratch files to
+  `tempfile.mkdtemp()` instead.
+- **`the recipe exited 0 but left nothing / a directory at ...`** → the
+  script wrote a different name, or `mkdir`'d the path. `{output}` is the
+  file itself: open it as handed, don't join a filename onto it.
 - **A blocked system tool** → the environment has no such tool; see
   containerizing below.
 
@@ -111,7 +124,7 @@ does the right thing, and there is no annex command to run to make it happen.
 - **A `git add` that fails on a filter** — the project's file storage is
   not set up in this working tree. In a fresh clone, `lc init` is the
   answer; if it persists, the install is broken and the user repairs it
-  with `uv tool install --force lightcone-cli==0.5.0rc1`. Do not commit past
+  with `uv tool install --force lightcone-cli==0.5.0rc2`. Do not commit past
   such an error: the file would go into history in the wrong form.
 - **`the content is not in this clone`** — the pointer is here but the bytes
   were never fetched. `lc materialize` fetches what a recipe declares; use

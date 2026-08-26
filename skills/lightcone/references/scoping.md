@@ -10,7 +10,6 @@ code is written yet. For the literature pass inside phase 3, read
 - [2. Analysis structure](#2-analysis-structure)
 - [3. Literature deep dive](#3-literature-deep-dive)
 - [4. Finalize](#4-finalize)
-- [Creating sub-analyses](#creating-sub-analyses)
 
 ## Before you start
 
@@ -44,14 +43,15 @@ Stage banner: **ANALYSIS STRUCTURE**
 
 > "Walk me through your analysis step by step. What goes in, what comes out?"
 
-- **Default to a single analysis.** Split into sub-analyses only when each
-  part is genuinely a self-contained product with materially different
-  inputs and outputs (training + evaluation is usually *one* analysis — the
-  product is the validated estimator). The full splitting judgment is the
-  astra skill's; when a split does seem warranted, confirm the stage
-  boundaries with the user before restructuring.
+- **Scope one analysis, flat.** However many stages the work has, they
+  are outputs of this one analysis — training + evaluation is a single
+  analysis, the product being the validated estimator.
 - **One output per output.** A single metric, a single plot, or a single
-  artifact each — never a bundle like "performance_metrics".
+  artifact each — never a bundle like "performance_metrics". This is
+  enforced, not advisory: `lc` writes each output to one file,
+  `results/<universe>/<id>.<format>`, so give every output a `format:` (its
+  file extension) as you declare it, and split anything that wanted to be
+  two files into two outputs.
 
 Update `astra.yaml` with `inputs` and `outputs`.
 
@@ -102,22 +102,8 @@ Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
    `astra.yaml` and `CLAUDE.md`.
 
    ```
-   | Section      | Decisions | Outputs | Prior insights |
-   |--------------|-----------|---------|----------------|
-   | (top-level)  | 3         | 2       | 5              |
-   | sub_analysis | 2         | 1       | 0              |
+   | Decisions | Outputs | Prior insights |
+   |-----------|---------|----------------|
+   | 3         | 2       | 5              |
    ```
 
-## Creating sub-analyses
-
-Each sub-analysis is just another `astra.yaml` nested in a directory:
-
-1. Create `analyses/<name>/` with its own `astra.yaml` (and optionally
-   `src/`, `universes/baseline.yaml`).
-2. Add a `path:` entry under the parent's `analyses:`
-   (`analyses: { my_sub: { path: ./analyses/my_sub } }`).
-3. Add `<name>: { universe: baseline }` to each existing parent universe
-   file.
-
-Wire inputs and decisions to the parent or siblings with `from:` references
-— the grammar is in the astra skill's spec reference.

@@ -45,6 +45,15 @@ missing and name what to allow rather than working around it.
 - **git identity missing** — `lc materialize` needs a committer before it
   will start. The user sets `git config --global user.name` / `user.email`;
   this is theirs to do, never yours.
+- **`N output(s) declare no format:`** — every executable output is
+  written to `results/<universe>/<id>.<format>`, so without one there is
+  nowhere to put it. The refusal names all of them at once; add each
+  artifact's extension (`format: png`) in a single edit.
+- **`output id ... contains a dot`** — the manifest sidecar
+  (`.<id>.manifest.json`) is recovered by partitioning the filename on its
+  first dot, so a dotted id would let two outputs share a manifest. This is
+  also what makes a **nested spec unbuildable today**: ASTRA qualifies a
+  sub-analysis's output as `<sub>.<output>`. Keep the analysis flat.
 
 ## A recipe fails
 
@@ -56,8 +65,12 @@ blocked.
   commit, re-run. Never `pip install`: an install that bypasses the lock
   reaches nothing a recipe sees.
 - **Reading outside the project** → declare the path as an ASTRA input.
-- **Writing outside `{output}`** → a recipe writes only its own output
-  directory. Send scratch files to `tempfile.mkdtemp()` instead.
+- **Writing outside its results directory** → a recipe may write only
+  inside the directory its output lands in. Send scratch files to
+  `tempfile.mkdtemp()` instead.
+- **`the recipe exited 0 but left nothing / a directory at ...`** → the
+  script wrote a different name, or `mkdir`'d the path. `{output}` is the
+  file itself: open it as handed, don't join a filename onto it.
 - **A blocked system tool** → the environment has no such tool; see
   containerizing below.
 

@@ -19,7 +19,7 @@
 #     moment of consent. It reports; the agent acts; who consents depends on
 #     whether anyone is there to consent (see the mode probe below).
 #   - The floor version comes from the bundling plugin's `tools` pin in
-#     skills.config.json: canonical sources write the lightcone-cli==0.5.0rc1
+#     skills.config.json: canonical sources write the lightcone-cli==0.5.0rc2
 #     placeholder and `npm run build` substitutes the pin into the packaged
 #     copies. Nothing here is a number a contributor should hand-edit.
 #
@@ -56,7 +56,7 @@ else
 fi
 
 # The `==` form is what the pin substitution rewrites; the floor is its tail.
-required_spec="lightcone-cli==0.5.0rc1"
+required_spec="lightcone-cli==0.5.0rc2"
 required="${required_spec##*==}"
 
 # Is anyone there to answer? A headless run (`claude -p`, an SDK embed, CI)

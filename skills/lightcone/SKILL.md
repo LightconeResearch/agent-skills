@@ -16,8 +16,9 @@ description: >
 # Lightcone projects
 
 An analysis declared in `astra.yaml`, executed by `lc`, and documented in index.md: recipes turn
-declared inputs and decisions into outputs under `results/`, each committed
-with the code that produced it, the MyST report of the analysis is in index.md.
+declared inputs and decisions into outputs under `results/` — one output is
+one file, named by the spec — each committed with the code that produced it,
+the MyST report of the analysis is in index.md.
 
 | What you are doing | Where to go |
 |---|---|
@@ -63,11 +64,16 @@ what you changed.
    `uv run`; `lc run bash -c '...'` for shell syntax. What works here works
    as a recipe. A missing import is environment work: `uv add <pkg>`, which
    is the only way to change the environment.
-2. **Wire.** Give the output a `recipe:` in `astra.yaml`. `{output}` is its
-   own results directory, `{inputs.<id>}` a declared input (an upstream
-   output's directory, when outputs chain), `{decisions.<id>}` the active
-   option. Everything a command references must appear in that output's
-   `inputs:` / `decisions:` — that is also how dependencies are declared.
+2. **Wire.** Give the output a `format:` and a `recipe:` in `astra.yaml`.
+   `format:` is the extension its artifact is written with, no leading dot
+   (`png`, `pdf`, `csv`, `parquet`, `json`, `fits`, `hdf5`, `md`, `tar.gz`);
+   the ASTRA schema leaves it optional, but `lc` refuses a plan where any
+   executable output lacks one — it has nowhere to write them. In the
+   recipe, `{output}` is the single file that output must write,
+   `{inputs.<id>}` a declared input (an upstream output's *file*, when
+   outputs chain), `{decisions.<id>}` the active option. Everything a
+   command references must appear in that output's `inputs:` / `decisions:`
+   — that is also how dependencies are declared.
 3. **Commit your edits**, by path: `git add src/ astra.yaml && git commit`.
 4. **`lc materialize [targets]`.** Remakes what is `stale`, dependencies
    first, and commits each output as it lands. Bare takes every output in
@@ -75,19 +81,27 @@ what you changed.
    takes one universe's. Re-running is idempotent. You are done when
    `lc materialize --check` passes — that, not `lc status`, is the gate.
 
-Outputs land at `results/<universe>/<output_id>/` — a sub-analysis uses its
-qualified id, `results/<universe>/<sub>.<output_id>/`. Each directory carries
-a `.lightcone-manifest.json` beside the bytes — the run record: the rendered
+Outputs land at `results/<universe>/<output_id>.<format>` — `lc` composes
+that path, no recipe chooses it, so the whole contents of `results/` are a
+pure function of the spec, and a consumer knows what every output *is* from
+`astra.yaml` alone. Beside each one sits `.<output_id>.manifest.json`, named
+from the id alone and kept in git rather than the annex so it reads on a
+clone that has fetched no content. It is the run record: the rendered
 `recipe`, the `decisions` it ran under, `git_sha`, `lc_version`/`uv_version`,
 the `hermeticity` the sandbox enforced, timestamps, and the hashes
 (`definition_version`, `env_version`, `data_version`, `input_versions`) that
-`lc status` compares against the spec to reach its verdict. Read it to answer
-how an output came to be; never write one. Name one output at a time while
-integrating, so each intermediate can be inspected rather than debugged from
-the bottom of a long trace.
+`lc status` compares against the spec to reach its verdict. `data_version` is
+a plain `sha256:` of the file's bytes, so it agrees with `sha256sum`. Read
+the manifest to answer how an output came to be; never write one. Name one
+output at a time while integrating, so each intermediate can be inspected
+rather than debugged from the bottom of a long trace.
 
 Write scripts recipe-ready: one script per output, every decision a CLI flag
-(never a hardcoded option value), everything written under `{output}`.
+(never a hardcoded option value), and the artifact written to the path
+`{output}` hands them, opened exactly as given — `fig.savefig(args.output)`,
+`Path(args.output).write_text(...)`, never a filename joined onto it. A
+recipe that exits 0 having written a directory, some other name, or nothing
+at that path is a failure, not an output.
 
 ## Read `lc status`
 
@@ -158,6 +172,9 @@ before anything long (a full multiverse, a first container build). Keep
   other way carry no run record, and the next run notices and remakes them.
 - **Never `git add -A`.** It sweeps a probe's stray `results/` files into a
   commit without a run record, which lands the output `stale`.
+- **One output is one file.** A recipe cannot emit a bundle: split it into
+  separate outputs, or declare a container format (`format: tar.gz`,
+  `format: hdf5`) and write the one archive.
 - **`pip install` reaches nothing.** The lock is the environment: `uv add`.
 - **Don't re-interview on resume.** The spec and `CLAUDE.md` already answer
   the scoping questions; summarize state and ask what is *next*.
