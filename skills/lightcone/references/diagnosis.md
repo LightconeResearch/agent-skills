@@ -65,9 +65,14 @@ blocked.
   commit, re-run. Never `pip install`: an install that bypasses the lock
   reaches nothing a recipe sees.
 - **Reading outside the project** → declare the path as an ASTRA input.
-- **Writing outside its results directory** → a recipe may write only
-  inside the directory its output lands in. Send scratch files to
-  `tempfile.mkdtemp()` instead.
+  The read set is the project tree, every declared `source:`, the
+  environment and the OS; a denial names what is undeclared.
+- **`Permission denied` writing a relative path** → the cwd is the project
+  root and the tree is read-only, so `open("chain.npz", "w")` is denied
+  wherever the script sits. The writable set is `results/` (a recipe: only
+  its own `results/<universe>/`), `$TMPDIR`/`$HOME` — private, per-run and
+  discarded — and `/tmp`, `/var/tmp`, `/dev/shm`. Send a probe's scratch to
+  `tempfile.mkdtemp()`; send a recipe's artifact to `{output}`.
 - **`the recipe exited 0 but left nothing / a directory at ...`** → the
   script wrote a different name, or `mkdir`'d the path. `{output}` is the
   file itself: open it as handed, don't join a filename onto it.

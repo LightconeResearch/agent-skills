@@ -63,7 +63,10 @@ what you changed.
 1. **Probe.** `lc run python src/fit.py --outliers clip` — argv, like
    `uv run`; `lc run bash -c '...'` for shell syntax. What works here works
    as a recipe. A missing import is environment work: `uv add <pkg>`, which
-   is the only way to change the environment.
+   is the only way to change the environment. Have the probe write where a
+   probe may write (below) — the project root is read-only, so a script
+   saving `chain.npz` beside itself dies at the last line, having done all
+   the work.
 2. **Wire.** Give the output a `format:` and a `recipe:` in `astra.yaml`.
    `format:` is the extension its artifact is written with, no leading dot
    (`png`, `pdf`, `csv`, `parquet`, `json`, `fits`, `hdf5`, `md`, `tar.gz`);
@@ -102,6 +105,32 @@ Write scripts recipe-ready: one script per output, every decision a CLI flag
 `Path(args.output).write_text(...)`, never a filename joined onto it. A
 recipe that exits 0 having written a directory, some other name, or nothing
 at that path is a failure, not an output.
+
+## What a command may touch
+
+`lc run` and a recipe run under the same boundary, which is why a working
+probe means a working recipe. The project tree is **readable but read-only**;
+the writable set is small and nothing else in it is writable:
+
+| Writable | `lc run` (probe) | A recipe |
+|---|---|---|
+| `results/` | the whole directory | only `results/<universe>/`, where its own output lands |
+| `$TMPDIR`, `$HOME` | a private per-run directory, gone afterwards | same |
+| `/tmp`, `/var/tmp`, `/dev/shm` | yes | yes |
+
+So a probe's scratch belongs in `tempfile` / `$TMPDIR` (`TMPDIR` already
+points inside the private HOME, so `tempfile.mkdtemp()` needs nothing
+declared), or in `results/` when you want to keep looking at it — remembering
+that anything a probe leaves in `results/` carries no run record and must go
+before you commit.
+
+**Readable:** the whole project tree, every `source:` declared in
+`astra.yaml` — that is what declaring an input buys — the project
+environment, and the OS. A denied read is the boundary naming an undeclared
+input, not an obstacle to work around.
+
+The tree being read-only includes `.venv`: `uv add` changes the environment
+because it runs *outside* the boundary, and nothing inside one ever can.
 
 ## Read `lc status`
 
