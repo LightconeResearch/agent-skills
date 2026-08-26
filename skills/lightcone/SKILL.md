@@ -152,8 +152,8 @@ Write to `astra.yaml` as each decision crystallizes rather than in bulk, and
 keep the conversation to a summary with ids — candidate decisions and
 findings belong in the file, where they can be reviewed. Confirm scope
 before anything long (a full multiverse, a first container build). Keep
-`CLAUDE.md`'s Project Notes current: it holds what the spec cannot and what
-`/clear` would otherwise lose.
+`AGENTS.md`'s Project Notes current: it holds what the spec cannot, and it is
+what a later session reads to pick the work up.
 
 ## Gotchas
 
@@ -176,7 +176,7 @@ before anything long (a full multiverse, a first container build). Keep
   separate outputs, or declare a container format (`format: tar.gz`,
   `format: hdf5`) and write the one archive.
 - **`pip install` reaches nothing.** The lock is the environment: `uv add`.
-- **Don't re-interview on resume.** The spec and `CLAUDE.md` already answer
+- **Don't re-interview on resume.** The spec and `AGENTS.md` already answer
   the scoping questions; summarize state and ask what is *next*.
 - **Five verbs, and `--help` is the authority.** `init`, `status`,
   `materialize`, `run`, `build`. Universes and outputs are selected by

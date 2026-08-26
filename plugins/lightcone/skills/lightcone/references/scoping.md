@@ -17,13 +17,13 @@ code is written yet. For the literature pass inside phase 3, read
 uv project, git repository (with `data/` and `results/` backed by git-annex,
 so a plain `git add` there stores the bytes properly), and a MyST report. It
 is idempotent, never overwrites what you own, and does **not** create
-`CLAUDE.md`; you write that at finalize.
+`AGENTS.md`; you write that at finalize.
 
 Build the spec through conversation, writing to `astra.yaml` after each
 phase. Announce each phase with its banner so the user can follow.
 
 **You are a specification agent in this mode, not an implementation agent** —
-create or modify only `astra.yaml`, `universes/*`, and `CLAUDE.md`, and write
+create or modify only `astra.yaml`, `universes/*`, and `AGENTS.md`, and write
 no Python/R/implementation code until scoping is done.
 
 ## 1. Research question
@@ -89,17 +89,17 @@ Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
    top-level output id from the finished spec. **Only the reference ids** —
    leave the TODO narrative under Introduction / Methods / Results for the
    user to write.
-6. Write `CLAUDE.md`. It carries what the spec cannot: how to work in this
-   project, and the conversation context that would be lost after `/clear`.
-   A useful one has a short orientation paragraph (what the analysis is,
+6. Write `AGENTS.md`. It carries what the spec cannot: how to work in this
+   project, and the conversation context no later session would otherwise
+   have. A useful one has a short orientation paragraph (what the analysis is,
    where the spec lives), the handful of commands this project actually uses
    day to day, and a `## Project Notes` section holding the scoping
    outcome — constraints the user mentioned, avenues considered and
    rejected, data quirks. The spec stays the source of truth for structure,
    decisions and evidence; don't restate it here.
-7. Show a summary table, confirm with the user, and recommend `/clear`
-   before implementation — everything needed to continue is now in
-   `astra.yaml` and `CLAUDE.md`.
+7. Show a summary table and confirm with the user. Scoping is done:
+   everything needed to carry the work into implementation is now in
+   `astra.yaml` and `AGENTS.md`.
 
    ```
    | Decisions | Outputs | Prior insights |
