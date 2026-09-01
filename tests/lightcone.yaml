@@ -1,0 +1,64 @@
+# E2E hook-dispatch test spec for the lightcone plugin. Field-by-field
+# documentation of how specs work lives in tests/astra.yaml.
+#
+# Scope: lightcone's OWN hook — the SessionStart engine preflight — and
+# nothing else. lightcone VENDORS the astra plugin (via `dependencies` in
+# skills.config.json), so byte-copies of astra's hooks are packaged alongside
+# it and fire in these same sessions; but those are astra's hooks, covered
+# against a standalone install by tests/astra.yaml. What only this spec can
+# show is that lightcone's own SessionStart entry survives the bundling path
+# (closure copy, hooks.json merge, script flattening, pin substitution) and
+# actually fires in a real session.
+#
+# The engine state is MADE deterministic rather than probed: `setup` installs
+# the pinned lightcone-cli into the scratch bin dir the runner puts first on
+# the sessions' PATH, so the preflight finds a real `lc` at exactly the pinned
+# version — on a CI runner and on a developer machine alike — and the version
+# it reports back is the assertion.
+
+plugin: lightcone
+
+# The hook frames its report around ./astra.yaml, so the session opens on a
+# real (minimal, valid) project — the same fixture as tests/astra.yaml.
+project:
+  astra.yaml: |
+    version: "0.0.13"
+    name: "E2E fixture"
+    description: "Minimal valid analysis used as the e2e project fixture."
+
+    inputs:
+      - id: primary_data
+        type: data
+        description: "Placeholder input."
+
+    outputs:
+      - id: main_result
+        type: metric
+        description: "Placeholder output."
+        inputs: [primary_data]
+        recipe:
+          command: python analyze.py --data {inputs.primary_data} --out {output}
+
+setup:
+  # Both uv dirs point into $E2E_BIN — the scratch bin dir, first on the PATH
+  # the hooks inherit and deleted with the scratch area afterwards. A bare
+  # `uv tool install` would instead land `lc` in the developer's own
+  # ~/.local/bin and replace whatever version they run.
+  - 'UV_TOOL_DIR="$E2E_BIN/tools" UV_TOOL_BIN_DIR="$E2E_BIN" uv tool install lightcone-cli==x.y.z'
+
+tests:
+  - name: engine-preflight
+    event: SessionStart
+    # What a session on a Lightcone project actually opens with — and the
+    # preflight is what answers it, before `lc` is ever run.
+    prompt: >-
+      What is the status of this Lightcone project? Answer in one sentence
+      from what you already know, and do not run any commands.
+    # Only the healthy branch of the preflight says this, and only after
+    # parsing a version out of `lc --version` — so the pinned version in the
+    # marker is proof the hook ran the CLI that setup installed.
+    expect_context: "Lightcone CLI ready: lc {pin:lightcone-cli}"
+    forbid_context:
+      - The Lightcone CLI is not installed   # `lc` never reached the hook's PATH
+      - did not report a version             # broken install, or a foreign `lc`
+      - older than the {pin:lightcone-cli} this skill   # install older than the pin

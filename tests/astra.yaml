@@ -9,8 +9,10 @@
 #
 #   1. expect_context — a marker substring the hook itself injects into the
 #      conversation (its additionalContext), searched in the harness's session
-#      trace (Claude: the stream-json output; Codex: the session rollout file
-#      under $CODEX_HOME/sessions/). Works for ANY hook, including ones that
+#      trace (Claude: the stream-json output plus the session transcripts
+#      under the throwaway config's projects/ dir — the stream alone omits
+#      PostToolUse context; Codex: the session rollout file under
+#      $CODEX_HOME/sessions/). Works for ANY hook, including ones that
 #      never shell out to a binary. Keep markers ASCII — traces JSON-escape
 #      non-ASCII characters.
 #   2. forbid_context — degraded-path markers that must NOT appear: hooks that
@@ -22,9 +24,11 @@
 #
 # Model output is never asserted; the model is only a means to trigger events.
 #
-# Any `<tool>@x.y.z` placeholder in this file is substituted with the plugin's
-# pinned tool version from skills.config.json, exactly like the build does for
-# hook scripts — specs never hardcode a version.
+# Any `<tool>@x.y.z` (or `<tool>==x.y.z`) placeholder in a spec is substituted
+# with the plugin's pinned tool version from skills.config.json, exactly like
+# the build does for hook scripts, and `{pin:<tool>}` expands to the bare
+# version — for asserting on a hook that reports the version it found. Specs
+# never hardcode a version.
 #
 # Test fields:
 #   name              label for output
@@ -39,13 +43,20 @@
 #   edits_file        (optional) file the model must edit to trigger the event.
 #                     Grants the session write access, and separates the two
 #                     failure modes: file edited but evidence missing → dispatch
-#                     is broken; file never edited → inconclusive, retried up to
-#                     `attempts` times, then failed as such.
-#   attempts          (optional, default 1) total tries for inconclusive runs
+#                     looks broken; file never edited → inconclusive.
+#   attempts          (optional, default 1) total session tries before the test
+#                     fails. Both failure modes retry: sessions are stochastic
+#                     (the model can skip the edit, or make it through a tool
+#                     the hook matcher doesn't cover), so one bad session
+#                     shouldn't fail CI — real dispatch breakage fails every
+#                     attempt anyway.
 #
 # Top-level fields: plugin (required), tests (required), project (fixture
 # files), stubs (optional PATH stubs: {stdout, exit}), setup (optional shell
-# commands run in the project dir before the tests — e.g. toolchain warmup).
+# commands run in the project dir before the tests — e.g. toolchain warmup, or
+# installing a CLI a hook looks for; $E2E_BIN is the scratch bin dir that comes
+# first on the sessions' PATH and is deleted afterwards, so an install aimed
+# there shadows the host's copy without touching it).
 
 plugin: astra
 
@@ -99,7 +110,7 @@ tests:
       comment line `# e2e-touch` to the end of astra.yaml using your file
       editing tool. Do nothing else, and do not explain.
     edits_file: astra.yaml
-    attempts: 2
+    attempts: 3
     # Only real, successful validation of the (still valid) fixture says this.
     expect_context: ASTRA validation passed
     forbid_context:

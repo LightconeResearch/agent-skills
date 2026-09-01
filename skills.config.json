@@ -13,7 +13,7 @@
   "plugins": [
     {
       "name": "astra",
-      "version": "0.0.3",
+      "version": "0.0.4",
       "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
       "skills": [
         "astra"
@@ -21,9 +21,25 @@
       "hooks": "hooks/astra/hooks.json",
       "tools": {
         "$comment": "Pins for the CLI tools this plugin's skills and hooks invoke via `uvx <name>@<version>`. Canonical skills/ and hooks/ write the literal `@x.y.z` placeholder — never a concrete version — and `npm run build` substitutes each bundling plugin's pin into the generated plugins/<name>/ copies.",
-        "astra-tools": "0.2.13"
+        "astra-tools": "0.2.17"
       },
       "dependencies": []
+    },
+    {
+      "name": "lightcone",
+      "version": "0.0.1",
+      "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (probe with `lc run`, integrate recipes, commit, `lc materialize`), status interpretation (current/behind/stale) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
+      "skills": [
+        "lightcone"
+      ],
+      "hooks": "hooks/lightcone/hooks.json",
+      "tools": {
+        "$comment": "Unlike astra-tools, lightcone-cli is NOT run through uvx: the user installs it once with `uv tool install lightcone-cli==<pin>`, which also puts git-annex on PATH for their own git commands in a project. The pin does double duty — it is the version the install commands name, AND the MINIMUM the SessionStart hook and the skill accept from `lc --version` (newer is fine, so nobody is downgraded). Keep the `==` form in the install commands rather than a bare package name: the current line is a pre-release, and a bare `uv tool install lightcone-cli` resolves to the older stable release instead (verified), while `uv tool upgrade` refuses to cross into a pre-release at all. Bump this on each release the skill is rewritten against.",
+        "lightcone-cli": "0.5.0rc2"
+      },
+      "dependencies": [
+        "astra"
+      ]
     }
   ]
 }

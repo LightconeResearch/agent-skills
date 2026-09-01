@@ -32,11 +32,14 @@
 // (see tests/astra.yaml for the field docs). Three evidence checks:
 //
 //   1. expect_context — a marker the hook injects into the conversation,
-//      searched in the harness's session trace (Claude: the stream-json
-//      output of the run; Codex: the rollout-*.jsonl the session persists
-//      under $CODEX_HOME/sessions/, where injected context lands as a
-//      developer message). Fully general: works for hooks that never run a
-//      binary.
+//      searched in the harness's session trace. Claude: the stream-json
+//      output PLUS the session transcripts persisted under the throwaway
+//      config's projects/ dir — the stream carries hook events only for
+//      session-scoped events like SessionStart, while injected PostToolUse
+//      context lands only in the transcript (as a hook_additional_context
+//      attachment). Codex: the rollout-*.jsonl the session persists under
+//      $CODEX_HOME/sessions/, where injected context lands as a developer
+//      message. Fully general: works for hooks that never run a binary.
 //   2. forbid_context — degraded-path markers that must NOT appear. Hooks
 //      that catch their own errors and inject an apologetic message instead
 //      of failing (the astra hooks do) would otherwise pass a weak marker
@@ -80,13 +83,46 @@ const skip = (m) => {
   console.log(`  \x1b[33m∅ skip\x1b[0m ${m}`);
 };
 const have = (bin) => spawnSync("sh", ["-c", `command -v ${bin}`]).status === 0;
-const tail = (s, n = 400) => (s || "").trim().slice(-n);
+// Teardown must never fail the suite. Both harnesses keep working inside their
+// throwaway home after the last session returns — Codex repopulates
+// $CODEX_HOME/.tmp/plugins-clone-*/ from the marketplace, which surfaces as
+// ENOTEMPTY when the recursive walk removes a directory another process is
+// still filling — and a temp dir that outlives the run says nothing about
+// whether a hook fired. So retry the racy cases (rmSync retries exactly
+// EBUSY/EMFILE/ENFILE/ENOTEMPTY/EPERM), then leave the remains to the OS.
+const discard = (dir) => {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch (e) {
+    console.log(`  \x1b[33m∅\x1b[0m could not remove ${dir} (${e.code}) — left for the OS`);
+  }
+};
+const tail = (s, n = 2000) => (s || "").trim().slice(-n);
+// Every .jsonl under dir, recursively — how both harnesses' persisted
+// session traces are found (Claude transcripts, Codex rollouts).
+const jsonlUnder = (dir) =>
+  existsSync(dir)
+    ? readdirSync(dir, { recursive: true })
+        .map(String)
+        .filter((f) => f.endsWith(".jsonl"))
+        .map((f) => join(dir, f))
+    : [];
+
+// `CI` is dropped from every child so the suite's own environment does not
+// decide behaviour under test: the lightcone plugin's SessionStart hook reads
+// it as "nobody can be asked here", which changes the remedy it names when the
+// engine is missing or too old. This is only half a guard — the Claude leg's
+// sessions are genuinely headless, so `claude` exports
+// CLAUDE_CODE_ENTRYPOINT=sdk-cli to its own hook children and that path is
+// taken anyway. Anything relying on those sessions NOT mutating the runner has
+// to come from permissions, not from this scrub.
+const { CI: _ci, ...PARENT_ENV } = process.env;
 
 function run(bin, argv, { cwd, env = {}, timeout = 120_000, input } = {}) {
   const r = spawnSync(bin, argv, {
     cwd,
     encoding: "utf8",
-    env: { ...process.env, ...env },
+    env: { ...PARENT_ENV, ...env },
     input,
     timeout,
   });
@@ -192,7 +228,19 @@ const specs = readdirSync(TESTS_DIR)
     const plugin = parseYamlLite(text).plugin;
     if (!plugin || !byName[plugin])
       throw new Error(`tests/${f}: \`plugin\` must name a plugin from skills.config.json`);
-    const spec = parseYamlLite(applyPins(text, pluginTools(plugin, byName)));
+    // Two substitutions, both fed from the plugin's effective pins:
+    // `<tool>@x.y.z` / `<tool>==x.y.z`, exactly what the build rewrites in
+    // hook scripts (so a `setup` command can install the very version the
+    // hooks expect), and `{pin:<tool>}` for a BARE version inside an
+    // expectation — what a hook that echoes back the version it found injects.
+    const tools = pluginTools(plugin, byName);
+    const spec = parseYamlLite(
+      applyPins(text, tools).replace(/\{pin:([\w.+-]+)\}/g, (_, tool) => {
+        if (!tools[tool])
+          throw new Error(`tests/${f}: {pin:${tool}} names no tool pinned by plugin \`${plugin}\``);
+        return tools[tool];
+      }),
+    );
     if (!spec.tests) throw new Error(`tests/${f}: missing required field \`tests\``);
     for (const t of spec.tests) {
       if (!t.expect_context && !t.expect_stub_call)
@@ -212,10 +260,16 @@ function makeScratch(prefix, spec) {
   const stubLog = join(scratch, "stub-invocations.log");
   mkdirSync(project);
   mkdirSync(bin);
-  for (const [rel, content] of Object.entries(spec.project || {})) {
-    mkdirSync(dirname(join(project, rel)), { recursive: true });
-    writeFileSync(join(project, rel), content);
-  }
+  // Owns "what a pristine fixture is": called once here and again between
+  // test attempts. Overwrites the declared fixture files; extra files a
+  // session created are left alone.
+  const resetProject = () => {
+    for (const [rel, content] of Object.entries(spec.project || {})) {
+      mkdirSync(dirname(join(project, rel)), { recursive: true });
+      writeFileSync(join(project, rel), content);
+    }
+  };
+  resetProject();
   for (const [name, cfg] of Object.entries(spec.stubs || {})) {
     writeFileSync(
       join(bin, name),
@@ -226,7 +280,7 @@ function makeScratch(prefix, spec) {
   }
   const stubCalls = () =>
     existsSync(stubLog) ? readFileSync(stubLog, "utf8").trim().split("\n") : [];
-  return { scratch, project, bin, stubCalls };
+  return { scratch, project, bin, stubCalls, resetProject };
 }
 
 // Run one spec's tests against one harness. `session(test)` runs a fresh
@@ -243,7 +297,12 @@ function runSpecTests(harness, spec, sc, session) {
   for (const cmd of spec.setup || []) {
     const r = run("sh", ["-c", cmd], {
       cwd: sc.project,
-      env: { PATH: `${sc.bin}:${process.env.PATH}` },
+      // $E2E_BIN is the scratch bin dir: first on the PATH the sessions and
+      // their hooks inherit, and deleted with the scratch area afterwards. A
+      // setup command that INSTALLS a binary aims it there, so the version
+      // under test shadows whatever the host has and the developer's own
+      // ~/.local/bin is left alone.
+      env: { PATH: `${sc.bin}:${process.env.PATH}`, E2E_BIN: sc.bin },
       timeout: 300_000,
     });
     if (r.status !== 0)
@@ -251,9 +310,13 @@ function runSpecTests(harness, spec, sc, session) {
   }
   for (const t of spec.tests) {
     const label = `${harness}/${spec.plugin}/${t.name}`;
-    const attempts = t.edits_file ? t.attempts || 1 : 1;
+    const attempts = t.attempts || 1;
     const editPath = t.edits_file ? join(sc.project, t.edits_file) : null;
     for (let attempt = 1; attempt <= attempts; attempt++) {
+      // Reset fixtures so attempts are independent: a prior attempt's edit
+      // would otherwise leave the requested change already in place, and
+      // the model then (reasonably) declines to repeat it.
+      sc.resetProject();
       const before = sc.stubCalls().length;
       const pre = editPath && existsSync(editPath) ? readFileSync(editPath, "utf8") : null;
       const r = session(t);
@@ -269,17 +332,18 @@ function runSpecTests(harness, spec, sc, session) {
         pass(`${label}: ${t.event} hook fired (all evidence observed)`);
         break;
       }
+      // Sessions are stochastic (the model can skip the edit, or make it
+      // through a tool the hook matcher doesn't cover), so retry every
+      // failure mode until attempts run out — real dispatch breakage fails
+      // every attempt anyway. On the last attempt, distinguish "the model
+      // never made the triggering edit" (inconclusive: the hook never got
+      // its chance) from "the event fired and evidence is missing" (what
+      // this suite exists to catch).
+      if (attempt < attempts) continue;
       const post = editPath && existsSync(editPath) ? readFileSync(editPath, "utf8") : null;
-      if (editPath && pre === post) {
-        // The model never made the triggering edit, so the hook never got its
-        // chance — inconclusive rather than broken.
-        if (attempt < attempts) continue;
-        fail(`${label}: model never edited ${t.edits_file} in ${attempts} attempts (exit ${r.status}) — ${t.event} untested.\n${tail(r.out)}`);
-        break;
-      }
-      // The event had its chance (edit happened, or none was needed) and
-      // evidence is still missing: this is what this suite exists to catch.
-      fail(`${label}: ${t.event} hook evidence missing — ${missing.join("; ")} (exit ${r.status}).\n${tail(r.out)}`);
+      fail(editPath && pre === post
+        ? `${label}: model never edited ${t.edits_file} in ${attempts} attempts (exit ${r.status}) — ${t.event} untested.\n${tail(r.out)}`
+        : `${label}: ${t.event} hook evidence missing — ${missing.join("; ")} (exit ${r.status}).\n${tail(r.out)}`);
       break;
     }
   }
@@ -292,24 +356,35 @@ function claudeLeg() {
   if (!process.env.ANTHROPIC_API_KEY && !process.env.CLAUDE_CODE_OAUTH_TOKEN)
     return skip("no ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN — Claude leg needs auth");
 
-  const cfg = mkdtempSync(join(tmpdir(), "e2e-cc-cfg-"));
-  const baseEnv = { CLAUDE_CONFIG_DIR: join(cfg, "config") };
-  try {
-    const add = run("claude", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
-    if (!/added marketplace/i.test(add.out)) return fail(`marketplace add failed: ${tail(add.out)}`);
-    for (const spec of specs) {
+  // One fresh config home PER SPEC, not per leg: a plugin installed for an
+  // earlier spec keeps its hooks registered in a shared home, and a spec
+  // whose plugin vendors another plugin's hooks (lightcone bundles astra's)
+  // could then pass on evidence produced by the standalone copy instead of
+  // its own. A hermetic home per spec keeps the evidence attributable.
+  for (const spec of specs) {
+    const cfg = mkdtempSync(join(tmpdir(), "e2e-cc-cfg-"));
+    const baseEnv = { CLAUDE_CONFIG_DIR: join(cfg, "config") };
+    try {
+      const add = run("claude", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
+      if (!/added marketplace/i.test(add.out)) { fail(`${spec.plugin}: marketplace add failed: ${tail(add.out)}`); continue; }
       const ins = run("claude", ["plugin", "install", `${spec.plugin}@${MARKET}`, "--scope", "user"], { env: baseEnv });
       if (!/Successfully installed plugin/i.test(ins.out)) { fail(`${spec.plugin}: install failed: ${tail(ins.out)}`); continue; }
       const sc = makeScratch(`e2e-cc-${spec.plugin}-`, spec);
+      // Claude's trace is the stream output PLUS the session transcripts
+      // persisted under <config>/projects/: injected PostToolUse context
+      // never reaches the stream, only the transcript (see the evidence
+      // notes in the file header).
+      const projectsDir = join(baseEnv.CLAUDE_CONFIG_DIR, "projects");
+      const transcripts = () => jsonlUnder(projectsDir);
       try {
         runSpecTests("claude", spec, sc, (t) => {
+          const preFiles = new Set(transcripts());
           const r = run(
             "claude",
             [
               "-p", t.prompt, "--model", "haiku",
-              // stream-json (which requires --verbose in print mode) is the
-              // trace: hook-injected context flows through it for every
-              // event type.
+              // stream-json (which requires --verbose in print mode) carries
+              // the session-scoped hook events and the model's output.
               "--output-format", "stream-json", "--verbose",
               // acceptEdits when the test needs a file edit: headless runs
               // can't answer a permission prompt, and the whole point is to
@@ -320,11 +395,15 @@ function claudeLeg() {
             ],
             { cwd: sc.project, env: { ...baseEnv, PATH: `${sc.bin}:${process.env.PATH}` }, timeout: 300_000 },
           );
-          return { ...r, trace: r.out };
+          const trace = [
+            r.out,
+            ...transcripts().filter((f) => !preFiles.has(f)).map((f) => readFileSync(f, "utf8")),
+          ].join("\n");
+          return { ...r, trace };
         });
-      } finally { rmSync(sc.scratch, { recursive: true, force: true }); }
-    }
-  } finally { rmSync(cfg, { recursive: true, force: true }); }
+      } finally { discard(sc.scratch); }
+    } finally { discard(cfg); }
+  }
 }
 
 // ---- Codex ---------------------------------------------------------------
@@ -334,16 +413,18 @@ function codexLeg() {
   const key = process.env.CODEX_API_KEY || process.env.OPENAI_API_KEY;
   if (!key) return skip("no CODEX_API_KEY / OPENAI_API_KEY — Codex leg needs auth");
 
-  const home = mkdtempSync(join(tmpdir(), "e2e-cx-home-"));
-  const baseEnv = { CODEX_HOME: join(home, "codex"), CODEX_API_KEY: key, OPENAI_API_KEY: key };
-  mkdirSync(baseEnv.CODEX_HOME, { recursive: true });
-  // Belt and braces: some Codex versions read the key from the environment,
-  // others want it persisted in auth.json. Harmless where redundant.
-  run("codex", ["login", "--with-api-key"], { env: baseEnv, input: key });
-  try {
-    const add = run("codex", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
-    if (!/Added marketplace/i.test(add.out)) return fail(`marketplace add failed: ${tail(add.out)}`);
-    for (const spec of specs) {
+  // Fresh CODEX_HOME per spec, for the same evidence-attribution reason as
+  // the Claude leg (see comment there).
+  for (const spec of specs) {
+    const home = mkdtempSync(join(tmpdir(), "e2e-cx-home-"));
+    const baseEnv = { CODEX_HOME: join(home, "codex"), CODEX_API_KEY: key, OPENAI_API_KEY: key };
+    mkdirSync(baseEnv.CODEX_HOME, { recursive: true });
+    // Belt and braces: some Codex versions read the key from the environment,
+    // others want it persisted in auth.json. Harmless where redundant.
+    run("codex", ["login", "--with-api-key"], { env: baseEnv, input: key });
+    try {
+      const add = run("codex", ["plugin", "marketplace", "add", ROOT], { env: baseEnv });
+      if (!/Added marketplace/i.test(add.out)) { fail(`${spec.plugin}: marketplace add failed: ${tail(add.out)}`); continue; }
       const ins = run("codex", ["plugin", "add", `${spec.plugin}@${MARKET}`], { env: baseEnv });
       if (!/Added plugin/i.test(ins.out)) { fail(`${spec.plugin}: plugin add failed: ${tail(ins.out)}`); continue; }
       const sc = makeScratch(`e2e-cx-${spec.plugin}-`, spec);
@@ -352,13 +433,7 @@ function codexLeg() {
       // hook-injected context lands as a developer message. The trace for a
       // test is the content of the rollout files its session created.
       const sessionsDir = join(baseEnv.CODEX_HOME, "sessions");
-      const rollouts = () =>
-        existsSync(sessionsDir)
-          ? readdirSync(sessionsDir, { recursive: true })
-              .map(String)
-              .filter((f) => f.endsWith(".jsonl"))
-              .map((f) => join(sessionsDir, f))
-          : [];
+      const rollouts = () => jsonlUnder(sessionsDir);
       try {
         runSpecTests("codex", spec, sc, (t) => {
           const preFiles = new Set(rollouts());
@@ -388,9 +463,9 @@ function codexLeg() {
             .join("\n");
           return { ...r, trace };
         });
-      } finally { rmSync(sc.scratch, { recursive: true, force: true }); }
-    }
-  } finally { rmSync(home, { recursive: true, force: true }); }
+      } finally { discard(sc.scratch); }
+    } finally { discard(home); }
+  }
 }
 
 // ---- run -----------------------------------------------------------------

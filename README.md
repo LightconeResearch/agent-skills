@@ -10,8 +10,8 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-1-7c3aed?style=flat-square)](#-skills)
-[![Plugins](https://img.shields.io/badge/plugins-1-7c3aed?style=flat-square)](#-plugins)
+[![Skills](https://img.shields.io/badge/skills-2-7c3aed?style=flat-square)](#-skills)
+[![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
 
 </div>
 
@@ -71,6 +71,7 @@ Open **Plugins** from the arrow beside **Create** and add the
 | Plugin | Skills | Adds |
 |---|---|---|
 | **`astra`** | `astra` | authoring guidance for [ASTRA](#-skills) analysis specs (`astra.yaml`); validate-on-save & session-start hooks |
+| **`lightcone`** | `lightcone`, `astra` | end-to-end guidance for working on a Lightcone project with the `lc` CLI — scoping, implementation, materialization, publishing. Bundles the `astra` plugin (skill + hooks), so installing `lightcone` alone gets the full stack — don't install `astra` alongside it |
 
 ## 🚀 Install a plugin
 
@@ -121,6 +122,7 @@ Open **Plugins** from the arrow beside **Create**, then search for and install
 | Skill | What it does |
 |---|---|
 | [`astra`](skills/astra) | Teaches the agent to author and revise an `astra.yaml`: the judgment a schema can't carry — what deserves to be a decision, when to split a sub-analysis, how to back claims with verifiable evidence. |
+| [`lightcone`](skills/lightcone) | Teaches the agent to work on a Lightcone project at any phase: interview the user to scope a new analysis, orient and summarize when resuming one, and drive the `lc` workflow — integrate recipes, materialize outputs, interpret status, diagnose failures, publish. |
 
 ## 📄 License
 

@@ -2,7 +2,7 @@
 // Validate skills + confirm the generated files are in sync with the source.
 // Usage: npm test   (CI fails on any error below)
 
-import { readFileSync, existsSync, statSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   ROOT,
@@ -16,6 +16,7 @@ import {
   PIN_PLACEHOLDER,
   UNPINNED_RE,
   PIN_SCAN_EXTS,
+  SPEC_FIELDS,
 } from "./lib.mjs";
 
 const errors = [];
@@ -29,6 +30,47 @@ for (const [dir, s] of Object.entries(skills)) {
   else if (s.name !== dir) errors.push(`skills/${dir}: name "${s.name}" must match its directory`);
   if (!s.description) errors.push(`skills/${dir}: missing 'description'`);
   else if (s.description.length > 1024) errors.push(`skills/${dir}: description exceeds 1024 chars (${s.description.length})`);
+  // Only the six fields the Agent Skills spec defines. Claude Code accepts
+  // roughly twenty more (`paths`, `argument-hint`, `context`, `model`, …),
+  // but two of this repo's three targets — the `npx skills` CLI and the
+  // Skills API packaging path — reject an unknown key with a hard error
+  // rather than ignoring it. A skill that loads here and fails to package
+  // elsewhere is the drift this check exists to catch.
+  for (const key of Object.keys(s.frontmatter || {}))
+    if (!SPEC_FIELDS.has(key))
+      errors.push(
+        `skills/${dir}: frontmatter key "${key}" is outside the Agent Skills spec ` +
+          `(${[...SPEC_FIELDS].join(", ")}) — it would fail packaging for the non-Claude targets`,
+      );
+}
+
+// 1b. Progressive disclosure holds together: a skill's references/ files are
+//     the ones it points at, and they stay one level deep. A reference loads
+//     only when the agent reads it, so a pointer to a file that moved is a
+//     silent hole rather than an error, and a reference reachable only from
+//     another reference tends to be previewed with `head` instead of read.
+for (const [dir] of Object.entries(skills)) {
+  const refDir = join(ROOT, "skills", dir, "references");
+  if (!existsSync(refDir)) continue;
+  const onDisk = readdirSync(refDir).filter((f) => f.endsWith(".md"));
+  const body = readFileSync(join(ROOT, "skills", dir, "SKILL.md"), "utf8");
+  const pointed = new Set([...body.matchAll(/references\/([\w.-]+\.md)/g)].map((m) => m[1]));
+  for (const name of pointed)
+    if (!onDisk.includes(name))
+      errors.push(`skills/${dir}/SKILL.md: points at references/${name}, which does not exist`);
+  for (const name of onDisk)
+    if (!pointed.has(name))
+      errors.push(
+        `skills/${dir}/references/${name}: nothing in SKILL.md points at it — an unreferenced file never loads`,
+      );
+  for (const name of onDisk) {
+    const text = readFileSync(join(refDir, name), "utf8");
+    for (const [, target] of text.matchAll(/references\/([\w.-]+\.md)/g)) {
+      if (target === name) continue;
+      if (!onDisk.includes(target))
+        errors.push(`skills/${dir}/references/${name}: points at references/${target}, which does not exist`);
+    }
+  }
 }
 
 // 2. Every skill referenced by a plugin exists; plugin names are valid & unique.

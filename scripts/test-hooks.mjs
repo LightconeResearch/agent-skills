@@ -200,6 +200,143 @@ try {
   assertSilent("session/elsewhere", run("astra-session-start.sh", "{}", {}, scratch), before);
 
   console.log("✓ ASTRA hook shims: prefilter, uvx delegation, and JSON splicing all behave.");
+
+  // --- lightcone engine preflight -----------------------------------------
+  // The PACKAGED copy is under test, not the canonical one: the version floor
+  // arrives by pin substitution, so only the packaged script carries a real
+  // number to compare against. `npm test` fails on drift between the two, so
+  // testing the generated copy still tests the source.
+  //
+  // Versions are chosen relative to the floor without arithmetic: 0.0.1 is
+  // below any floor, 999.0.0 above any, and "<floor>.dev1" is the floor's own
+  // pre-release — the case `sort -V` gets backwards.
+  // The canonical script carries the `lightcone-cli==x.y.z` placeholder, so
+  // substituting a floor here is exactly what the build does — which lets the
+  // cases below pin a floor of their own (an rc floor orders differently from
+  // a release one) instead of being hostage to whatever the repo pins today.
+  const lcSource = readFileSync(
+    join(ROOT, "hooks/lightcone/scripts/lightcone-session-start.sh"),
+    "utf8",
+  );
+  const floor = JSON.parse(readFileSync(join(ROOT, "skills.config.json"), "utf8")).plugins.find(
+    (p) => p.name === "lightcone",
+  ).tools["lightcone-cli"];
+  const scriptWithFloor = (v) => {
+    const path = join(scratch, `lc-hook-${v.replaceAll(/[^\w.]/g, "_")}.sh`);
+    writeFileSync(path, lcSource.replaceAll("lightcone-cli==x.y.z", `lightcone-cli==${v}`));
+    return path;
+  };
+  const lcBin = join(scratch, "lc-bin");
+  mkdirSync(lcBin);
+  const lcPath = join(lcBin, "lc");
+
+  // No ...process.env: a real CI= or CLAUDE_CODE_ENTRYPOINT= in the ambient
+  // environment would otherwise decide the mode these cases are asserting.
+  function runLc({ version, env = {}, cwd = project, lcScript = scriptWithFloor(floor) } = {}) {
+    if (version === undefined) rmSync(lcPath, { force: true });
+    else if (version === "broken") writeFileSync(lcPath, "#!/bin/sh\nexit 127\n", { mode: 0o755 });
+    // Single-quoted in sh so a version carrying " or \ reaches the hook
+    // intact instead of being eaten by the fake's own quoting.
+    else writeFileSync(lcPath, `#!/bin/sh\nprintf '%s\\n' 'lc, version ${version}'\n`, { mode: 0o755 });
+    const r = spawnSync("bash", [lcScript], {
+      cwd,
+      encoding: "utf8",
+      input: "{}",
+      env: { PATH: `${lcBin}:/usr/bin:/bin`, ...env },
+    });
+    if (r.status !== 0) throw new Error(`lightcone hook: exited ${r.status}\n${r.stdout}${r.stderr}`);
+    return r.stdout;
+  }
+  const lcContext = (label, opts) => parsedContext(label, runLc(opts), "SessionStart");
+  const TUI = { CLAUDE_CODE_ENTRYPOINT: "cli" };
+  const HEADLESS = { CLAUDE_CODE_ENTRYPOINT: "sdk-cli" };
+
+  // Outside a Lightcone project the engine is still checked — the skill's
+  // first job is often to create a project from nothing.
+  const elsewhereAbsent = parsedContext(
+    "lc/elsewhere-absent",
+    runLc({ cwd: scratch, env: TUI }),
+    "SessionStart",
+  );
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "no astra.yaml");
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "is not installed");
+  assertIncludes("lc/elsewhere-absent", elsewhereAbsent, "lc init");
+
+  // The all-clear is phrased identically in and out of a project, because
+  // the skill matches on that sentence to skip its own `lc --version`.
+  // Silence would be indistinguishable from a hook that never ran.
+  for (const [label, cwdArg] of [
+    ["lc/ok-signal-in-project", project],
+    ["lc/ok-signal-elsewhere", scratch],
+  ])
+    assertIncludes(
+      label,
+      parsedContext(label, runLc({ version: floor, cwd: cwdArg, env: TUI }), "SessionStart"),
+      `Lightcone CLI ready: lc ${floor}`,
+    );
+
+  // …and no *other* state may carry that sentence, or the skill would skip
+  // a check it needed to run.
+  for (const [label, opts] of [
+    ["lc/no-false-ok-absent", {}],
+    ["lc/no-false-ok-broken", { version: "broken" }],
+    ["lc/no-false-ok-old", { version: "0.0.1" }],
+  ]) {
+    const ctx = parsedContext(label, runLc({ ...opts, env: TUI }), "SessionStart");
+    if (ctx.includes("Lightcone CLI ready"))
+      throw new Error(`${label}: emitted the all-clear for an unusable engine\n${ctx}`);
+  }
+
+  // Engine state.
+  assertIncludes("lc/absent", lcContext("lc/absent", { env: TUI }), "is not installed");
+  assertIncludes("lc/broken", lcContext("lc/broken", { version: "broken", env: TUI }), "not the Lightcone CLI");
+  assertIncludes("lc/old", lcContext("lc/old", { version: "0.0.1", env: TUI }), `older than the ${floor}`);
+  assertIncludes("lc/ready", lcContext("lc/ready", { version: floor, env: TUI }), "Lightcone CLI ready");
+  assertIncludes("lc/newer", lcContext("lc/newer", { version: "999.0.0", env: TUI }), "Lightcone CLI ready");
+  // PEP 440 ordering, which `sort -V` gets backwards: every pre-release of the
+  // floor precedes it, and a release candidate floor is satisfied by the
+  // release it led to. Each case names the floor it is judged against.
+  const ordering = [
+    // [floor, installed, satisfies the floor?]
+    ["0.5.0", "0.5.0.dev1+gabc123", false],
+    ["0.5.0", "0.5.0rc1", false],
+    ["0.5.0", "0.5.0a1", false],
+    ["0.5.0", "0.5.0b9", false],
+    ["0.5.0", "0.5.0", true],
+    ["0.5.0", "0.5.1rc1", true], // a later release line, still ahead of 0.5.0
+    ["0.5.0rc1", "0.5.0rc1", true],
+    ["0.5.0rc1", "0.5.0", true], // the release the candidate led to
+    ["0.5.0rc1", "0.5.0rc2", true],
+    ["0.5.0rc2", "0.5.0rc1", false],
+    ["0.5.0rc1", "0.5.0rc1.dev2+gabc", false], // a dev build of the candidate
+    ["0.5.0rc1", "0.4.9", false],
+    // A bare .dev build carries no pre-release segment, and still precedes
+    // every pre-release of its own version.
+    ["0.5.0a1", "0.5.0.dev1", false],
+    ["0.5.0.dev1", "0.5.0a1", true],
+  ];
+  for (const [floorV, installed, ok] of ordering) {
+    const label = `lc/order ${installed} vs floor ${floorV}`;
+    const ctx = parsedContext(
+      label,
+      runLc({ version: installed, env: TUI, lcScript: scriptWithFloor(floorV) }),
+      "SessionStart",
+    );
+    assertIncludes(label, ctx, ok ? "Lightcone CLI ready" : `older than the ${floorV}`);
+  }
+
+  // Mode: ask where a person is, act where none can be, and default to
+  // asking when the launcher is unrecognized.
+  assertIncludes("lc/tui", lcContext("lc/tui", { env: TUI }), "Ask the user");
+  assertIncludes("lc/headless", lcContext("lc/headless", { env: HEADLESS }), "No one can be asked");
+  assertIncludes("lc/ci", lcContext("lc/ci", { env: { ...TUI, CI: "true" } }), "No one can be asked");
+  assertIncludes("lc/unknown-harness", lcContext("lc/unknown-harness", { env: {} }), "Ask the user");
+
+  // A foreign `lc` whose version carries JSON metacharacters must not break
+  // the envelope — parsedContext throws if the line no longer parses.
+  lcContext("lc/hostile-version", { version: '1.0"x\\y', env: TUI });
+
+  console.log("✓ lightcone preflight: engine states, version floor, and ask/act mode all behave.");
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
