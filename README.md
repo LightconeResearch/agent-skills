@@ -10,6 +10,7 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
+[![OpenCode](https://img.shields.io/badge/OpenCode-skills%20✓-1f6feb?style=flat-square)](https://opencode.ai)
 [![Skills](https://img.shields.io/badge/skills-2-7c3aed?style=flat-square)](#-skills)
 [![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
 
@@ -18,8 +19,8 @@
 ---
 
 Agent skills for the [Lightcone Research](https://github.com/LightconeResearch)
-stack, packaged as plugins to work across Claude Code, Codex,
-and other compatible agents.
+stack, packaged as plugins to work across Claude Code, Codex, OpenCode,
+and other agents that read the Agent Skills format.
 
 ## 📦 Prerequisites
 
@@ -31,6 +32,9 @@ The only prerequisite is `uv`: [https://docs.astral.sh/uv/getting-started/instal
 One-time setup: register this repository as a plugin marketplace in your
 harness. It registers under the name `lightcone-research`, which is the
 `@lightcone-research` suffix in the install commands below.
+
+OpenCode has no marketplace step — skip straight to
+[Install a plugin](#-install-a-plugin).
 
 <details>
 <summary><b>Claude Code</b></summary>
@@ -114,6 +118,34 @@ Then invoke the skill in Codex, for example `$astra:astra`.
 
 Open **Plugins** from the arrow beside **Create**, then search for and install
 `astra`. Invoke `/astra:astra`.
+
+</details>
+
+<details>
+<summary><b>OpenCode</b></summary>
+
+OpenCode reads skills in the open Agent Skills format directly, so there is
+no plugin to install — copy the plugin's packaged skills into OpenCode's
+skills directory with the [`skills` CLI](https://github.com/vercel-labs/skills):
+
+```bash
+# for every project (installs to ~/.agents/skills/, which OpenCode reads)
+npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
+
+# or for the current project only (installs to ./.agents/skills/)
+npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode
+```
+
+Point the URL at `plugins/<plugin>` — that directory holds the packaged
+skills with their tool versions pinned; `plugins/lightcone` ships both the
+`lightcone` and `astra` skills. OpenCode loads a skill when the task matches
+its description; you can also just ask it to "use the astra skill".
+
+Without `npx`: clone the repo and copy `plugins/<plugin>/skills/*` into
+`~/.config/opencode/skills/` (or any other directory OpenCode scans for skills).
+
+**Skills only.** The validate-on-save and session-start hooks do not run on
+OpenCode yet — ask the agent to run `astra validate astra.yaml` after edits.
 
 </details>
 
