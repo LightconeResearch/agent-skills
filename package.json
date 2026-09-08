@@ -15,7 +15,7 @@
     "docs:build": "uvx --from zensical zensical build",
     "docs:serve": "uvx --from zensical zensical serve",
     "validate": "node scripts/validate.mjs",
-    "test": "node scripts/validate.mjs && node scripts/test-hooks.mjs && node scripts/test-opencode.mjs",
+    "test": "node scripts/validate.mjs && node scripts/test-hooks.mjs && node scripts/test-opencode.mjs && node scripts/test-pi.mjs",
     "smoke": "node scripts/smoke.mjs",
     "e2e": "node scripts/e2e-hooks.mjs"
   },

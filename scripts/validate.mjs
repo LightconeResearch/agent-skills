@@ -18,6 +18,7 @@ import {
   UNPINNED_RE,
   PIN_SCAN_EXTS,
   SPEC_FIELDS,
+  npmPackageName,
 } from "./lib.mjs";
 
 const errors = [];
@@ -150,20 +151,54 @@ for (const { source, dest, pins } of copies) {
   }
 }
 
-// 6. The generated OpenCode plugin modules load. The drift check above proves
-//    each module's text is what the generator produces; this proves the text
-//    is a working ES module with a plugin function as its default export —
-//    OpenCode imports it exactly like this, and a template typo would
-//    otherwise surface only in a user's session log.
-for (const rel of Object.keys(files).filter((f) => /^plugins\/[^/]+\/opencode\/[^/]+\.js$/.test(f))) {
-  const abs = join(ROOT, rel);
-  if (!existsSync(abs)) continue; // already reported above
-  try {
-    const mod = await import(pathToFileURL(abs).href);
-    if (typeof mod.default !== "function")
-      errors.push(`${rel}: default export is not a plugin function`);
-  } catch (e) {
-    errors.push(`${rel}: failed to import as an ES module — ${e.message}`);
+// 6. The npm packages. Each plugins/<name>/ is also the npm package OpenCode
+//    and Pi install, so on top of the drift check (which proves the generated
+//    text is what the generator produces) this proves the package is what those
+//    harnesses can consume:
+//    - both modules import as ES modules with a function default export
+//      (OpenCode imports the main; Pi imports pi/index.js via jiti);
+//    - the OpenCode module exposes ONLY that export — OpenCode iterates every
+//      export and throws on a non-function;
+//    - the manifest names the package from marketplace.npmScope and carries the
+//      plugin's version, and its `pi` entries point at existing paths;
+//    - no dependencies, no scripts, no lockfile: a package.json + lockfile at a
+//      Claude Code plugin root makes Claude run an install for the plugin.
+{
+  const mk = config.marketplace;
+  if (!/^@[a-z0-9-]+$/.test(mk.npmScope || ""))
+    errors.push(`skills.config.json: marketplace.npmScope must be an npm scope like "@lightcone-research" (got ${JSON.stringify(mk.npmScope)})`);
+  const LOCKFILES = ["package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml", "bun.lock", "bun.lockb"];
+  for (const p of config.plugins) {
+    const dir = join(ROOT, "plugins", p.name);
+    const manifestPath = join(dir, "package.json");
+    if (!existsSync(manifestPath)) continue; // reported by the drift check
+    let manifest;
+    try { manifest = JSON.parse(readFileSync(manifestPath, "utf8")); } catch (e) { errors.push(`plugins/${p.name}/package.json: ${e.message}`); continue; }
+    const expectedName = mk.npmScope ? npmPackageName(mk, p.name) : null;
+    if (expectedName && manifest.name !== expectedName)
+      errors.push(`plugins/${p.name}/package.json: name ${manifest.name} ≠ ${expectedName}`);
+    if (manifest.version !== p.version)
+      errors.push(`plugins/${p.name}/package.json: version ${manifest.version} ≠ plugin version ${p.version}`);
+    for (const key of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies", "scripts"])
+      if (manifest[key]) errors.push(`plugins/${p.name}/package.json: must not declare ${key} (the modules are dependency-free by design)`);
+    for (const rel of [...(manifest.pi?.extensions || []), ...(manifest.pi?.skills || [])])
+      if (!existsSync(join(dir, rel))) errors.push(`plugins/${p.name}/package.json: pi entry ${rel} does not exist`);
+    for (const lock of LOCKFILES)
+      if (existsSync(join(dir, lock)))
+        errors.push(`plugins/${p.name}/${lock}: a lockfile next to package.json makes Claude Code run an install for this plugin — remove it`);
+    for (const rel of ["opencode/index.js", "pi/index.js"]) {
+      const abs = join(dir, rel);
+      if (!existsSync(abs)) continue; // only plugins with hooks ship modules; drift check reports a missing one
+      try {
+        const mod = await import(pathToFileURL(abs).href);
+        if (typeof mod.default !== "function") errors.push(`plugins/${p.name}/${rel}: default export is not a function`);
+        const exported = Object.keys(mod);
+        if (rel.startsWith("opencode/") && (exported.length !== 1 || exported[0] !== "default"))
+          errors.push(`plugins/${p.name}/${rel}: exports ${JSON.stringify(exported)} — OpenCode loads every export, so only \`default\` may exist`);
+      } catch (e) {
+        errors.push(`plugins/${p.name}/${rel}: failed to import as an ES module — ${e.message}`);
+      }
+    }
   }
 }
 
@@ -173,5 +208,5 @@ if (errors.length) {
 }
 console.log(
   `✓ ${Object.keys(skills).length} skills, ${config.plugins.length} plugins, ` +
-  `${copies.length} packaged files — frontmatter valid, generated files in sync, OpenCode modules load.`,
+  `${copies.length} packaged files — frontmatter valid, generated files in sync, npm packages consistent.`,
 );

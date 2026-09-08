@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Hermetic tests for the generated OpenCode plugin modules
-// (plugins/<name>/opencode/<name>.js). No OpenCode binary, no network, no real
+// (plugins/<name>/opencode/index.js, the npm package main). No OpenCode binary, no network, no real
 // astra: the modules are imported into this process and their hooks are
 // called the way OpenCode calls them, with a fake `uvx` on PATH (same fake as
 // test-hooks.mjs) so the embedded scripts' behaviour is observable.
@@ -8,8 +8,8 @@
 // What this proves, on top of test-hooks.mjs (the scripts) and validate.mjs
 // (the module text is what the generator produces):
 //   - the wiring: PostToolUse groups fire from "tool.execute.after" for the
-//     tools the hooks.json matcher names — including OpenCode's `patch`, which
-//     the matcher knows as `apply_patch` — and stay silent for the rest;
+//     tools the hooks.json matcher names (OpenCode's `write`, `edit` and
+//     `apply_patch`, matched case-insensitively) and stay silent for the rest;
 //   - the routing: a script's additionalContext lands in output.output (tool
 //     result) or output.system (system prompt), and non-envelope noise does not;
 //   - the primer contract: one SessionStart run per session, re-emitted on
@@ -56,8 +56,12 @@ const assertIncludes = (label, haystack, needle) => {
 };
 
 async function load(name, directory) {
-  const mod = await import(pathToFileURL(join(ROOT, `plugins/${name}/opencode/${name}.js`)).href);
+  const mod = await import(pathToFileURL(join(ROOT, `plugins/${name}/opencode/index.js`)).href);
   if (typeof mod.default !== "function") fail(`${name}: module has no default-exported plugin function`);
+  // OpenCode iterates EVERY export of a plugin module and throws on a non-function,
+  // so the module must expose exactly the one default export.
+  const exported = Object.keys(mod);
+  if (exported.length !== 1 || exported[0] !== "default") fail(`${name}: unexpected exports ${JSON.stringify(exported)}`);
   return mod.default({ directory, worktree: directory, project: {}, client: {}, $: null });
 }
 
@@ -93,9 +97,9 @@ try {
   assertIncludes("edit/pass", out, "ASTRA validation passed");
   delete process.env.FAKE_UVX_RC;
 
-  // OpenCode's `patch` tool is the matcher's `apply_patch`.
-  out = await afterTool(astra, "patch", { patchText: "*** Update File: astra.yaml" });
-  assertIncludes("patch/alias", out, "ASTRA validation FAILED");
+  // OpenCode's apply_patch tool (lowercase id) matches the Codex name in the matcher.
+  out = await afterTool(astra, "apply_patch", { patchText: "*** Update File: astra.yaml" });
+  assertIncludes("apply_patch", out, "ASTRA validation FAILED");
 
   // Tools outside the matcher never run the script, even when they mention the spec.
   let before = uvxCalls().length;
@@ -125,11 +129,16 @@ try {
   assertIncludes("primer/cached", system.join("\n"), "ASTRA project — spec at ./astra.yaml");
   if (uvxCalls().length !== before + 1) fail("primer/cached: SessionStart ran again for the same session");
 
+  // The agent-generation path calls the transform without a sessionID: still served.
+  const noSession = { system: [] };
+  await astra["experimental.chat.system.transform"]({ model: {} }, noSession);
+  assertIncludes("primer/no-session", noSession.system.join("\n"), "ASTRA project");
+
   // A new session runs it again — once — and session.created pre-warms it.
   await astra.event({ event: { type: "session.created", properties: { info: { id: "s2" } } } });
   system = await systemFor(astra, "s2");
   assertIncludes("primer/prewarmed", system.join("\n"), "ASTRA project");
-  if (uvxCalls().length !== before + 2) fail("primer/prewarmed: expected one run for s2 (pre-warm + transform shared it)");
+  if (uvxCalls().length !== before + 3) fail("primer/prewarmed: expected one run for s2 (pre-warm + transform shared it)");
   delete process.env.FAKE_UVX_RC;
 
   // Outside an ASTRA project the astra primer stays silent.

@@ -1,16 +1,18 @@
 # AGENTS.md
 
 This repository is the **source of truth for the Lightcone Research agent skills**.
-It is not an application — it packages `SKILL.md`-based skills for four install
-targets (the `npx skills` CLI, the Claude Code plugin marketplace, Codex plugins, and
-OpenCode) from a single canonical source. Two plugins: `astra` (spec reference) and
+It is not an application — it packages `SKILL.md`-based skills for five install
+targets (the `npx skills` CLI, the Claude Code plugin marketplace, Codex plugins, and —
+from one npm package per plugin — OpenCode and Pi) from a single canonical source. Two plugins: `astra` (spec reference) and
 `lightcone` (project companion, which bundles `astra`). Plugin skills are
 namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 
-**OpenCode** reads the Agent Skills format directly (users install the packaged
-`plugins/<name>/skills/` copies with `npx skills add <repo-url>/tree/main/plugins/<name>
--a opencode`), and gets its hooks as a generated plugin module,
-`plugins/<name>/opencode/<name>.js` — see *Build tooling* below.
+**OpenCode and Pi** read the Agent Skills format directly and install plugins from
+npm, so every `plugins/<name>/` dir is also an npm package,
+`@lightcone-research/<name>-plugin` (generated `package.json`; OpenCode imports
+`opencode/index.js`, Pi imports `pi/index.js` and the `skills/` tree) — see *Build
+tooling* below. Publishing is `.github/workflows/publish-npm.yml`, triggered by a plugin
+version bump on `main`.
 
 ## Where things live
 
@@ -23,8 +25,9 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
   `dependencies` (bundled build-time closure) and `requires` (documented-only
   prerequisite the user installs — not bundled).
 - `scripts/build.mjs`, `scripts/validate.mjs` — the generator and the validator.
-- `scripts/test-hooks.mjs`, `scripts/test-opencode.mjs` — hermetic tests of the hook
-  scripts and of the generated OpenCode plugin modules (fake `uvx`, no network).
+- `scripts/test-hooks.mjs`, `scripts/test-opencode.mjs`, `scripts/test-pi.mjs` — hermetic
+  tests of the hook scripts and of the generated OpenCode and Pi modules (fake `uvx`,
+  no network).
 - `tests/<plugin>.yaml` — declarative e2e hook-dispatch test specs, run by
   `scripts/e2e-hooks.mjs` (`npm run e2e`, and the `e2e-hooks` CI workflow)
   against real headless Claude Code and Codex sessions. To cover a new
@@ -33,16 +36,17 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 ## Generated — do not hand-edit
 
 `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, the entire
-`plugins/` tree (including each `plugins/<name>/opencode/<name>.js` module), and
-`manifest.json` are **generated** from `skills.config.json` + `skills/` + `hooks/`. After changing any skill or the config:
+`plugins/` tree (including each plugin's npm package: `package.json`, `README.md`,
+`LICENSE`, `opencode/index.js`, `pi/index.js`), and `manifest.json` are **generated**
+from `skills.config.json` + `skills/` + `hooks/`. After changing any skill or the config:
 
 ```bash
 npm run build     # regenerate all target files
 npm test          # validate frontmatter + assert nothing drifted
 ```
 
-Commit the regenerated files alongside your source change. CI runs `npm test` and
-fails if the generated files are out of sync. The generator is zero-dependency
+Commit the regenerated files alongside your source change. CI (`test.yml`) runs
+`npm test` and fails if the generated files are out of sync. The generator is zero-dependency
 (Node ≥ 18 built-ins only) — no `npm install` is required.
 
 ## Tool pins
@@ -81,20 +85,27 @@ per-target is generated and drift-checked. **Do not edit a generated file to fix
 target — change the source and rebuild.** If a manifest looks wrong, the bug is in
 `skills.config.json` or `scripts/lib.mjs`, not in the output.
 
-**OpenCode** (the fourth target) reads skills straight from the Agent Skills format
-— the `skills` CLI installs `plugins/<name>/skills/` as-is, so no manifest is generated
-— but has no `hooks.json`: its plugins are JavaScript modules exporting
-`async (input) => hooks`. So for every plugin that ships hooks, `lib.mjs`
-(`renderOpencodePlugin`) generates `plugins/<name>/opencode/<name>.js`: the closure's
-hook scripts embedded verbatim with the plugin's pins applied, and the `hooks.json`
-events mapped onto OpenCode's API (`PostToolUse` → `tool.execute.after`, appending the
-script's `additionalContext` to the tool result; `SessionStart` →
-`experimental.chat.system.transform`, run once per session and re-added to the system
-prompt on every request, since OpenCode rebuilds the prompt each time). Scripts are
-embedded rather than referenced so the module is one file a user drops into
-`~/.config/opencode/plugins/` — no plugin root to resolve. It is plain ESM with no
-dependencies, which is also what lets `validate.mjs` import it and
-`test-opencode.mjs` drive its hooks under Node.
+**OpenCode and Pi** (the fourth and fifth targets) read skills straight from the Agent
+Skills format — the `skills` CLI installs `plugins/<name>/skills/` as-is, so no manifest is
+generated for the skills — but neither has a `hooks.json`: OpenCode plugins are JS modules
+exporting `async (input) => hooks`, installed from npm through the `plugin` array of
+`opencode.json`; Pi extensions are JS modules default-exporting `function (pi) {…}`,
+installed from npm through the `pi` field of `package.json`. So every `plugins/<name>/` dir
+doubles as ONE npm package, `<npmScope>/<name>-plugin`: `lib.mjs` generates its
+`package.json` (`main`/`exports` → `opencode/index.js`; `pi.extensions` → `./pi`,
+`pi.skills` → `./skills`; `files` keeps the Claude/Codex manifests and `hooks/` out of the
+tarball), its `README.md`, a `LICENSE` copy, and — for a plugin with hooks — the two modules
+(`renderOpencodePlugin`, `renderPiExtension`). Both embed the closure's hook scripts
+verbatim with the plugin's pins applied and map the `hooks.json` events onto the harness
+API: `PostToolUse` → OpenCode `tool.execute.after` / Pi `tool_result` (context appended to
+the tool result); `SessionStart` → OpenCode `experimental.chat.system.transform` / Pi
+`before_agent_start` (primer run once per session, re-added to the system prompt on every
+request, because both harnesses rebuild the prompt each time). Scripts are embedded rather
+than referenced because an npm-installed module has no plugin root to resolve, and the
+modules have zero dependencies so the package installs with scripts ignored. Plain ESM,
+which is also what lets `validate.mjs` import them and `test-opencode.mjs` /
+`test-pi.mjs` drive their hooks under Node. **Never add a lockfile or `dependencies` to a
+plugin dir**: Claude Code runs an install for a plugin root that carries both.
 
 **How the pieces fit.** `scripts/lib.mjs` is the engine: it loads the config, parses
 each `SKILL.md` frontmatter, computes the transitive skill closure per plugin (own +

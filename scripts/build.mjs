@@ -41,5 +41,5 @@ for (const { source, dest, pins } of copies) {
 console.log(
   `Generated ${Object.keys(files).length} metadata files and ${copies.length} packaged files ` +
     `(skills + agents + hooks) across Claude (.claude-plugin), Codex (.agents/plugins), ` +
-    `the shared plugins/ dirs (incl. the OpenCode opencode/<name>.js modules), and manifest.json.`,
+    `the shared plugins/ dirs (each also an npm package for OpenCode and Pi), and manifest.json.`,
 );

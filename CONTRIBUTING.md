@@ -1,6 +1,6 @@
 # Contributing
 
-This repo turns one canonical set of skills into four install targets. The golden
+This repo turns one canonical set of skills into five install targets. The golden
 rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 
 ## Layout
@@ -14,7 +14,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
 | `.agents/plugins/marketplace.json` | Codex marketplace manifest | ⚙️ generated |
-| `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted; `opencode/<name>.js` is the plugin's hooks as an OpenCode plugin module | ⚙️ generated |
+| `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted. Each is also the npm package OpenCode and Pi install: `package.json`, `README.md`, `LICENSE`, `opencode/index.js`, `pi/index.js` | ⚙️ generated |
 | `manifest.json` | Skill/plugin registry | ⚙️ generated |
 
 ## Add a skill
@@ -64,10 +64,11 @@ Edit `skills.config.json`:
   plugin bundles a dependency that also ships hooks (e.g. a plugin bundling `astra`), the
   generator **merges** the manifests: hook groups concatenate per event, scripts copy
   side by side (canonical script basenames must stay unique across plugins). The same
-  hooks also become the plugin's OpenCode module, `plugins/<name>/opencode/<name>.js`
-  (scripts embedded, pins applied) — nothing to declare; only `PostToolUse` and
-  `SessionStart` events have an OpenCode mapping, so a new event type needs one in
-  `renderOpencodePlugin` first. `agents` — Claude subagent file paths.
+  hooks also become the plugin's OpenCode module (`plugins/<name>/opencode/index.js`) and
+  Pi extension (`plugins/<name>/pi/index.js`) — scripts embedded, pins applied, nothing
+  to declare; only `PostToolUse` and `SessionStart` have a mapping, so a new event type
+  needs one in `renderOpencodePlugin` and `renderPiExtension` first. `agents` — Claude
+  subagent file paths.
 
 Then `npm run build && npm test`.
 
@@ -103,8 +104,9 @@ astra-spec is deliberately unpinned; the astra-tools release resolves it).
 ## Validation
 
 `npm test` runs `scripts/validate.mjs`, `scripts/test-hooks.mjs` (the hook scripts
-against a fake `uvx`) and `scripts/test-opencode.mjs` (the generated OpenCode
-modules, driven under Node the way OpenCode calls them). The validator checks:
+against a fake `uvx`), `scripts/test-opencode.mjs` and `scripts/test-pi.mjs` (the
+generated modules, driven under Node the way OpenCode and Pi call them). CI runs it on
+every PR (`test.yml`). The validator checks:
 
 - every skill's `name` is lowercase-hyphen and matches its directory;
 - `description` is present and ≤ 1024 chars;
@@ -115,8 +117,10 @@ modules, driven under Node the way OpenCode calls them). The validator checks:
 - the generated manifests and `plugins/` copies match what the current source
   would produce — packaged copies compared with the bundling plugin's tool
   pins applied (drift check);
-- each generated `plugins/<name>/opencode/<name>.js` imports as an ES module
-  with a plugin function as its default export.
+- each plugin's npm package: `package.json` named `<npmScope>/<name>-plugin` at
+  the plugin's version, no `dependencies`/`scripts`, no lockfile in the dir, `pi`
+  entries that exist; `opencode/index.js` and `pi/index.js` import as ES modules
+  with a function default export (and the OpenCode one exports nothing else).
 
 For the real thing — installing each plugin into a throwaway environment and
 confirming it loads — run the smoke suite (needs `claude`, `codex`, and `tmux`
@@ -127,9 +131,12 @@ npm run smoke            # CLI install (all harnesses) + interactive tmux instal
 npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
 ```
 
-The OpenCode leg needs neither `opencode` nor auth: it installs the packaged
-skills with `npx skills … -a opencode` into an isolated HOME, asserts the tool
-pins are concrete, and imports the plugin module from the plugins dir.
+The OpenCode/Pi legs need neither binary nor auth: one installs the packaged
+skills with `npx skills … -a opencode` into an isolated HOME and asserts the tool
+pins are concrete; the other `npm pack`s each plugin dir, checks the tarball's
+file list, installs it the way each harness does (bun/npm) and imports both
+entry points. The Claude leg also runs `claude plugin validate` on the dir, since
+it now carries the npm files too.
 
 ## Local testing of the install paths
 
@@ -151,7 +158,37 @@ npx skills add ./plugins/astra -a opencode --list
 npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode --list
 
 # OpenCode hooks, against a real OpenCode: symlink the generated module into a
-# project's plugin dir and start a session there
+# project's plugin dir and start a session there (the local-file path is fine for
+# development; users install the npm package)
 mkdir -p /path/to/project/.opencode/plugins
-ln -s "$PWD/plugins/astra/opencode/astra.js" /path/to/project/.opencode/plugins/astra.js
+ln -s "$PWD/plugins/astra/opencode/index.js" /path/to/project/.opencode/plugins/astra.js
+
+# Pi hooks, against a real Pi: load the extension without installing
+pi -e ./plugins/astra/pi/index.js
+
+# The npm package as it would publish
+(cd plugins/astra && npm pack --dry-run && npm publish --dry-run)
 ```
+
+## Releasing the npm packages
+
+Each `plugins/<name>/` is published to npm as `@lightcone-research/<name>-plugin`, at
+the plugin's `version` from `skills.config.json` — so the version-bump rule above is
+also the release rule. `.github/workflows/publish-npm.yml` runs on `main` whenever a
+generated `plugins/*/package.json` changes, re-runs `npm test`, and publishes every
+package whose version is not on the registry yet (`npm publish --provenance`, npm
+trusted publishing — no token). A version already on the registry is skipped with a
+warning: it means a plugin dir changed without a bump.
+
+Trusted publishing is configured per package on npmjs.com (package settings →
+Trusted publisher: repository `LightconeResearch/agent-skills`, workflow
+`publish-npm.yml`). **The first version of a new package name is published by hand**
+by an npm org owner, then the trusted publisher is configured:
+
+```bash
+cd plugins/astra && npm publish --access public   # once, for a brand-new package name
+```
+
+Never add `dependencies`, `scripts` or a lockfile to a plugin dir — the modules are
+dependency-free by design, and Claude Code runs an install for a plugin root that
+carries a `package.json` with a lockfile.
