@@ -10,7 +10,8 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![OpenCode](https://img.shields.io/badge/OpenCode-skills%20✓-1f6feb?style=flat-square)](https://opencode.ai)
+[![OpenCode](https://img.shields.io/badge/OpenCode-✓-1f6feb?style=flat-square)](https://opencode.ai)
+[![Pi](https://img.shields.io/badge/Pi-✓-5b21b6?style=flat-square)](https://github.com/badlogic/pi-mono)
 [![Skills](https://img.shields.io/badge/skills-2-7c3aed?style=flat-square)](#-skills)
 [![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
 
@@ -19,7 +20,7 @@
 ---
 
 Agent skills for the [Lightcone Research](https://github.com/LightconeResearch)
-stack, packaged as plugins to work across Claude Code, Codex, OpenCode,
+stack, packaged as plugins to work across Claude Code, Codex, OpenCode, Pi,
 and other agents that read the Agent Skills format.
 
 ## 📦 Prerequisites
@@ -33,7 +34,7 @@ One-time setup: register this repository as a plugin marketplace in your
 harness. It registers under the name `lightcone-research`, which is the
 `@lightcone-research` suffix in the install commands below.
 
-OpenCode has no marketplace step — skip straight to
+OpenCode and Pi have no marketplace step — skip straight to
 [Install a plugin](#-install-a-plugin).
 
 <details>
@@ -124,28 +125,44 @@ Open **Plugins** from the arrow beside **Create**, then search for and install
 <details>
 <summary><b>OpenCode</b></summary>
 
-OpenCode reads skills in the open Agent Skills format directly, so there is
-no plugin to install — copy the plugin's packaged skills into OpenCode's
-skills directory with the [`skills` CLI](https://github.com/vercel-labs/skills):
+OpenCode reads skills in the open Agent Skills format directly and installs
+plugins from npm, so a plugin arrives in two parts:
 
 ```bash
-# for every project (installs to ~/.agents/skills/, which OpenCode reads)
+# 1. skills — for every project (installs to ~/.agents/skills/, which OpenCode reads);
+#    drop -g for the current project only (./.agents/skills/)
 npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
-
-# or for the current project only (installs to ./.agents/skills/)
-npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode
 ```
 
-Point the URL at `plugins/<plugin>` — that directory holds the packaged
-skills with their tool versions pinned; `plugins/lightcone` ships both the
-`lightcone` and `astra` skills. OpenCode loads a skill when the task matches
-its description; you can also just ask it to "use the astra skill".
+```json
+// 2. hooks — in ~/.config/opencode/opencode.json (or a project's opencode.json);
+//    installed automatically at the next start. Keep the version pinned.
+{ "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+```
 
-Without `npx`: clone the repo and copy `plugins/<plugin>/skills/*` into
-`~/.config/opencode/skills/` (or any other directory OpenCode scans for skills).
+`@lightcone-research/<plugin>-plugin` is the plugin's `plugins/<plugin>/`
+directory published to npm; its `opencode/index.js` runs the same
+validate-on-save and session-start hooks as the Claude Code and Codex packages.
+`lightcone-plugin` includes `astra`'s hooks — list one or the other. OpenCode
+loads a skill when the task matches its description; you can also just ask it
+to "use the astra skill". Details in the
+[OpenCode page](https://lightconeresearch.github.io/agent-skills/opencode/).
 
-**Skills only.** The validate-on-save and session-start hooks do not run on
-OpenCode yet — ask the agent to run `astra validate astra.yaml` after edits.
+</details>
+
+<details>
+<summary><b>Pi</b></summary>
+
+Pi installs skills and hooks together from the same npm package:
+
+```bash
+pi install npm:@lightcone-research/astra-plugin@0.0.5
+```
+
+Then invoke `/skill:astra`, or let the agent load it when the task matches.
+`lightcone-plugin` ships both skills and includes `astra`'s hooks — install one
+or the other. Details in the
+[Pi page](https://lightconeresearch.github.io/agent-skills/pi/).
 
 </details>
 

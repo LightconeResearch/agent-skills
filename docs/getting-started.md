@@ -20,7 +20,7 @@ Two things on your PATH:
 | Tool | Why | Install |
 |---|---|---|
 | `uv` | Runs Python and the ASTRA CLI | [astral.sh/uv](https://astral.sh/uv) |
-| Claude Code, Codex or OpenCode | The agent doing the work | `npm install -g @anthropic-ai/claude-code` / `npm install -g @openai/codex` / [opencode.ai](https://opencode.ai) |
+| Claude Code, Codex, OpenCode or Pi | The agent doing the work | `npm install -g @anthropic-ai/claude-code` / `npm install -g @openai/codex` / [opencode.ai](https://opencode.ai) / [pi-mono](https://github.com/badlogic/pi-mono) |
 
 Then the [`astra` plugin](astra.md), which teaches your agent the format:
 
@@ -44,9 +44,22 @@ Then the [`astra` plugin](astra.md), which teaches your agent the format:
     npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
     ```
 
-    OpenCode runs the skill but not the plugin's hooks, so where the tutorial
-    says a hook validated the file, ask the agent to run
-    `astra validate astra.yaml` instead.
+    and, in `~/.config/opencode/opencode.json`:
+
+    ```json
+    { "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+    ```
+
+    The first installs the skill, the second the plugin's hooks — see the
+    [OpenCode page](opencode.md).
+
+=== "Pi"
+
+    ```bash
+    pi install npm:@lightcone-research/astra-plugin@0.0.5
+    ```
+
+    Skills and hooks in one step — see the [Pi page](pi.md).
 
 There is nothing else to install: the plugin runs the ASTRA CLI through `uvx`,
 which fetches it on first use.

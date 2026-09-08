@@ -1,0 +1,52 @@
+{
+  "name": "@lightcone-research/astra-plugin",
+  "version": "0.0.5",
+  "description": "Reference for the ASTRA specification (astra.yaml): top-level structure, sub-analyses, inputs/outputs, decisions and options, prior insights and findings, evidence and quote verification, and composition mechanics. Invoke when reading, writing, validating, or debugging an astra.yaml spec, or when the user asks about ASTRA schema or sub-analysis composition. Ships hooks that validate astra.yaml on save and remind agents to load the skill when they read an ASTRA file.",
+  "type": "module",
+  "main": "./opencode/index.js",
+  "exports": {
+    ".": "./opencode/index.js",
+    "./server": "./opencode/index.js",
+    "./pi": "./pi/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "opencode/",
+    "pi/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./pi"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "pi-package",
+    "agent-skills",
+    "astra"
+  ],
+  "license": "BSD-3-Clause",
+  "author": {
+    "name": "Lightcone Research",
+    "email": "info@lightconeresearch.org"
+  },
+  "homepage": "https://github.com/LightconeResearch/agent-skills",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LightconeResearch/agent-skills.git",
+    "directory": "plugins/astra"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

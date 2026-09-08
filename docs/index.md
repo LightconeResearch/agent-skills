@@ -4,8 +4,8 @@ Portable, open-standard skills that teach coding agents the
 [Lightcone Research](https://github.com/LightconeResearch) stack.
 
 The skills follow the [Agent Skills standard](https://agentskills.io), work
-across Claude Code, Codex and OpenCode, and are packaged as plugins with their
-hooks included (Claude Code and Codex).
+across Claude Code, Codex, OpenCode and Pi, and are packaged as plugins with
+their hooks included.
 
 [:simple-github: **View on GitHub**](https://github.com/LightconeResearch/agent-skills){ .md-button .md-button--primary }
 
@@ -55,19 +55,32 @@ Python dependencies install them on first use.
 
 === "OpenCode"
 
-    OpenCode reads Agent Skills directly, so there is no marketplace step.
-    Install the packaged skills with the
-    [`skills` CLI](https://github.com/vercel-labs/skills):
+    OpenCode reads Agent Skills directly and installs plugins from npm, so
+    there is no marketplace step: install the skills with the
+    [`skills` CLI](https://github.com/vercel-labs/skills), then list the
+    package in `opencode.json`.
 
     ```bash
     npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
     ```
 
-    This installs into `~/.agents/skills/`, one of the directories OpenCode
-    scans; drop `-g` to install into the current project (`./.agents/skills/`)
-    instead. The agent loads the skill when the task matches its description,
-    or when you ask it to "use the astra skill".
-    Skills only: the hooks do not run on OpenCode yet.
+    ```json
+    { "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+    ```
+
+    The skill lands in `~/.agents/skills/` (drop `-g` for `./.agents/skills/`);
+    the agent loads it when the task matches, or when you ask it to "use the
+    astra skill". See the [OpenCode page](opencode.md).
+
+=== "Pi"
+
+    One step, skills and hooks together:
+
+    ```bash
+    pi install npm:@lightcone-research/astra-plugin@0.0.5
+    ```
+
+    Then invoke `/skill:astra`. See the [Pi page](pi.md).
 
 ## Tutorial
 

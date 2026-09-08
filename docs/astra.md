@@ -58,19 +58,32 @@ first use.
 
 === "OpenCode"
 
-    OpenCode reads Agent Skills directly, so there is no marketplace step.
-    Install the packaged skills with the
-    [`skills` CLI](https://github.com/vercel-labs/skills):
+    OpenCode reads Agent Skills directly and installs plugins from npm, so
+    there is no marketplace step: install the skills with the
+    [`skills` CLI](https://github.com/vercel-labs/skills), then list the
+    package in `opencode.json`.
 
     ```bash
     npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
     ```
 
-    This installs into `~/.agents/skills/`, one of the directories OpenCode
-    scans; drop `-g` to install into the current project (`./.agents/skills/`)
-    instead. The agent loads the skill when the task matches its description,
-    or when you ask it to "use the astra skill".
-    Skills only: the hooks do not run on OpenCode yet.
+    ```json
+    { "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+    ```
+
+    The skill lands in `~/.agents/skills/` (drop `-g` for `./.agents/skills/`);
+    the agent loads it when the task matches, or when you ask it to "use the
+    astra skill". See the [OpenCode page](opencode.md).
+
+=== "Pi"
+
+    One step, skills and hooks together:
+
+    ```bash
+    pi install npm:@lightcone-research/astra-plugin@0.0.5
+    ```
+
+    Then invoke `/skill:astra`. See the [Pi page](pi.md).
 
 ## Try it
 

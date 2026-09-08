@@ -1,0 +1,27 @@
+# Validate the source and the generated tree on every PR and on main:
+# scripts/validate.mjs (frontmatter, tool-pin placeholders, generated-file
+# drift, npm manifests), scripts/test-hooks.mjs (the hook scripts against a
+# fake uvx) and scripts/test-opencode.mjs / test-pi.mjs (the generated npm
+# modules driven the way OpenCode and Pi call them). Zero dependencies — no
+# `npm install`. This is also the gate publish-npm.yml re-runs before publishing.
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
