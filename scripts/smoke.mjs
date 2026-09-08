@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// Install smoke tests — prove each plugin actually installs and loads on both
-// harnesses. No LLM/API calls: only `claude plugin …` / `codex plugin …` (which
-// run headless without auth) and, for the interactive path, tmux send-keys into a
-// real REPL whose state is asserted out-of-band.
+// Install smoke tests — prove each plugin actually installs and loads on every
+// harness. No LLM/API calls: only `claude plugin …` / `codex plugin …` (which
+// run headless without auth), the `skills` CLI for OpenCode, and, for the
+// interactive path, tmux send-keys into a real REPL whose state is asserted
+// out-of-band.
 //
 //   npm run smoke              # everything available on this machine
 //   npm run smoke -- --cli     # hermetic CLI installs only (no tmux, no real config)
+//                              # — Claude Code, Codex, and OpenCode legs
 //   npm run smoke -- --tmux    # interactive tmux install only
 //
 // CLI phase (hermetic): each harness installs every plugin into a throwaway config
@@ -17,10 +19,10 @@
 // asserts, and cleans up. Auto-skips when no authenticated REPL is reachable.
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const PLUGINS = ["astra"];
@@ -123,6 +125,40 @@ function cliCodex() {
   } finally { rmSync(home, { recursive: true, force: true }); }
 }
 
+// OpenCode has no marketplace: skills arrive through the `skills` CLI (which
+// installs a packaged plugins/<name>/ dir into ~/.agents/skills/, a directory
+// OpenCode scans) and hooks through the generated opencode/<name>.js module,
+// which OpenCode imports from its plugins dir. Both halves are asserted from
+// the filesystem — no `opencode` binary is needed. Network is (npx fetches the
+// CLI), as it is for the other legs' installs.
+function cliOpencode() {
+  console.log("\nOpenCode — skills via `npx skills` + plugin module (isolated HOME)");
+  if (!have("npx")) return skip("`npx` not on PATH");
+  const home = mktemp("smoke-oc-");
+  const env = { HOME: home, XDG_CONFIG_HOME: join(home, ".config") };
+  try {
+    for (const p of PLUGINS) {
+      const ins = run("npx", ["-y", "skills@latest", "add", join(ROOT, "plugins", p), "-a", "opencode", "-g", "-y", "--skill", "*"], env);
+      const skill = CODEX_PROBE_SKILLS[p];
+      const md = join(home, ".agents", "skills", skill, "SKILL.md");
+      if (!existsSync(md)) { fail(`${p}: ${skill} skill not under ~/.agents/skills after install:\n${ins.out.trim().slice(-300)}`); continue; }
+      if (/(?:@|==)x\.y\.z/.test(readFileSync(md, "utf8"))) fail(`${p}: installed ${skill} skill carries the unpinned x.y.z placeholder`);
+      else pass(`${p}: ${skill} skill installed for OpenCode with concrete tool pins`);
+
+      // Where OpenCode would load it from; prove it imports and registers hooks.
+      const dest = join(env.XDG_CONFIG_HOME, "opencode", "plugins", `${p}.js`);
+      mkdirSync(dirname(dest), { recursive: true });
+      copyFileSync(join(ROOT, "plugins", p, "opencode", `${p}.js`), dest);
+      const probe = run("node", ["--input-type=module", "-e",
+        `const m = await import(${JSON.stringify(pathToFileURL(dest).href)});` +
+        `const h = await m.default({ directory: process.cwd() });` +
+        `if (!Object.values(h).some((v) => typeof v === "function")) process.exit(1);`], env);
+      if (probe.status === 0) pass(`${p}: opencode/${p}.js imports from the plugins dir and registers hooks`);
+      else fail(`${p}: plugin module failed to load:\n${probe.out.trim().slice(-300)}`);
+    }
+  } finally { rmSync(home, { recursive: true, force: true }); }
+}
+
 // ---- tmux phase (interactive, real config) -------------------------------
 const tmux = (...a) => run("tmux", a);
 const sleep = (ms) => execFileSync("sh", ["-c", `sleep ${ms / 1000}`]);
@@ -203,7 +239,7 @@ function tmuxClaude() {
 
 // ---- run -----------------------------------------------------------------
 console.log(`Smoke tests — repo ${ROOT}\nmode: ${only}`);
-if (only === "all" || only === "cli") { cliClaude(); cliCodex(); }
+if (only === "all" || only === "cli") { cliClaude(); cliCodex(); cliOpencode(); }
 if (only === "all" || only === "tmux") { tmuxClaude(); }
 
 console.log(failures ? `\n\x1b[31m✗ ${failures} smoke failure(s)\x1b[0m` : "\n\x1b[32m✓ all smoke checks passed\x1b[0m");

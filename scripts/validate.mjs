@@ -4,6 +4,7 @@
 
 import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   ROOT,
   NAME_RE,
@@ -149,11 +150,28 @@ for (const { source, dest, pins } of copies) {
   }
 }
 
+// 6. The generated OpenCode plugin modules load. The drift check above proves
+//    each module's text is what the generator produces; this proves the text
+//    is a working ES module with a plugin function as its default export —
+//    OpenCode imports it exactly like this, and a template typo would
+//    otherwise surface only in a user's session log.
+for (const rel of Object.keys(files).filter((f) => /^plugins\/[^/]+\/opencode\/[^/]+\.js$/.test(f))) {
+  const abs = join(ROOT, rel);
+  if (!existsSync(abs)) continue; // already reported above
+  try {
+    const mod = await import(pathToFileURL(abs).href);
+    if (typeof mod.default !== "function")
+      errors.push(`${rel}: default export is not a plugin function`);
+  } catch (e) {
+    errors.push(`${rel}: failed to import as an ES module — ${e.message}`);
+  }
+}
+
 if (errors.length) {
   console.error(`✗ ${errors.length} problem(s):\n` + errors.map((e) => `  - ${e}`).join("\n"));
   process.exit(1);
 }
 console.log(
   `✓ ${Object.keys(skills).length} skills, ${config.plugins.length} plugins, ` +
-  `${copies.length} packaged files — frontmatter valid and generated files in sync.`,
+  `${copies.length} packaged files — frontmatter valid, generated files in sync, OpenCode modules load.`,
 );

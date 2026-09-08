@@ -10,7 +10,7 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![OpenCode](https://img.shields.io/badge/OpenCode-skills%20✓-1f6feb?style=flat-square)](https://opencode.ai)
+[![OpenCode](https://img.shields.io/badge/OpenCode-✓-1f6feb?style=flat-square)](https://opencode.ai)
 [![Skills](https://img.shields.io/badge/skills-2-7c3aed?style=flat-square)](#-skills)
 [![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
 
@@ -124,28 +124,26 @@ Open **Plugins** from the arrow beside **Create**, then search for and install
 <details>
 <summary><b>OpenCode</b></summary>
 
-OpenCode reads skills in the open Agent Skills format directly, so there is
-no plugin to install — copy the plugin's packaged skills into OpenCode's
-skills directory with the [`skills` CLI](https://github.com/vercel-labs/skills):
+OpenCode reads skills in the open Agent Skills format directly and loads
+plugins as plain JavaScript files, so a plugin installs in two parts:
 
 ```bash
-# for every project (installs to ~/.agents/skills/, which OpenCode reads)
+# 1. skills — for every project (installs to ~/.agents/skills/, which OpenCode reads);
+#    drop -g for the current project only (./.agents/skills/)
 npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
 
-# or for the current project only (installs to ./.agents/skills/)
-npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode
+# 2. hooks — one generated file in OpenCode's plugin directory
+mkdir -p ~/.config/opencode/plugins
+curl -fsSL https://raw.githubusercontent.com/LightconeResearch/agent-skills/main/plugins/astra/opencode/astra.js -o ~/.config/opencode/plugins/astra.js
 ```
 
-Point the URL at `plugins/<plugin>` — that directory holds the packaged
-skills with their tool versions pinned; `plugins/lightcone` ships both the
-`lightcone` and `astra` skills. OpenCode loads a skill when the task matches
-its description; you can also just ask it to "use the astra skill".
-
-Without `npx`: clone the repo and copy `plugins/<plugin>/skills/*` into
-`~/.config/opencode/skills/` (or any other directory OpenCode scans for skills).
-
-**Skills only.** The validate-on-save and session-start hooks do not run on
-OpenCode yet — ask the agent to run `astra validate astra.yaml` after edits.
+Point both at `plugins/<plugin>`: that directory holds the packaged skills
+with their tool versions pinned, and `opencode/<plugin>.js` runs the same
+validate-on-save and session-start hooks as the Claude Code and Codex
+packages. `plugins/lightcone` ships both skills and a plugin file that
+includes `astra`'s hooks. OpenCode loads a skill when the task matches its
+description; you can also just ask it to "use the astra skill". Details in the
+[OpenCode page](https://lightconeresearch.github.io/agent-skills/opencode/).
 
 </details>
 

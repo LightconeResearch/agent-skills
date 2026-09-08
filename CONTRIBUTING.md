@@ -1,6 +1,6 @@
 # Contributing
 
-This repo turns one canonical set of skills into three install targets. The golden
+This repo turns one canonical set of skills into four install targets. The golden
 rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 
 ## Layout
@@ -14,7 +14,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
 | `.agents/plugins/marketplace.json` | Codex marketplace manifest | ⚙️ generated |
-| `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted | ⚙️ generated |
+| `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted; `opencode/<name>.js` is the plugin's hooks as an OpenCode plugin module | ⚙️ generated |
 | `manifest.json` | Skill/plugin registry | ⚙️ generated |
 
 ## Add a skill
@@ -63,8 +63,11 @@ Edit `skills.config.json`:
   — the build flattens every closure hook tree under one `hooks/scripts/` dir. When a
   plugin bundles a dependency that also ships hooks (e.g. a plugin bundling `astra`), the
   generator **merges** the manifests: hook groups concatenate per event, scripts copy
-  side by side (canonical script basenames must stay unique across plugins). `agents` —
-  Claude subagent file paths.
+  side by side (canonical script basenames must stay unique across plugins). The same
+  hooks also become the plugin's OpenCode module, `plugins/<name>/opencode/<name>.js`
+  (scripts embedded, pins applied) — nothing to declare; only `PostToolUse` and
+  `SessionStart` events have an OpenCode mapping, so a new event type needs one in
+  `renderOpencodePlugin` first. `agents` — Claude subagent file paths.
 
 Then `npm run build && npm test`.
 
@@ -99,7 +102,9 @@ astra-spec is deliberately unpinned; the astra-tools release resolves it).
 
 ## Validation
 
-`npm test` (alias `node scripts/validate.mjs`) checks:
+`npm test` runs `scripts/validate.mjs`, `scripts/test-hooks.mjs` (the hook scripts
+against a fake `uvx`) and `scripts/test-opencode.mjs` (the generated OpenCode
+modules, driven under Node the way OpenCode calls them). The validator checks:
 
 - every skill's `name` is lowercase-hyphen and matches its directory;
 - `description` is present and ≤ 1024 chars;
@@ -109,16 +114,22 @@ astra-spec is deliberately unpinned; the astra-tools release resolves it).
   by the plugins that bundle it;
 - the generated manifests and `plugins/` copies match what the current source
   would produce — packaged copies compared with the bundling plugin's tool
-  pins applied (drift check).
+  pins applied (drift check);
+- each generated `plugins/<name>/opencode/<name>.js` imports as an ES module
+  with a plugin function as its default export.
 
 For the real thing — installing each plugin into a throwaway environment and
 confirming it loads — run the smoke suite (needs `claude`, `codex`, and `tmux`
 on PATH; no LLM/API calls):
 
 ```bash
-npm run smoke            # CLI install (both harnesses) + interactive tmux install (Claude)
+npm run smoke            # CLI install (all harnesses) + interactive tmux install (Claude)
 npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
 ```
+
+The OpenCode leg needs neither `opencode` nor auth: it installs the packaged
+skills with `npx skills … -a opencode` into an isolated HOME, asserts the tool
+pins are concrete, and imports the plugin module from the plugins dir.
 
 ## Local testing of the install paths
 
@@ -138,4 +149,9 @@ npx skills add ./ --list
 # plugin dir — point at plugins/<name>, locally or via the GitHub tree URL:
 npx skills add ./plugins/astra -a opencode --list
 npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode --list
+
+# OpenCode hooks, against a real OpenCode: symlink the generated module into a
+# project's plugin dir and start a session there
+mkdir -p /path/to/project/.opencode/plugins
+ln -s "$PWD/plugins/astra/opencode/astra.js" /path/to/project/.opencode/plugins/astra.js
 ```

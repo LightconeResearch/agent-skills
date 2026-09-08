@@ -1,18 +1,16 @@
 # AGENTS.md
 
 This repository is the **source of truth for the Lightcone Research agent skills**.
-It is not an application — it packages `SKILL.md`-based skills for three install
-targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
-from a single canonical source. Two plugins: `astra` (spec reference) and
+It is not an application — it packages `SKILL.md`-based skills for four install
+targets (the `npx skills` CLI, the Claude Code plugin marketplace, Codex plugins, and
+OpenCode) from a single canonical source. Two plugins: `astra` (spec reference) and
 `lightcone` (project companion, which bundles `astra`). Plugin skills are
 namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 
-**OpenCode** is a documented-only target: it reads the Agent Skills format
-directly, so users install the packaged `plugins/<name>/skills/` copies with
-`npx skills add <repo-url>/tree/main/plugins/<name> -a opencode` (see the README).
-Nothing is generated for it, and the `hooks.json` hooks do not run there —
-OpenCode plugins are JS modules with their own hook API, so hook support would
-need a wrapper plugin. Skills only, for now.
+**OpenCode** reads the Agent Skills format directly (users install the packaged
+`plugins/<name>/skills/` copies with `npx skills add <repo-url>/tree/main/plugins/<name>
+-a opencode`), and gets its hooks as a generated plugin module,
+`plugins/<name>/opencode/<name>.js` — see *Build tooling* below.
 
 ## Where things live
 
@@ -25,6 +23,8 @@ need a wrapper plugin. Skills only, for now.
   `dependencies` (bundled build-time closure) and `requires` (documented-only
   prerequisite the user installs — not bundled).
 - `scripts/build.mjs`, `scripts/validate.mjs` — the generator and the validator.
+- `scripts/test-hooks.mjs`, `scripts/test-opencode.mjs` — hermetic tests of the hook
+  scripts and of the generated OpenCode plugin modules (fake `uvx`, no network).
 - `tests/<plugin>.yaml` — declarative e2e hook-dispatch test specs, run by
   `scripts/e2e-hooks.mjs` (`npm run e2e`, and the `e2e-hooks` CI workflow)
   against real headless Claude Code and Codex sessions. To cover a new
@@ -33,8 +33,8 @@ need a wrapper plugin. Skills only, for now.
 ## Generated — do not hand-edit
 
 `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, the entire
-`plugins/` tree, and `manifest.json` are **generated** from `skills.config.json` +
-`skills/`. After changing any skill or the config:
+`plugins/` tree (including each `plugins/<name>/opencode/<name>.js` module), and
+`manifest.json` are **generated** from `skills.config.json` + `skills/` + `hooks/`. After changing any skill or the config:
 
 ```bash
 npm run build     # regenerate all target files
@@ -80,6 +80,21 @@ silently. So `skills.config.json` + `skills/` is the single source, and everythi
 per-target is generated and drift-checked. **Do not edit a generated file to fix a
 target — change the source and rebuild.** If a manifest looks wrong, the bug is in
 `skills.config.json` or `scripts/lib.mjs`, not in the output.
+
+**OpenCode** (the fourth target) reads skills straight from the Agent Skills format
+— the `skills` CLI installs `plugins/<name>/skills/` as-is, so no manifest is generated
+— but has no `hooks.json`: its plugins are JavaScript modules exporting
+`async (input) => hooks`. So for every plugin that ships hooks, `lib.mjs`
+(`renderOpencodePlugin`) generates `plugins/<name>/opencode/<name>.js`: the closure's
+hook scripts embedded verbatim with the plugin's pins applied, and the `hooks.json`
+events mapped onto OpenCode's API (`PostToolUse` → `tool.execute.after`, appending the
+script's `additionalContext` to the tool result; `SessionStart` →
+`experimental.chat.system.transform`, run once per session and re-added to the system
+prompt on every request, since OpenCode rebuilds the prompt each time). Scripts are
+embedded rather than referenced so the module is one file a user drops into
+`~/.config/opencode/plugins/` — no plugin root to resolve. It is plain ESM with no
+dependencies, which is also what lets `validate.mjs` import it and
+`test-opencode.mjs` drive its hooks under Node.
 
 **How the pieces fit.** `scripts/lib.mjs` is the engine: it loads the config, parses
 each `SKILL.md` frontmatter, computes the transitive skill closure per plugin (own +

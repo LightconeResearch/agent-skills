@@ -42,11 +42,12 @@ Then the [`astra` plugin](astra.md), which teaches your agent the format:
 
     ```bash
     npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
+    mkdir -p ~/.config/opencode/plugins
+    curl -fsSL https://raw.githubusercontent.com/LightconeResearch/agent-skills/main/plugins/astra/opencode/astra.js -o ~/.config/opencode/plugins/astra.js
     ```
 
-    OpenCode runs the skill but not the plugin's hooks, so where the tutorial
-    says a hook validated the file, ask the agent to run
-    `astra validate astra.yaml` instead.
+    The first line installs the skill, the rest the plugin's hooks — see the
+    [OpenCode page](opencode.md).
 
 There is nothing else to install: the plugin runs the ASTRA CLI through `uvx`,
 which fetches it on first use.
