@@ -12,13 +12,13 @@
         <meta name="author" content="Lightcone Research">
       
       
-        <link rel="canonical" href="https://lightconeresearch.github.io/agent-skills/opencode/">
+        <link rel="canonical" href="https://lightconeresearch.github.io/agent-skills/pi/">
       
       
-        <link rel="prev" href="../astra/">
+        <link rel="prev" href="../opencode/">
       
       
-        <link rel="next" href="../pi/">
+        <link rel="next" href="../getting-started/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>OpenCode - Lightcone Research Agent Skills</title>
+        <title>Pi - Lightcone Research Agent Skills</title>
       
     
     
@@ -85,7 +85,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#opencode" class="md-skip">
+        <a href="#pi" class="md-skip">
           Skip to content
         </a>
       
@@ -125,7 +125,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              OpenCode
+              Pi
             
           </span>
         </div>
@@ -407,6 +407,33 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../opencode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenCode
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -426,7 +453,7 @@
   <span class="md-ellipsis">
     
   
-  OpenCode
+  Pi
 
     
   </span>
@@ -443,7 +470,7 @@
   <span class="md-ellipsis">
     
   
-  OpenCode
+  Pi
 
     
   </span>
@@ -480,10 +507,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-the-plugin-does" class="md-nav__link">
+  <a href="#what-the-package-does" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        What the plugin does
+        What the package does
       </span>
     </span>
   </a>
@@ -538,33 +565,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../pi/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Pi
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -713,10 +713,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-the-plugin-does" class="md-nav__link">
+  <a href="#what-the-package-does" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        What the plugin does
+        What the package does
       </span>
     </span>
   </a>
@@ -785,93 +785,75 @@
   
 
 
-<h1 id="opencode">OpenCode<a class="headerlink" href="#opencode" title="Permanent link">&para;</a></h1>
-<p><a href="https://opencode.ai">OpenCode</a> reads skills in the open
-<a href="https://agentskills.io">Agent Skills</a> format directly, and it installs plugins
-from npm: packages listed under <code>plugin</code> in <code>opencode.json</code> are installed
-automatically at startup. So a Lightcone plugin arrives in two parts — the
-<strong>skills</strong> through the <code>skills</code> CLI, and the <strong>hooks</strong> as an npm package that
-this repository publishes from the very same hook scripts Claude Code and Codex
-run.</p>
+<h1 id="pi">Pi<a class="headerlink" href="#pi" title="Permanent link">&para;</a></h1>
+<p><a href="https://github.com/badlogic/pi-mono">Pi</a> reads skills in the open
+<a href="https://agentskills.io">Agent Skills</a> format and installs extension packages
+from npm, so a Lightcone plugin installs in one step — skills and hooks
+together — from the same npm package OpenCode uses.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <p>The only prerequisite is
 <a href="https://docs.astral.sh/uv/getting-started/installation/"><code>uv</code></a>, as on every
-harness. The examples install <code>astra</code>; for the full stack substitute
-<code>lightcone</code> — its package includes <code>astra</code>'s hooks, so do not list both.</p>
-<p><strong>1. Skills</strong> — with the <a href="https://github.com/vercel-labs/skills"><code>skills</code> CLI</a>,
-pointed at the packaged plugin directory:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>npx<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra<span class="w"> </span>-a<span class="w"> </span>opencode<span class="w"> </span>-g
+harness. The example installs <code>astra</code>; for the full stack substitute
+<code>lightcone</code> — its package ships both skills and includes <code>astra</code>'s hooks, so do
+not install both.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pi<span class="w"> </span>install<span class="w"> </span>npm:@lightcone-research/astra-plugin@0.0.5
 </span></code></pre></div>
-<p>This installs into <code>~/.agents/skills/</code>, one of the directories OpenCode scans.
-Drop <code>-g</code> to install into the current project (<code>./.agents/skills/</code>) instead.</p>
-<p><strong>2. Hooks</strong> — add the package to <code>opencode.json</code>
-(<code>~/.config/opencode/opencode.json</code> for every project, or a project's own):</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"$schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://opencode.ai/config.json"</span><span class="p">,</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"@lightcone-research/astra-plugin@0.0.5"</span><span class="p">]</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
-</span></code></pre></div>
-<p>OpenCode installs it on the next start. <strong>Pin the version</strong>: OpenCode resolves
-an unpinned spec once and keeps that copy in its cache, so <code>@latest</code> would not
-pick up new releases. The package version is the plugin version shown in the
-<a href="https://github.com/LightconeResearch/agent-skills#-plugins">README</a>.</p>
-<h2 id="what-the-plugin-does">What the plugin does<a class="headerlink" href="#what-the-plugin-does" title="Permanent link">&para;</a></h2>
+<p>Pi installs the package under <code>~/.pi/agent/npm/</code> and picks up its <code>skills/</code>
+directory and its extension. Pin the version: it is the plugin version shown in
+the <a href="https://github.com/LightconeResearch/agent-skills#-plugins">README</a>, and
+<code>pi update</code> leaves pinned packages alone. To try before installing:
+<code>pi -e npm:@lightcone-research/astra-plugin</code>.</p>
+<h2 id="what-the-package-does">What the package does<a class="headerlink" href="#what-the-package-does" title="Permanent link">&para;</a></h2>
 <p><code>@lightcone-research/astra-plugin</code> is <code>plugins/astra/</code> published as-is: the
-packaged skills, plus <code>opencode/index.js</code>, a module generated by
-<code>npm run build</code> from the plugin's <code>hooks.json</code>. It embeds the hook scripts
-verbatim — tool versions already pinned — and maps the hook events onto
-OpenCode's plugin API:</p>
+packaged skills, plus <code>pi/index.js</code>, an extension generated by <code>npm run build</code>
+from the plugin's <code>hooks.json</code>. It embeds the hook scripts verbatim — tool
+versions already pinned — and maps the hook events onto Pi's extension API:</p>
 <table>
 <thead>
 <tr>
 <th><code>hooks.json</code> event</th>
-<th>OpenCode hook</th>
+<th>Pi event</th>
 <th>Effect</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>PostToolUse</code> (<code>Write\|Edit\|apply_patch</code>)</td>
-<td><code>tool.execute.after</code> on <code>write</code>, <code>edit</code>, <code>apply_patch</code></td>
-<td>Whenever a save touches <code>astra.yaml</code>, the spec is re-validated and the report is appended to the tool result the model reads.</td>
+<td><code>tool_result</code> on <code>write</code>, <code>edit</code></td>
+<td>Whenever a save touches <code>astra.yaml</code>, the spec is re-validated and the report is appended to the tool result as a text block.</td>
 </tr>
 <tr>
 <td><code>SessionStart</code></td>
-<td><code>experimental.chat.system.transform</code> (pre-warmed on <code>session.created</code>)</td>
-<td>The session primer — spec location and analysis shape, and for <code>lightcone</code> the state of the <code>lc</code> engine — runs once per session and is added to the system prompt on every request.</td>
+<td><code>session_start</code> + <code>before_agent_start</code></td>
+<td>The session primer — spec location and analysis shape, and for <code>lightcone</code> the state of the <code>lc</code> engine — runs once per session and is appended to the system prompt on every turn.</td>
 </tr>
 </tbody>
 </table>
-<p>The module has no dependencies. It needs <code>bash</code> on PATH (Git Bash or WSL on
+<p>The extension has no dependencies. It needs <code>bash</code> on PATH (Git Bash or WSL on
 Windows); the scripts need <code>uvx</code> and tell the agent when it is missing, exactly
 as on the other harnesses.</p>
-<div class="admonition note">
-<p class="admonition-title">Experimental hook</p>
-<p>The session primer relies on <code>experimental.chat.system.transform</code>, which
-OpenCode marks experimental. If a release renames it, validate-on-save
-keeps working and only the primer goes quiet — please open an issue.</p>
-</div>
 <h2 id="using-the-skills">Using the skills<a class="headerlink" href="#using-the-skills" title="Permanent link">&para;</a></h2>
-<p>OpenCode does not namespace skills by plugin: the agent loads <code>astra</code> or
-<code>lightcone</code> through its <code>skill</code> tool when the task matches the description,
-and you can simply ask it to "use the astra skill".</p>
+<p>Pi lists installed skills in the system prompt and loads one on demand; you
+can also invoke one directly as <code>/skill:astra</code> or <code>/skill:lightcone</code>. Skills
+are not namespaced by plugin. Do not add the skills a second time with the
+<code>skills</code> CLI — Pi warns on duplicate names and keeps the first.</p>
 <h2 id="updating-and-removing">Updating and removing<a class="headerlink" href="#updating-and-removing" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Update</strong>: bump the pinned version in <code>opencode.json</code> and re-run the
-  <code>npx skills add …</code> line for the skills.</li>
-<li><strong>Remove</strong>: delete the <code>plugin</code> entry and <code>~/.agents/skills/&lt;skill&gt;/</code>.</li>
+<li><strong>Update</strong>: <code>pi install npm:@lightcone-research/astra-plugin@&lt;new version&gt;</code>.</li>
+<li><strong>Remove</strong>: <code>pi remove npm:@lightcone-research/astra-plugin</code>.</li>
 </ul>
 <h2 id="differences-from-claude-code-and-codex">Differences from Claude Code and Codex<a class="headerlink" href="#differences-from-claude-code-and-codex" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>No marketplace.</strong> Two install lines instead of one, no in-app catalogue.</li>
+<li><strong>No marketplace</strong>, but a one-line install that covers skills and hooks.</li>
 <li><strong>Interactive or not?</strong> The <code>lightcone</code> primer asks the user before
-  installing or upgrading <code>lc</code> when a person may be present. OpenCode does not
-  expose how it was launched, so the primer always asks — in a headless
-  <code>opencode run</code> the agent will report instead of acting.</li>
+  installing or upgrading <code>lc</code> when a person may be present. The extension does
+  not yet tell the scripts whether Pi runs interactively, so the primer always
+  asks — in <code>pi -p</code> (print mode) the agent will report instead of acting.
+  A future release can pass Pi's own signal through.</li>
 </ul>
 <h2 id="try-it">Try it<a class="headerlink" href="#try-it" title="Permanent link">&para;</a></h2>
-<p>The <a href="../getting-started/">getting started tutorial</a> works on OpenCode as it
-does elsewhere: the validate-on-save hook fires when the agent writes the spec.</p>
+<p>The <a href="../getting-started/">getting started tutorial</a> works on Pi as it does
+elsewhere: the validate-on-save hook fires when the agent writes the spec.</p>
 
 
 
@@ -911,7 +893,7 @@ does elsewhere: the validate-on-save hook fires when the agent writes the spec.<
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../astra/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ASTRA">
+          <a href="../opencode/" class="md-footer__link md-footer__link--prev" aria-label="Previous: OpenCode">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -921,20 +903,20 @@ does elsewhere: the validate-on-save hook fires when the agent writes the spec.<
                 Previous
               </span>
               <div class="md-ellipsis">
-                ASTRA
+                OpenCode
               </div>
             </div>
           </a>
         
         
           
-          <a href="../pi/" class="md-footer__link md-footer__link--next" aria-label="Next: Pi">
+          <a href="../getting-started/" class="md-footer__link md-footer__link--next" aria-label="Next: Getting started with ASTRA">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Pi
+                Getting started with ASTRA
               </div>
             </div>
             <div class="md-footer__button md-icon">

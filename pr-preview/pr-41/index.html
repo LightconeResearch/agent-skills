@@ -508,6 +508,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Pi
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -694,8 +721,8 @@
 <p>Portable, open-standard skills that teach coding agents the
 <a href="https://github.com/LightconeResearch">Lightcone Research</a> stack.</p>
 <p>The skills follow the <a href="https://agentskills.io">Agent Skills standard</a>, work
-across Claude Code, Codex and OpenCode, and are packaged as plugins with their
-hooks included.</p>
+across Claude Code, Codex, OpenCode and Pi, and are packaged as plugins with
+their hooks included.</p>
 <p><a class="md-button md-button--primary" href="https://github.com/LightconeResearch/agent-skills"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>GitHub</title><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></span> <strong>View on GitHub</strong></a></p>
 <h2 id="plugins">Plugins<a class="headerlink" href="#plugins" title="Permanent link">&para;</a></h2>
 <table>
@@ -720,7 +747,7 @@ hooks included.</p>
 <p>The only prerequisite is
 <a href="https://docs.astral.sh/uv/getting-started/installation/"><code>uv</code></a>: plugins with
 Python dependencies install them on first use.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Claude Code</label><label for="__tabbed_1_2">Claude App</label><label for="__tabbed_1_3">Codex CLI</label><label for="__tabbed_1_4">Codex App</label><label for="__tabbed_1_5">OpenCode</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:6"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><input id="__tabbed_1_6" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Claude Code</label><label for="__tabbed_1_2">Claude App</label><label for="__tabbed_1_3">Codex CLI</label><label for="__tabbed_1_4">Codex App</label><label for="__tabbed_1_5">OpenCode</label><label for="__tabbed_1_6">Pi</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>claude<span class="w"> </span>plugin<span class="w"> </span>marketplace<span class="w"> </span>add<span class="w"> </span>LightconeResearch/agent-skills
@@ -746,18 +773,23 @@ it with <code>/astra:astra</code>.</p>
 install it. Then call <code>/astra:astra</code>.</p>
 </div>
 <div class="tabbed-block">
-<p>OpenCode reads Agent Skills directly and loads plugins as JavaScript
-files, so there is no marketplace step: install the skills with the
-<a href="https://github.com/vercel-labs/skills"><code>skills</code> CLI</a>, then drop the
-generated hooks file into OpenCode's plugin directory.</p>
+<p>OpenCode reads Agent Skills directly and installs plugins from npm, so
+there is no marketplace step: install the skills with the
+<a href="https://github.com/vercel-labs/skills"><code>skills</code> CLI</a>, then list the
+package in <code>opencode.json</code>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>npx<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra<span class="w"> </span>-a<span class="w"> </span>opencode<span class="w"> </span>-g
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.config/opencode/plugins
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://raw.githubusercontent.com/LightconeResearch/agent-skills/main/plugins/astra/opencode/astra.js<span class="w"> </span>-o<span class="w"> </span>~/.config/opencode/plugins/astra.js
+</span></code></pre></div>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"$schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://opencode.ai/config.json"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"@lightcone-research/astra-plugin@0.0.5"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div>
 <p>The skill lands in <code>~/.agents/skills/</code> (drop <code>-g</code> for <code>./.agents/skills/</code>);
 the agent loads it when the task matches, or when you ask it to "use the
-astra skill". See the <a href="opencode/">OpenCode page</a> for what the plugin
-file does.</p>
+astra skill". See the <a href="opencode/">OpenCode page</a>.</p>
+</div>
+<div class="tabbed-block">
+<p>One step, skills and hooks together:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pi<span class="w"> </span>install<span class="w"> </span>npm:@lightcone-research/astra-plugin@0.0.5
+</span></code></pre></div>
+<p>Then invoke <code>/skill:astra</code>. See the <a href="pi/">Pi page</a>.</p>
 </div>
 </div>
 </div>
