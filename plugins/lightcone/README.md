@@ -28,6 +28,6 @@ Installs the skills and the hooks together; invoke a skill as `/skill:<name>`.
 ## Contents
 
 - Skills: `astra`, `lightcone`
-- Hooks: the plugin's SessionStart primer and PostToolUse validation, as an OpenCode plugin module (`opencode/index.js`) and a Pi extension (`pi/index.js`). Needs `bash` on PATH; the scripts need `uvx` and say so when it is missing.
+- Hooks: the plugin's `hooks/` tree (SessionStart primer, PostToolUse validation), run on OpenCode by `opencode/index.js` and on Pi by `pi/index.js`. Needs `bash` on PATH; the scripts need `uvx` and say so when it is missing.
 
 Documentation: https://lightconeresearch.github.io/agent-skills/opencode/ and https://lightconeresearch.github.io/agent-skills/pi/ · License: BSD-3-Clause

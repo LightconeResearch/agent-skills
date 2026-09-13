@@ -1,10 +1,13 @@
-# Live end-to-end hook-dispatch tests (scripts/e2e-hooks.mjs): install the
-# marketplace and one plugin per spec (astra, lightcone) into throwaway config
-# homes for Claude Code and Codex, run real headless sessions, and assert the
-# plugin hooks actually fire (SessionStart and PostToolUse), observed through a
-# stubbed `uvx` sentinel.
+# Live end-to-end hook-dispatch tests (scripts/e2e-hooks.mjs): install one
+# plugin per spec (astra, lightcone) into throwaway config homes for Claude
+# Code, Codex, OpenCode and Pi, run real headless sessions, and assert the
+# plugin hooks actually fire (SessionStart and PostToolUse), observed in each
+# harness's session trace.
 #
-# Auth comes from two repository secrets:
+# The Claude Code and Codex legs talk to real models; the OpenCode and Pi
+# legs run against a canned local model (scripts/e2e-canned-model.mjs) whose
+# request log is their trace, so they need no secret. Auth for the first two
+# comes from two repository secrets:
 #   CLAUDE_CODE_OAUTH_TOKEN — Claude Code leg (headless `claude -p`). Already
 #     present: the Claude GitHub app installed it (claude.yml uses it too).
 #   OPENAI_API_KEY — Codex leg (`codex exec`), created manually under
@@ -27,9 +30,10 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    # Two specs x two harnesses, each spec now up to 3 tests and one of them
-    # retried up to 3 times, every session capped at 300s — worst case grew
-    # well past the original 25.
+    # Two specs x four harnesses, each spec up to 3 tests and one of them
+    # retried up to 3 times on the real-model legs, every session capped at
+    # 300s — worst case is well past the original 25. The canned-model legs
+    # add seconds, not minutes.
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +47,10 @@ jobs:
       # (openai/codex#16430). Running `latest` makes this workflow the early
       # warning for that class of breakage.
       - name: Install harness CLIs
-        run: npm install -g @anthropic-ai/claude-code @openai/codex
+        run: |
+          npm install -g @anthropic-ai/claude-code @openai/codex @earendil-works/pi-coding-agent
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
 
       # The astra hooks shell out to `uvx astra-tools@<pin>` for real (the
       # spec declares no stubs), so the runner needs uv — a missing uv shows

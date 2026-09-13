@@ -1,59 +1,27 @@
 #!/usr/bin/env node
-// Hermetic tests for the generated OpenCode plugin modules
-// (plugins/<name>/opencode/index.js, the npm package main). No OpenCode binary, no network, no real
-// astra: the modules are imported into this process and their hooks are
-// called the way OpenCode calls them, with a fake `uvx` on PATH (same fake as
-// test-hooks.mjs) so the embedded scripts' behaviour is observable.
+// Hermetic tests for the OpenCode adapter as packaged (plugins/<name>/opencode/index.js,
+// the npm package main, running plugins/<name>/hooks/hooks.json). No OpenCode
+// binary, no network, no real astra: the module is imported into this process
+// and its hooks are called the way OpenCode calls them, with the fake `uvx` from
+// test-lib.mjs on PATH so the scripts' behaviour is observable.
 //
 // What this proves, on top of test-hooks.mjs (the scripts) and validate.mjs
-// (the module text is what the generator produces):
+// (the packaged files are byte copies of their sources):
 //   - the wiring: PostToolUse groups fire from "tool.execute.after" for the
 //     tools the hooks.json matcher names (OpenCode's `write`, `edit` and
 //     `apply_patch`, matched case-insensitively) and stay silent for the rest;
 //   - the routing: a script's additionalContext lands in output.output (tool
 //     result) or output.system (system prompt), and non-envelope noise does not;
-//   - the primer contract: one SessionStart run per session, re-emitted on
-//     every request, pre-warmable from the session.created event;
+//   - the primer contract: one SessionStart run per session (session.created
+//     starts it), re-emitted on every request;
 //   - a bundling plugin (lightcone) runs its dependency's hooks too, in order.
 
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
+import { ROOT, assertIncludes, fail, hermeticEnv, makeScratch } from "./test-lib.mjs";
 
-const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
-const scratch = mkdtempSync(join(tmpdir(), "opencode-plugin-"));
-const project = join(scratch, "project");
-const elsewhere = join(scratch, "elsewhere");
-const bin = join(scratch, "bin");
-const uvxLog = join(scratch, "uvx-invocations.log");
-
-mkdirSync(project, { recursive: true });
-mkdirSync(elsewhere, { recursive: true });
-mkdirSync(bin);
-writeFileSync(join(project, "astra.yaml"), "id: test\n");
-writeFileSync(
-  join(bin, "uvx"),
-  `#!/bin/sh
-echo "$*" >> "${uvxLog}"
-printf '%s\\n' "\\"fake report: $*\\""
-exit "\${FAKE_UVX_RC:-1}"
-`,
-  { mode: 0o755 },
-);
-
-// The embedded scripts inherit this process's environment: a hermetic PATH
-// (fake uvx, no `lc`), and none of the harness variables the lightcone hook
-// reads to pick its mode.
-process.env.PATH = `${bin}:/usr/bin:/bin`;
-delete process.env.CLAUDE_CODE_ENTRYPOINT;
-delete process.env.CI;
-
-const uvxCalls = () => (existsSync(uvxLog) ? readFileSync(uvxLog, "utf8").trim().split("\n").filter(Boolean) : []);
-const fail = (msg) => { throw new Error(msg); };
-const assertIncludes = (label, haystack, needle) => {
-  if (!haystack.includes(needle)) fail(`${label}: missing ${JSON.stringify(needle)}\n${haystack}`);
-};
+const { project, elsewhere, bin, uvxCalls, cleanup } = makeScratch("opencode-plugin-");
+hermeticEnv(bin);
 
 async function load(name, directory) {
   const mod = await import(pathToFileURL(join(ROOT, `plugins/${name}/opencode/index.js`)).href);
@@ -78,6 +46,8 @@ async function systemFor(hooks, sessionID) {
   await hooks["experimental.chat.system.transform"]({ sessionID, model: {} }, output);
   return output.system;
 }
+
+const sessionCreated = (hooks, id) => hooks.event({ event: { type: "session.created", properties: { info: { id } } } });
 
 try {
   const astra = await load("astra", project);
@@ -124,21 +94,20 @@ try {
   assertIncludes("primer uvx args", uvxCalls().at(-1), "info --json");
   if (uvxCalls().length !== before + 1) fail("primer: expected exactly one uvx run for the session");
 
-  // Same session, next request: re-emitted from cache, no second run.
+  // Same session, next request: re-emitted from cache, no second run. The
+  // agent-generation path calls the transform without a sessionID: served too.
   system = await systemFor(astra, "s1");
   assertIncludes("primer/cached", system.join("\n"), "ASTRA project — spec at ./astra.yaml");
-  if (uvxCalls().length !== before + 1) fail("primer/cached: SessionStart ran again for the same session");
+  system = await systemFor(astra, undefined);
+  assertIncludes("primer/no-session", system.join("\n"), "ASTRA project");
+  if (uvxCalls().length !== before + 1) fail("primer/cached: SessionStart ran again within the session");
 
-  // The agent-generation path calls the transform without a sessionID: still served.
-  const noSession = { system: [] };
-  await astra["experimental.chat.system.transform"]({ model: {} }, noSession);
-  assertIncludes("primer/no-session", noSession.system.join("\n"), "ASTRA project");
-
-  // A new session runs it again — once — and session.created pre-warms it.
-  await astra.event({ event: { type: "session.created", properties: { info: { id: "s2" } } } });
+  // A new session runs it again — once: session.created starts the run and
+  // the first transform shares it.
+  await sessionCreated(astra, "s2");
   system = await systemFor(astra, "s2");
-  assertIncludes("primer/prewarmed", system.join("\n"), "ASTRA project");
-  if (uvxCalls().length !== before + 3) fail("primer/prewarmed: expected one run for s2 (pre-warm + transform shared it)");
+  assertIncludes("primer/new-session", system.join("\n"), "ASTRA project");
+  if (uvxCalls().length !== before + 2) fail("primer/new-session: expected exactly one more run");
   delete process.env.FAKE_UVX_RC;
 
   // Outside an ASTRA project the astra primer stays silent.
@@ -161,7 +130,7 @@ try {
   assertIncludes("lightcone/validate", out, "ASTRA validation passed");
   delete process.env.FAKE_UVX_RC;
 
-  console.log("✓ OpenCode plugin modules: tool matching, result/system routing, and the per-session primer all behave.");
+  console.log("✓ OpenCode adapter: tool matching, result/system routing, and the per-session primer all behave.");
 } finally {
-  rmSync(scratch, { recursive: true, force: true });
+  cleanup();
 }

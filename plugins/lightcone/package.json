@@ -6,11 +6,10 @@
   "main": "./opencode/index.js",
   "exports": {
     ".": "./opencode/index.js",
-    "./server": "./opencode/index.js",
-    "./pi": "./pi/index.js",
-    "./package.json": "./package.json"
+    "./server": "./opencode/index.js"
   },
   "files": [
+    "hooks/",
     "opencode/",
     "pi/",
     "skills/",

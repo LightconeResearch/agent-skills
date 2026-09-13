@@ -18,6 +18,7 @@ import {
   UNPINNED_RE,
   PIN_SCAN_EXTS,
   SPEC_FIELDS,
+  HOOK_EVENTS,
   npmPackageName,
 } from "./lib.mjs";
 
@@ -89,6 +90,14 @@ for (const p of config.plugins) {
   for (const r of p.requires || []) if (!byName[r]) errors.push(`plugin "${p.name}": unknown required plugin "${r}"`);
   for (const a of p.agents || []) if (!existsSync(join(ROOT, a))) errors.push(`plugin "${p.name}": missing agent file ${a}`);
   if (p.hooks && !existsSync(join(ROOT, p.hooks))) errors.push(`plugin "${p.name}": missing hooks file ${p.hooks}`);
+  else if (p.hooks) {
+    // The OpenCode and Pi adapters (harness/) map only these events; any other
+    // would silently never fire on those harnesses.
+    const { hooks } = JSON.parse(readFileSync(join(ROOT, p.hooks), "utf8"));
+    for (const event of Object.keys(hooks || {}))
+      if (!HOOK_EVENTS.includes(event))
+        errors.push(`${p.hooks}: event "${event}" has no OpenCode/Pi mapping (harness/ handles ${HOOK_EVENTS.join(", ")})`);
+  }
 }
 
 // 3. Tool pins: canonical skills/ and hooks/ never carry a concrete tool
@@ -152,9 +161,9 @@ for (const { source, dest, pins } of copies) {
 }
 
 // 6. The npm packages. Each plugins/<name>/ is also the npm package OpenCode
-//    and Pi install, so on top of the drift check (which proves the generated
-//    text is what the generator produces) this proves the package is what those
-//    harnesses can consume:
+//    and Pi install, so on top of the drift check (which proves the packaged
+//    files are what the source would produce) this proves the package is what
+//    those harnesses can consume:
 //    - both modules import as ES modules with a function default export
 //      (OpenCode imports the main; Pi imports pi/index.js via jiti);
 //    - the OpenCode module exposes ONLY that export — OpenCode iterates every

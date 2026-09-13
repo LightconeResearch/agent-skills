@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Hermetic tests for the generated Pi extensions (plugins/<name>/pi/index.js,
-// listed under package.json `pi.extensions`). No Pi binary, no network, no
-// real astra: the module is imported into this process and its factory is
-// handed a fake `pi` that records handlers, which are then called the way Pi
-// calls them — with a fake `uvx` on PATH (same fake as test-hooks.mjs) so the
-// embedded scripts' behaviour is observable.
+// Hermetic tests for the Pi adapter as packaged (plugins/<name>/pi/index.js,
+// listed under package.json `pi.extensions`, running plugins/<name>/hooks/hooks.json).
+// No Pi binary, no network, no real astra: the module is imported into this
+// process and its factory is handed a fake `pi` that records handlers, which
+// are then called the way Pi calls them, with the fake `uvx` from test-lib.mjs
+// on PATH so the scripts' behaviour is observable.
 //
 // What this proves, on top of test-hooks.mjs (the scripts) and validate.mjs
-// (the module text is what the generator produces):
+// (the packaged files are byte copies of their sources):
 //   - the wiring: `tool_result` runs the PostToolUse scripts for the tools the
 //     hooks.json matcher names (Pi's `write`, `edit`) and returns undefined for
 //     the rest — Pi keeps the result untouched when a handler returns nothing;
@@ -18,44 +18,15 @@
 //     undefined outside an ASTRA project so the base prompt stays untouched;
 //   - a bundling plugin (lightcone) runs its dependency's hooks too, in order.
 
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
+import { ROOT, assertIncludes, fail, hermeticEnv, makeScratch } from "./test-lib.mjs";
 
-const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
-const scratch = mkdtempSync(join(tmpdir(), "pi-extension-"));
-const project = join(scratch, "project");
-const elsewhere = join(scratch, "elsewhere");
-const bin = join(scratch, "bin");
-const uvxLog = join(scratch, "uvx-invocations.log");
-
-mkdirSync(project, { recursive: true });
-mkdirSync(elsewhere, { recursive: true });
-mkdirSync(bin);
-writeFileSync(join(project, "astra.yaml"), "id: test\n");
-writeFileSync(
-  join(bin, "uvx"),
-  `#!/bin/sh
-echo "$*" >> "${uvxLog}"
-printf '%s\\n' "\\"fake report: $*\\""
-exit "\${FAKE_UVX_RC:-1}"
-`,
-  { mode: 0o755 },
-);
-
-process.env.PATH = `${bin}:/usr/bin:/bin`;
-delete process.env.CLAUDE_CODE_ENTRYPOINT;
-delete process.env.CI;
-
-const uvxCalls = () => (existsSync(uvxLog) ? readFileSync(uvxLog, "utf8").trim().split("\n").filter(Boolean) : []);
-const fail = (msg) => { throw new Error(msg); };
-const assertIncludes = (label, haystack, needle) => {
-  if (!haystack.includes(needle)) fail(`${label}: missing ${JSON.stringify(needle)}\n${haystack}`);
-};
+const { project, elsewhere, bin, uvxCalls, cleanup } = makeScratch("pi-extension-");
+hermeticEnv(bin);
 
 // Load a plugin's Pi extension and register it against a fake `pi`. Returns
-// the handlers by event name plus a ctx factory for a project directory.
+// the handlers by event name.
 async function load(name) {
   const mod = await import(pathToFileURL(join(ROOT, `plugins/${name}/pi/index.js`)).href);
   if (typeof mod.default !== "function") fail(`${name}: pi/index.js has no default-exported factory`);
@@ -159,7 +130,7 @@ try {
   assertIncludes("lightcone/validate", patch.content.at(-1).text, "ASTRA validation passed");
   delete process.env.FAKE_UVX_RC;
 
-  console.log("✓ Pi extensions: tool matching, result/system-prompt routing, and the per-session primer all behave.");
+  console.log("✓ Pi adapter: tool matching, result/system-prompt routing, and the per-session primer all behave.");
 } finally {
-  rmSync(scratch, { recursive: true, force: true });
+  cleanup();
 }
