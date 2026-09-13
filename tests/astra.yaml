@@ -144,6 +144,9 @@ tests:
     # astra.yaml is still valid on its own; only whole-project validation sees
     # that universes/baseline.yaml now selects a decision that no longer exists.
     expect_context: UNKNOWN_DECISION
+    # The hook's own pass marker, in full: the FAILED report it splices in
+    # still says "Schema validation passed" for astra.yaml before the
+    # universe error, so a shorter marker would match the failure itself.
     forbid_context:
-      - validation passed   # the hook validated astra.yaml alone
+      - ASTRA validation passed   # the hook validated astra.yaml alone
       - not validated       # uv missing, or the toolchain crashed
