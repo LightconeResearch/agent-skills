@@ -141,8 +141,8 @@ npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugi
 ```
 
 `@lightcone-research/<plugin>-plugin` is the plugin's `plugins/<plugin>/`
-directory published to npm; its `opencode/index.js` runs the same
-validate-on-save and session-start hooks as the Claude Code and Codex packages.
+directory published to npm; it ships the same `hooks/` tree as the Claude Code
+and Codex packages, which `opencode/index.js` runs on OpenCode.
 `lightcone-plugin` includes `astra`'s hooks — list one or the other. OpenCode
 loads a skill when the task matches its description; you can also just ask it
 to "use the astra skill". Details in the

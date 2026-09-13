@@ -14,7 +14,8 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
 | `.agents/plugins/marketplace.json` | Codex marketplace manifest | ⚙️ generated |
-| `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted. Each is also the npm package OpenCode and Pi install: `package.json`, `README.md`, `LICENSE`, `opencode/index.js`, `pi/index.js` | ⚙️ generated |
+| `harness/` | Static OpenCode + Pi adapters, copied into every plugin with hooks | ✅ |
+| `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted. Each is also the npm package OpenCode and Pi install: `package.json`, `README.md`, `LICENSE`, the `harness/` copies | ⚙️ generated |
 | `manifest.json` | Skill/plugin registry | ⚙️ generated |
 
 ## Add a skill
@@ -64,10 +65,10 @@ Edit `skills.config.json`:
   plugin bundles a dependency that also ships hooks (e.g. a plugin bundling `astra`), the
   generator **merges** the manifests: hook groups concatenate per event, scripts copy
   side by side (canonical script basenames must stay unique across plugins). The same
-  hooks also become the plugin's OpenCode module (`plugins/<name>/opencode/index.js`) and
-  Pi extension (`plugins/<name>/pi/index.js`) — scripts embedded, pins applied, nothing
-  to declare; only `PostToolUse` and `SessionStart` have a mapping, so a new event type
-  needs one in `renderOpencodePlugin` and `renderPiExtension` first. `agents` — Claude
+  `hooks/` tree also runs on OpenCode and Pi, through the static adapters copied in from
+  `harness/` — nothing to declare; only `PostToolUse` and `SessionStart` have a mapping
+  (the validator rejects any other event), so a new event type needs one in
+  `harness/opencode/index.js` and `harness/pi/index.js` first. `agents` — Claude
   subagent file paths.
 
 Then `npm run build && npm test`.
@@ -116,7 +117,8 @@ every PR (`test.yml`). The validator checks:
   by the plugins that bundle it;
 - the generated manifests and `plugins/` copies match what the current source
   would produce — packaged copies compared with the bundling plugin's tool
-  pins applied (drift check);
+  pins applied (drift check), `harness/` copies byte-for-byte;
+- every `hooks.json` event is one the OpenCode/Pi adapters map;
 - each plugin's npm package: `package.json` named `<npmScope>/<name>-plugin` at
   the plugin's version, no `dependencies`/`scripts`, no lockfile in the dir, `pi`
   entries that exist; `opencode/index.js` and `pi/index.js` import as ES modules

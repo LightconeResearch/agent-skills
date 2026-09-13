@@ -10,8 +10,8 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 **OpenCode and Pi** read the Agent Skills format directly and install plugins from
 npm, so every `plugins/<name>/` dir is also an npm package,
 `@lightcone-research/<name>-plugin` (generated `package.json`; OpenCode imports
-`opencode/index.js`, Pi imports `pi/index.js` and the `skills/` tree) — see *Build
-tooling* below. Publishing is `.github/workflows/publish-npm.yml`, triggered by a plugin
+`opencode/index.js`, Pi imports `pi/index.js` and the `skills/` tree; both run the
+packaged `hooks/` tree through `hooks/run.js`) — see *Build tooling* below. Publishing is `.github/workflows/publish-npm.yml`, triggered by a plugin
 version bump on `main`.
 
 ## Where things live
@@ -20,6 +20,9 @@ version bump on `main`.
   skill; the directory name must equal the `name:` in the frontmatter.
 - `hooks/<plugin>/` — per-plugin `hooks.json` + bash scripts (`astra/` validates
   on save and reminds the agent to load the skill).
+- `harness/` — the static OpenCode and Pi adapters (`hooks/run.js`, `opencode/index.js`,
+  `pi/index.js`), copied verbatim into every plugin that ships hooks. Edit these to
+  change how `hooks.json` is mapped onto those harnesses.
 - `skills.config.json` — declares how skills compose into the plugins.
   A plugin composes with others two ways:
   `dependencies` (bundled build-time closure) and `requires` (documented-only
@@ -37,8 +40,8 @@ version bump on `main`.
 
 `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, the entire
 `plugins/` tree (including each plugin's npm package: `package.json`, `README.md`,
-`LICENSE`, `opencode/index.js`, `pi/index.js`), and `manifest.json` are **generated**
-from `skills.config.json` + `skills/` + `hooks/`. After changing any skill or the config:
+`LICENSE`, and the `harness/` copies), and `manifest.json` are **generated**
+from `skills.config.json` + `skills/` + `hooks/` + `harness/`. After changing any skill or the config:
 
 ```bash
 npm run build     # regenerate all target files
@@ -93,18 +96,21 @@ exporting `async (input) => hooks`, installed from npm through the `plugin` arra
 installed from npm through the `pi` field of `package.json`. So every `plugins/<name>/` dir
 doubles as ONE npm package, `<npmScope>/<name>-plugin`: `lib.mjs` generates its
 `package.json` (`main`/`exports` → `opencode/index.js`; `pi.extensions` → `./pi`,
-`pi.skills` → `./skills`; `files` keeps the Claude/Codex manifests and `hooks/` out of the
-tarball), its `README.md`, a `LICENSE` copy, and — for a plugin with hooks — the two modules
-(`renderOpencodePlugin`, `renderPiExtension`). Both embed the closure's hook scripts
-verbatim with the plugin's pins applied and map the `hooks.json` events onto the harness
-API: `PostToolUse` → OpenCode `tool.execute.after` / Pi `tool_result` (context appended to
-the tool result); `SessionStart` → OpenCode `experimental.chat.system.transform` / Pi
-`before_agent_start` (primer run once per session, re-added to the system prompt on every
-request, because both harnesses rebuild the prompt each time). Scripts are embedded rather
-than referenced because an npm-installed module has no plugin root to resolve, and the
-modules have zero dependencies so the package installs with scripts ignored. Plain ESM,
-which is also what lets `validate.mjs` import them and `test-opencode.mjs` /
-`test-pi.mjs` drive their hooks under Node. **Never add a lockfile or `dependencies` to a
+`pi.skills` → `./skills`; `files` keeps the Claude/Codex manifests out of the tarball),
+its `README.md` and a `LICENSE` copy. The hooks need no generation: a plugin with hooks
+gets the three STATIC files in `harness/` byte-copied in next to its packaged `hooks/`
+tree. `hooks/run.js` reads the sibling `hooks.json` and runs each command the way Claude
+Code does (`bash -c`, payload on stdin, `CLAUDE_PLUGIN_ROOT` = the package root, found
+from `import.meta.url`); `opencode/index.js` and `pi/index.js` map the events onto the
+harness API: `PostToolUse` → OpenCode `tool.execute.after` / Pi `tool_result` (context
+appended to the tool result); `SessionStart` → OpenCode `experimental.chat.system.transform`
+/ Pi `before_agent_start` (primer run once per session, re-added to the system prompt on
+every request, because both harnesses rebuild the prompt each time). So the npm package
+ships exactly the `hooks/` tree the Claude Code and Codex packages use — the vendoring is
+the same byte-for-byte copy `validate.mjs` already checks — and `validate.mjs` rejects a
+`hooks.json` event the adapters do not map. The adapters have zero dependencies, so the
+package installs with scripts ignored. Plain ESM, which is also what lets `validate.mjs`
+import them and `test-opencode.mjs` / `test-pi.mjs` drive their hooks under Node. **Never add a lockfile or `dependencies` to a
 plugin dir**: Claude Code runs an install for a plugin root that carries both.
 
 **How the pieces fit.** `scripts/lib.mjs` is the engine: it loads the config, parses

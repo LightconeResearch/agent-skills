@@ -5,50 +5,19 @@
 // The shims are deliberately thin: string-match the raw payload, then
 // delegate to the pinned `uvx astra-tools@<pin>` invocation, whose --json
 // mode returns ONE JSON-encoded string that the shim splices into the
-// response envelope. So the tests stub uvx (controllable exit code +
-// invocation log) and assert the shim's halves: the prefilter (non-ASTRA
-// events exit silently WITHOUT invoking uvx), the delegation (correct astra
-// arguments), and the envelope (every emitted line must JSON.parse, with the
-// spliced report intact).
-//
-// A fake `astra` that always SUCCEEDS also sits on PATH: if any script ever
-// regresses to running a PATH astra instead of uvx, the expected FAILED
-// message flips to passed and the assertions break.
+// response envelope. So the tests stub uvx (see test-lib.mjs: controllable
+// exit code + invocation log) and assert the shim's halves: the prefilter
+// (non-ASTRA events exit silently WITHOUT invoking uvx), the delegation
+// (correct astra arguments), and the envelope (every emitted line must
+// JSON.parse, with the spliced report intact).
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { ROOT, assertIncludes, makeScratch } from "./test-lib.mjs";
 
-const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const SCRIPTS = join(ROOT, "hooks/astra/scripts");
-const scratch = mkdtempSync(join(tmpdir(), "astra-hook-"));
-const project = join(scratch, "project");
-const bin = join(scratch, "bin");
-const uvxLog = join(scratch, "uvx-invocations.log");
-
-mkdirSync(project, { recursive: true });
-mkdirSync(bin);
-writeFileSync(join(project, "astra.yaml"), "id: test\n");
-// The fake emits what the real --json mode emits: one JSON-encoded string
-// (here with embedded quotes and a backslash, to prove the splice needs no
-// re-escaping). FAKE_UVX_GARBAGE simulates a toolchain that never got to
-// astra (uvx resolution failure, crash) — non-JSON noise on stdout.
-writeFileSync(
-  join(bin, "uvx"),
-  `#!/bin/sh
-echo "$*" >> "${uvxLog}"
-if [ -n "\${FAKE_UVX_GARBAGE}" ]; then
-  echo "error: no interpreter found"
-  exit 2
-fi
-printf '%s\\n' "\\"fake report: $* | with \\\\\\"quotes\\\\\\" and a \\\\\\\\backslash\\""
-exit "\${FAKE_UVX_RC:-1}"
-`,
-  { mode: 0o755 },
-);
-writeFileSync(join(bin, "astra"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+const { scratch, project, bin, uvxCalls, cleanup } = makeScratch("astra-hook-");
 
 function run(script, input, env = {}, cwd = project) {
   const result = spawnSync("bash", [join(SCRIPTS, script)], {
@@ -77,18 +46,10 @@ function parsedContext(label, stdout, expectedEvent) {
   return out.additionalContext;
 }
 
-function assertIncludes(label, haystack, needle) {
-  if (!haystack.includes(needle)) {
-    throw new Error(`${label}: missing ${JSON.stringify(needle)}\n${haystack}`);
-  }
-}
-
 function assertSilent(label, stdout, before) {
   if (stdout !== "") throw new Error(`${label}: expected no output\n${stdout}`);
   if (uvxCalls().length !== before) throw new Error(`${label}: uvx was invoked`);
 }
-
-const uvxCalls = () => (existsSync(uvxLog) ? readFileSync(uvxLog, "utf8").trim().split("\n") : []);
 
 try {
   // --- validate-on-save ---------------------------------------------------
@@ -338,5 +299,5 @@ try {
 
   console.log("✓ lightcone preflight: engine states, version floor, and ask/act mode all behave.");
 } finally {
-  rmSync(scratch, { recursive: true, force: true });
+  cleanup();
 }

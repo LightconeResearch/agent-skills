@@ -50,7 +50,7 @@ const mktemp = (p) => mkdtempSync(join(tmpdir(), p));
 // Run a command, capturing combined output; never throws.
 function run(bin, argv, env = {}, cwd = undefined) {
   const r = spawnSync(bin, argv, { encoding: "utf8", env: { ...process.env, ...env }, cwd });
-  return { out: (r.stdout || "") + (r.stderr || ""), status: r.status };
+  return { out: (r.stdout || "") + (r.stderr || ""), stdout: r.stdout || "", status: r.status };
 }
 
 // Is `id` present-and-enabled in a `claude plugin list` dump? Anchor to the
@@ -155,7 +155,7 @@ function cliSkills() {
 
 // What OpenCode and Pi do at startup, without either binary: pack the plugin dir
 // as npm would publish it, install the tarball the way each harness does
-// (OpenCode: bun/npm into a cache dir and import the main; Pi: npm install and
+// (OpenCode: into a cache dir, importing the main by name; Pi: npm install and
 // import pi/index.js), and prove the entry points load.
 function npmPackages() {
   console.log("\nnpm packages — pack, install, import (OpenCode main + Pi extension)");
@@ -170,11 +170,14 @@ function npmPackages() {
 
       const pack = run("npm", ["pack", "--json", "--pack-destination", tmp], quiet, dir);
       let info;
-      try { info = JSON.parse(pack.out.slice(pack.out.indexOf("[")))[0]; } catch { fail(`${p}: npm pack produced no JSON:\n${pack.out.trim().slice(-300)}`); continue; }
+      try {
+        const parsed = JSON.parse(pack.stdout); // npm ≤ 11: [entry]; npm 12: { "<name>": entry }
+        info = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
+      } catch { fail(`${p}: npm pack produced no JSON:\n${pack.out.trim().slice(-300)}`); continue; }
       const paths = info.files.map((f) => f.path);
-      const must = ["package.json", "README.md", "LICENSE", "opencode/index.js", "pi/index.js", `skills/${skill}/SKILL.md`];
+      const must = ["package.json", "README.md", "LICENSE", "hooks/hooks.json", "hooks/run.js", "opencode/index.js", "pi/index.js", `skills/${skill}/SKILL.md`];
       const missing = must.filter((f) => !paths.includes(f));
-      const leaked = paths.filter((f) => /^(\.claude-plugin|\.codex-plugin|hooks)\//.test(f));
+      const leaked = paths.filter((f) => /^\.(claude|codex)-plugin\//.test(f));
       if (missing.length || leaked.length) fail(`${p}: tarball missing ${JSON.stringify(missing)}, leaking ${JSON.stringify(leaked)}`);
       else pass(`${p}: tarball ships exactly the npm-facing files (${paths.length} files)`);
       const tarball = join(tmp, info.filename);
@@ -183,7 +186,7 @@ function npmPackages() {
       const oc = join(tmp, `oc-${p}`);
       mkdirSync(oc);
       writeFileSync(join(oc, "package.json"), '{"name":"smoke","private":true,"type":"module"}\n');
-      const ocInstall = have("bun") ? run("bun", ["add", tarball], {}, oc) : run("npm", ["install", "--ignore-scripts", tarball], quiet, oc);
+      const ocInstall = run("npm", ["install", "--ignore-scripts", tarball], quiet, oc);
       if (ocInstall.status !== 0) { fail(`${p}: install failed:\n${ocInstall.out.trim().slice(-300)}`); continue; }
       const probe = run("node", ["--input-type=module", "-e",
         `const m = await import(${JSON.stringify(pkgName)});` +
