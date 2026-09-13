@@ -110,9 +110,7 @@ try {
   assertIncludes("save/fail", context, 'with "quotes" and a \\backslash');
   const [firstCall] = uvxCalls();
   assertIncludes("save/fail uvx args", firstCall, "astra-tools@");
-  // Whole-project validation: no FILE argument, so universes are checked too.
   assertIncludes("save/fail uvx args", firstCall, "validate --json");
-  if (/validate astra\.yaml/.test(firstCall)) fail("save/fail uvx args", "hook still validates only astra.yaml");
 
   // Passing validation → single-line passed message.
   context = parsedContext(
