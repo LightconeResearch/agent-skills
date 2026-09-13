@@ -10,9 +10,9 @@
 // (openai/codex#16430: plugin-bundled hooks silently never ran), so this
 // suite runs REAL headless sessions against marketplace-installed plugins.
 //
-//   node scripts/e2e-hooks.mjs             # every spec, both harnesses
-//   node scripts/e2e-hooks.mjs --claude    # one harness only
-//   node scripts/e2e-hooks.mjs --codex
+//   node scripts/e2e-hooks.mjs             # every spec, every harness
+//   node scripts/e2e-hooks.mjs --claude    # one harness only (or --codex,
+//                                          # --opencode, --pi; combinable)
 //
 // To cover a new plugin, add tests/<plugin>.yaml — see tests/astra.yaml for
 // the spec format. No runner changes should be needed: everything
@@ -20,13 +20,14 @@
 // expectations) lives in the spec.
 //
 // Auth comes from the environment (ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
-// for Claude Code; CODEX_API_KEY or OPENAI_API_KEY for Codex). A leg whose
-// auth or binary is missing is skipped LOCALLY (a dev without one CLI or key
-// can still run the rest), but in CI every skip is a hard FAILURE: the
-// workflow installs both CLIs and is expected to have both secrets, so a
+// for Claude Code; CODEX_API_KEY or OPENAI_API_KEY for Codex). The OpenCode
+// and Pi legs need none: they run against a canned local model (see below).
+// A leg whose auth or binary is missing is skipped LOCALLY (a dev without one
+// CLI or key can still run the rest), but in CI every skip is a hard FAILURE:
+// the workflow installs every CLI and is expected to have both secrets, so a
 // skip there means a missing/forgotten secret or a broken install — exactly
 // what must not silently green the check. (Consequence: PRs from forks fail
-// these legs, since GitHub does not expose secrets to forks.)
+// the Claude and Codex legs, since GitHub does not expose secrets to forks.)
 //
 // A test passes when every piece of EVIDENCE it configures is observed
 // (see tests/astra.yaml for the field docs). Three evidence checks:
@@ -39,7 +40,15 @@
 //      context lands only in the transcript (as a hook_additional_context
 //      attachment). Codex: the rollout-*.jsonl the session persists under
 //      $CODEX_HOME/sessions/, where injected context lands as a developer
-//      message. Fully general: works for hooks that never run a binary.
+//      message. OpenCode and Pi persist NEITHER the system prompt nor any
+//      hook trace, so those legs point the harness at a canned local
+//      OpenAI-compatible model (scripts/e2e-canned-model.mjs) and read the
+//      model REQUESTS it logged: every byte a hook injects — the extended
+//      system prompt, the decorated tool result — reaches the model, so the
+//      request log is the one complete trace those harnesses offer. The
+//      canned model also makes the triggering edit on demand, so those legs
+//      are deterministic and need no API key. Fully general: works for
+//      hooks that never run a binary.
 //   2. forbid_context — degraded-path markers that must NOT appear. Hooks
 //      that catch their own errors and inject an apologetic message instead
 //      of failing (the astra hooks do) would otherwise pass a weak marker
@@ -64,13 +73,14 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyPins, loadModel, pluginTools } from "./lib.mjs";
+import { startCannedModel } from "./e2e-canned-model.mjs";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const MARKET = "lightcone-research";
 
-const args = process.argv.slice(2);
-const wantClaude = args.includes("--claude") || !args.includes("--codex");
-const wantCodex = args.includes("--codex") || !args.includes("--claude");
+const LEGS = ["claude", "codex", "opencode", "pi"];
+const only = process.argv.slice(2).map((a) => a.replace(/^--/, "")).filter((a) => LEGS.includes(a));
+const want = (leg) => !only.length || only.includes(leg);
 
 let failures = 0;
 const pass = (m) => console.log(`  \x1b[32m✓\x1b[0m ${m}`);
@@ -122,7 +132,11 @@ function run(bin, argv, { cwd, env = {}, timeout = 120_000, input } = {}) {
   const r = spawnSync(bin, argv, {
     cwd,
     encoding: "utf8",
-    env: { ...PARENT_ENV, ...env },
+    // PWD follows cwd, as it would under a shell: OpenCode trusts $PWD for
+    // its working directory, and an inherited PWD naming this runner's
+    // directory made it run sessions there — outside the scratch project
+    // and its config — instead of in `cwd`.
+    env: { ...PARENT_ENV, ...(cwd ? { PWD: cwd } : {}), ...env },
     input,
     timeout,
   });
@@ -468,10 +482,116 @@ function codexLeg() {
   }
 }
 
+// ---- OpenCode and Pi: canned model --------------------------------------
+// Neither harness persists hook-injected context anywhere (no transcript, no
+// rollout, the system prompt is not stored), so both legs run against the
+// canned model in e2e-canned-model.mjs and take its request log as the trace.
+// Script it for one test: a test that needs a file edit gets a `write` of
+// that file with its fixture content plus a trailing newline — a change any
+// text file tolerates, enough for the edit to count as made and for a save
+// hook to fire — and every other test gets a plain text reply.
+function scriptModel(model, t, sc) {
+  if (!t.edits_file) return model.script({});
+  const path = join(sc.project, t.edits_file);
+  model.script({ write: { path, content: readFileSync(path, "utf8") + "\n" } });
+}
+// The trace for one session: every model request it produced, as JSON.
+const requestsSince = (model, before) => JSON.stringify(model.requests().slice(before));
+
+// ---- OpenCode ------------------------------------------------------------
+async function opencodeLeg() {
+  console.log("\nOpenCode — live hook dispatch (isolated XDG dirs, canned model)");
+  if (!have("opencode")) return skip("`opencode` not on PATH");
+
+  // Fresh XDG config/data/state per spec (evidence attribution, as in the
+  // other legs). XDG_CACHE_HOME is left alone on purpose: uv keeps its cache
+  // there, and the spec's `setup` warmed the pinned astra-tools into it.
+  for (const spec of specs) {
+    const home = mkdtempSync(join(tmpdir(), "e2e-oc-home-"));
+    const model = await startCannedModel(join(home, "model"));
+    const baseEnv = { XDG_CONFIG_HOME: join(home, "config"), XDG_DATA_HOME: join(home, "data"), XDG_STATE_HOME: join(home, "state") };
+    for (const d of Object.values(baseEnv)) mkdirSync(d);
+    try {
+      const sc = makeScratch(`e2e-oc-${spec.plugin}-`, spec);
+      // The plugin under test is the packaged plugins/<name>/ dir itself — the
+      // npm package as published, minus the registry — listed by path in the
+      // project's opencode.json, which resolves its entry through the same
+      // package.json exports an npm install would. The canned model is a
+      // custom OpenAI-compatible provider; `edit` is allowed so a headless
+      // run cannot stall on a permission prompt when a test edits a file.
+      writeFileSync(join(sc.project, "opencode.json"), JSON.stringify({
+        $schema: "https://opencode.ai/config.json",
+        plugin: [join(ROOT, "plugins", spec.plugin)],
+        provider: { canned: { npm: "@ai-sdk/openai-compatible", name: "canned", options: { baseURL: model.url, apiKey: "canned" }, models: { canned: { name: "canned" } } } },
+        model: "canned/canned",
+        small_model: "canned/canned",
+        permission: { edit: "allow" },
+      }, null, 2));
+      try {
+        runSpecTests("opencode", spec, sc, (t) => {
+          scriptModel(model, t, sc);
+          const before = model.requests().length;
+          const r = run(
+            "opencode",
+            // --print-logs puts the server's own errors on stderr, where a
+            // failure's diagnostics can show them; the JSON stream only says
+            // "unexpected server error".
+            ["run", "--format", "json", "--print-logs", "--log-level", "WARN", "-m", "canned/canned", t.prompt],
+            { cwd: sc.project, env: { ...baseEnv, PATH: `${sc.bin}:${process.env.PATH}` }, timeout: 300_000 },
+          );
+          return { ...r, trace: requestsSince(model, before) };
+        });
+      } finally { discard(sc.scratch); }
+    } finally { model.close(); discard(home); }
+  }
+}
+
+// ---- Pi ------------------------------------------------------------------
+async function piLeg() {
+  console.log("\nPi — live hook dispatch (isolated PI_CODING_AGENT_DIR, canned model)");
+  if (!have("pi")) return skip("`pi` not on PATH");
+
+  // Fresh agent dir per spec: settings, the installed package, sessions.
+  for (const spec of specs) {
+    const home = mkdtempSync(join(tmpdir(), "e2e-pi-home-"));
+    const model = await startCannedModel(join(home, "model"));
+    const agentDir = join(home, "agent");
+    mkdirSync(agentDir);
+    const baseEnv = { PI_CODING_AGENT_DIR: agentDir };
+    // The canned model as a models.json provider (Pi wants a key even for a
+    // keyless server, and a plain `system` role rather than `developer`).
+    writeFileSync(join(agentDir, "models.json"), JSON.stringify({
+      providers: { canned: { baseUrl: model.url, api: "openai-completions", apiKey: "canned", compat: { supportsDeveloperRole: false, supportsReasoningEffort: false }, models: [{ id: "canned", name: "canned", reasoning: false, input: ["text"], contextWindow: 128000, maxTokens: 4096 }] } },
+    }, null, 2));
+    try {
+      // The package under test is the packaged plugins/<name>/ dir, installed
+      // by path: Pi loads it by the same package.json `pi` manifest an npm
+      // install is loaded by (extension + skills).
+      const ins = run("pi", ["install", join(ROOT, "plugins", spec.plugin)], { env: baseEnv });
+      if (!/Installed /.test(ins.out)) { fail(`${spec.plugin}: pi install failed: ${tail(ins.out)}`); continue; }
+      const sc = makeScratch(`e2e-pi-${spec.plugin}-`, spec);
+      try {
+        runSpecTests("pi", spec, sc, (t) => {
+          scriptModel(model, t, sc);
+          const before = model.requests().length;
+          const r = run(
+            "pi",
+            ["-p", "--mode", "json", "--provider", "canned", "--model", "canned", t.prompt],
+            { cwd: sc.project, env: { ...baseEnv, PATH: `${sc.bin}:${process.env.PATH}` }, timeout: 300_000 },
+          );
+          return { ...r, trace: requestsSince(model, before) };
+        });
+      } finally { discard(sc.scratch); }
+    } finally { model.close(); discard(home); }
+  }
+}
+
 // ---- run -----------------------------------------------------------------
 console.log(`E2E hook-dispatch tests — repo ${ROOT}\nspecs: ${specs.map((s) => s.plugin).join(", ")}`);
-if (wantClaude) claudeLeg();
-if (wantCodex) codexLeg();
+if (want("claude")) claudeLeg();
+if (want("codex")) codexLeg();
+if (want("opencode")) await opencodeLeg();
+if (want("pi")) await piLeg();
 
 console.log(failures ? `\n\x1b[31m✗ ${failures} e2e failure(s)\x1b[0m` : "\n\x1b[32m✓ all e2e checks passed\x1b[0m");
 process.exit(failures ? 1 : 0);

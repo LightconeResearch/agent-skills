@@ -1,5 +1,5 @@
 # E2E hook-dispatch test spec for the astra plugin, executed by
-# scripts/e2e-hooks.mjs against BOTH harnesses (Claude Code and Codex).
+# scripts/e2e-hooks.mjs against every harness (Claude Code, Codex, OpenCode, Pi).
 # Add a sibling <plugin>.yaml to cover another plugin — no runner changes.
 #
 # How a spec works: the runner installs `plugin` from this repo's marketplace
@@ -14,7 +14,9 @@
 #      PostToolUse context; Codex: the session rollout file under
 #      $CODEX_HOME/sessions/). Works for ANY hook, including ones that
 #      never shell out to a binary. Keep markers ASCII — traces JSON-escape
-#      non-ASCII characters.
+#      non-ASCII characters. OpenCode and Pi persist no such trace, so those
+#      legs run against a canned local model and search its request log —
+#      the system prompt and tool results the hooks extended — instead.
 #   2. forbid_context — degraded-path markers that must NOT appear: hooks that
 #      catch their own errors and inject an apologetic message instead of
 #      failing would otherwise slip through. This is how a broken tool CLI

@@ -33,8 +33,10 @@ version bump on `main`.
   no network).
 - `tests/<plugin>.yaml` — declarative e2e hook-dispatch test specs, run by
   `scripts/e2e-hooks.mjs` (`npm run e2e`, and the `e2e-hooks` CI workflow)
-  against real headless Claude Code and Codex sessions. To cover a new
-  plugin, add a spec here — no runner changes needed.
+  against real headless Claude Code, Codex, OpenCode and Pi sessions (the last
+  two against a canned local model, `scripts/e2e-canned-model.mjs`, whose
+  request log is their trace). To cover a new plugin, add a spec here — no
+  runner changes needed.
 
 ## Generated — do not hand-edit
 
