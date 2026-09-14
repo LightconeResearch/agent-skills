@@ -189,12 +189,335 @@ export function closureHooks(pluginName, byName) {
  *  event in source order, so a dependency's hooks fire alongside the plugin's own.
  *  Emitted through jsonl() for byte-stable, drift-checkable output. */
 export function mergeHooks(hookPaths) {
+  return jsonl({ hooks: mergeHooksObject(hookPaths) });
+}
+
+/** The merged `{ <Event>: [group, ...] }` map behind mergeHooks(), for targets
+ *  that consume the hook wiring as data rather than as a hooks.json file. */
+export function mergeHooksObject(hookPaths) {
   const merged = {};
   for (const rel of hookPaths) {
     const { hooks } = JSON.parse(readFileSync(join(ROOT, rel), "utf8"));
     for (const [event, groups] of Object.entries(hooks || {})) (merged[event] ||= []).push(...groups);
   }
-  return jsonl({ hooks: merged });
+  return merged;
+}
+
+// --- npm package targets: OpenCode and Pi ------------------------------------
+// OpenCode and Pi both read the Agent Skills format directly, so their skills
+// need no manifest — but neither has a hooks.json. OpenCode plugins are JS
+// modules exporting `async (input) => hooks`, installed from npm through the
+// `plugin` array in opencode.json; Pi extensions are JS modules default-
+// exporting `function (pi) { pi.on(...) }`, installed from npm through the
+// `pi` field of package.json. So every plugin dir doubles as ONE npm package
+// (`<npmScope>/<name>-plugin`): a generated package.json, an OpenCode module
+// (`opencode/index.js`, the package main) and a Pi extension (`pi/index.js`,
+// listed under `pi.extensions`), with the packaged `skills/` tree listed under
+// `pi.skills`. Both modules embed the closure's hook SCRIPTS verbatim (tool pins
+// substituted like every other packaged copy) and map the hooks.json events
+// onto the harness API:
+//
+//   PostToolUse (matcher, scripts)
+//     OpenCode "tool.execute.after": additionalContext appended to the tool
+//       result the model reads.
+//     Pi "tool_result": appended as a text block to the result content.
+//   SessionStart (scripts)
+//     OpenCode "experimental.chat.system.transform": the primer runs once per
+//       session (pre-warmed on the session.created event) and is appended to
+//       the system prompt on every request — OpenCode rebuilds the prompt each
+//       time, so a one-shot injection would be forgotten after the first turn.
+//     Pi "before_agent_start": same primer, appended to event.systemPrompt on
+//       every turn — Pi resets to the base prompt whenever a handler returns
+//       none. Pi re-invokes the extension factory per session, so module state
+//       is per session by construction.
+//
+// Scripts are embedded rather than referenced because an npm-installed module
+// has no plugin root to resolve (${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT} never
+// appears here), and the modules have zero dependencies so the package installs
+// with scripts ignored, as OpenCode does. Plain ESM JavaScript: OpenCode and Pi
+// (via jiti) load it as-is, and `node` imports it for the hermetic tests.
+export const HOOK_EVENTS = ["PostToolUse", "SessionStart"];
+const SCRIPT_REF_RE = /hooks\/scripts\/([\w.-]+\.sh)/;
+
+/** npm package name for a plugin: `<npmScope>/<name>-plugin`. */
+export function npmPackageName(marketplace, pluginName) {
+  if (!marketplace.npmScope) throw new Error('skills.config.json: marketplace.npmScope is required (e.g. "@lightcone-research")');
+  return `${marketplace.npmScope}/${pluginName}-plugin`;
+}
+
+/** Hook wiring for the module templates: per event, [{ matcher, scripts: [{ name, timeout }] }]. */
+function hookGroups(hooks, event) {
+  return (hooks[event] || []).map((group) => ({
+    matcher: group.matcher || "",
+    scripts: (group.hooks || [])
+      .filter((h) => h.type === "command")
+      .map((h) => {
+        const m = SCRIPT_REF_RE.exec(h.command || "");
+        if (!m) throw new Error(`${event} hook command does not reference hooks/scripts/<name>.sh: ${h.command}`);
+        return { name: m[1], timeout: h.timeout || 60 };
+      }),
+  }));
+}
+
+/** The data half shared by both modules: embedded scripts + wiring constants. */
+function hookDataJs({ name, hooks, scripts }) {
+  const postToolUse = hookGroups(hooks, "PostToolUse");
+  const sessionStart = hookGroups(hooks, "SessionStart");
+  for (const g of [...postToolUse, ...sessionStart])
+    for (const s of g.scripts)
+      if (!(s.name in scripts)) throw new Error(`hooks.json references ${s.name}, which no closure hooks/ tree ships`);
+  const unknown = Object.keys(hooks).filter((e) => !HOOK_EVENTS.includes(e));
+  if (unknown.length) throw new Error(`no OpenCode/Pi mapping for hook event(s): ${unknown.join(", ")}`);
+  const scriptEntries = Object.keys(scripts)
+    .sort()
+    .map((n) => `  ${JSON.stringify(n)}: ${JSON.stringify(scripts[n])},`)
+    .join("\n");
+  const js = `const PLUGIN = ${JSON.stringify(name)};
+
+// The hook scripts, byte-identical to plugins/${name}/hooks/scripts/*.sh.
+const SCRIPTS = {
+${scriptEntries}
+};
+
+// Wiring lifted from hooks.json. Matchers are the Claude/Codex tool-name
+// regexes; harness tool ids are lowercase, so matching is case-insensitive.
+const POST_TOOL_USE = ${JSON.stringify(postToolUse, null, 2)};
+const SESSION_START = ${JSON.stringify(sessionStart, null, 2)};
+`;
+  return { js, postToolUse, sessionStart };
+}
+
+// The runtime half shared by both modules. Written without template literals
+// so it can sit inside this file's template literal unescaped.
+const HOOK_RUNTIME_JS = `import { spawn } from "node:child_process";
+
+function matches(matcher, tool) {
+  if (!matcher) return true;
+  return new RegExp("^(?:" + matcher + ")$", "i").test(tool || "");
+}
+
+// Run one embedded script with the payload on stdin (what the harness would
+// have piped), in the project directory, killed after its hooks.json timeout.
+// Resolves to whatever it printed — never rejects: a hook must not break the
+// tool call or the request it decorates. No bash on PATH → silent.
+function runScript(name, payload, cwd, timeoutSeconds) {
+  return new Promise((resolve) => {
+    let out = "";
+    let child;
+    try {
+      child = spawn("bash", ["-c", SCRIPTS[name]], { cwd, env: process.env, stdio: ["pipe", "pipe", "ignore"] });
+    } catch {
+      return resolve("");
+    }
+    const timer = setTimeout(() => child.kill(), timeoutSeconds * 1000);
+    child.stdout.on("data", (chunk) => (out += chunk));
+    child.on("error", () => { clearTimeout(timer); resolve(out); });
+    child.on("close", () => { clearTimeout(timer); resolve(out); });
+    child.stdin.on("error", () => {});
+    child.stdin.end(payload);
+  });
+}
+
+// Each script prints hook envelopes, one JSON object per line; collect their
+// additionalContext and drop anything that is not an envelope.
+function contextOf(stdout) {
+  const parts = [];
+  for (const line of stdout.split("\\n")) {
+    if (!line.trim()) continue;
+    try {
+      const ctx = JSON.parse(line)?.hookSpecificOutput?.additionalContext;
+      if (typeof ctx === "string" && ctx.trim()) parts.push(ctx.trim());
+    } catch {}
+  }
+  return parts.join("\\n\\n");
+}
+
+async function runGroups(groups, tool, payload, cwd) {
+  const parts = [];
+  for (const group of groups) {
+    if (!matches(group.matcher, tool)) continue;
+    for (const script of group.scripts) {
+      const ctx = contextOf(await runScript(script.name, payload, cwd, script.timeout));
+      if (ctx) parts.push(ctx);
+    }
+  }
+  return parts.join("\\n\\n");
+}
+
+// The payload mirrors the Claude Code hook JSON the scripts were written for.
+function hookPayload(event, cwd, extra) {
+  return JSON.stringify(Object.assign({ hook_event_name: event, cwd: cwd, plugin: PLUGIN }, extra));
+}
+`;
+
+function generatedHeader(kind, { name, version, pkg }) {
+  return `// GENERATED by \`npm run build\` from hooks/*/hooks.json — do not edit; change the
+// source and rebuild (see AGENTS.md). Drift is a CI failure.
+//
+// ${kind} for the "${name}" plugin, version ${version} — installed from npm as
+// ${pkg}. Runs the very same hook scripts the Claude Code and Codex packages of
+// this plugin run (embedded below, tool versions already pinned) and routes their
+// output the harness's way. Needs \`bash\` on PATH; the scripts need \`uvx\` and say
+// so themselves when it is missing. Nothing else.
+`;
+}
+
+/** Render the OpenCode plugin module (`opencode/index.js`, the package main). */
+export function renderOpencodePlugin({ name, version, pkg, hooks, scripts }) {
+  const data = hookDataJs({ name, hooks, scripts });
+  return `${generatedHeader("OpenCode plugin", { name, version, pkg })}//
+//   PostToolUse  → "tool.execute.after": additionalContext is appended to the
+//                  tool result the model reads.
+//   SessionStart → "experimental.chat.system.transform": the primer runs once
+//                  per session (pre-warmed on the session.created event) and is
+//                  appended to the system prompt on every request.
+
+${HOOK_RUNTIME_JS}
+${data.js}
+/** @type {import("@opencode-ai/plugin").Plugin} */
+export default async function ({ directory }) {
+  const cwd = directory || process.cwd();
+  const primers = new Map(); // sessionID → Promise<string>; one SessionStart per session
+  const primer = (sessionID) => {
+    const key = sessionID ?? "";
+    if (!primers.has(key)) {
+      const payload = hookPayload("SessionStart", cwd, { session_id: key, source: "startup" });
+      primers.set(key, runGroups(SESSION_START, "", payload, cwd));
+    }
+    return primers.get(key);
+  };
+
+  const hooks = {};
+${data.sessionStart.length ? `  hooks.event = async ({ event }) => {
+    if (event?.type === "session.created") void primer(event.properties?.info?.id);
+  };
+  hooks["experimental.chat.system.transform"] = async (input, output) => {
+    const ctx = await primer(input?.sessionID);
+    if (ctx) output.system.push(ctx);
+  };
+` : ""}${data.postToolUse.length ? `  hooks["tool.execute.after"] = async (input, output) => {
+    const payload = hookPayload("PostToolUse", cwd, {
+      session_id: input.sessionID,
+      tool_name: input.tool,
+      tool_input: input.args,
+      tool_response: { title: output?.title },
+    });
+    const ctx = await runGroups(POST_TOOL_USE, input.tool, payload, cwd);
+    if (ctx) output.output = (output.output ?? "") + "\\n\\n" + ctx;
+  };
+` : ""}  return hooks;
+}
+`;
+}
+
+/** Render the Pi extension (`pi/index.js`, listed under package.json `pi.extensions`). */
+export function renderPiExtension({ name, version, pkg, hooks, scripts }) {
+  const data = hookDataJs({ name, hooks, scripts });
+  return `${generatedHeader("Pi extension", { name, version, pkg })}//
+//   PostToolUse  → "tool_result": additionalContext is appended to the result
+//                  content as a text block.
+//   SessionStart → "before_agent_start": the primer runs once per session (from
+//                  session_start) and is appended to the system prompt on every
+//                  turn — Pi resets to the base prompt when a handler returns none.
+
+${HOOK_RUNTIME_JS}
+${data.js}
+/** @param {import("@earendil-works/pi-coding-agent").ExtensionAPI} pi */
+export default function (pi) {
+  let primer; // Promise<string>; Pi re-invokes this factory per session
+  const prime = (cwd) => (primer ??= runGroups(SESSION_START, "", hookPayload("SessionStart", cwd, { source: "startup" }), cwd));
+${data.sessionStart.length ? `
+  pi.on("session_start", async (_event, ctx) => {
+    primer = undefined;
+    void prime(ctx.cwd);
+  });
+
+  pi.on("before_agent_start", async (event, ctx) => {
+    const text = await prime(ctx.cwd);
+    if (text) return { systemPrompt: (event.systemPrompt ?? "") + "\\n\\n" + text };
+  });
+` : ""}${data.postToolUse.length ? `
+  pi.on("tool_result", async (event, ctx) => {
+    const payload = hookPayload("PostToolUse", ctx.cwd, {
+      tool_name: event.toolName,
+      tool_input: event.input,
+      tool_response: { isError: event.isError },
+    });
+    const text = await runGroups(POST_TOOL_USE, event.toolName, payload, ctx.cwd);
+    if (text) return { content: [...(event.content ?? []), { type: "text", text }] };
+  });
+` : ""}}
+`;
+}
+
+/** The generated package.json for a plugin dir (never dependencies, never scripts). */
+export function renderPackageJson({ p, mk, pkg, hasHooks, skillNames }) {
+  const manifest = {
+    name: pkg,
+    version: p.version,
+    description: p.description,
+    type: "module",
+  };
+  if (hasHooks) {
+    manifest.main = "./opencode/index.js";
+    manifest.exports = {
+      ".": "./opencode/index.js",
+      "./server": "./opencode/index.js",
+      "./pi": "./pi/index.js",
+      "./package.json": "./package.json",
+    };
+  }
+  Object.assign(manifest, {
+    files: ["opencode/", "pi/", "skills/", "README.md", "LICENSE"],
+    pi: { extensions: ["./pi"], skills: ["./skills"] },
+    keywords: ["opencode", "opencode-plugin", "pi-package", "agent-skills", ...skillNames],
+    license: "BSD-3-Clause",
+    author: mk.owner,
+    homepage: `https://github.com/${mk.repo}`,
+    repository: { type: "git", url: `git+https://github.com/${mk.repo}.git`, directory: `plugins/${p.name}` },
+    publishConfig: { access: "public" },
+    engines: { node: ">=20" },
+  });
+  return jsonl(manifest);
+}
+
+/** The npm-page README for a plugin package. */
+export function renderPackageReadme({ p, mk, pkg, hasHooks, skillNames }) {
+  const repo = `https://github.com/${mk.repo}`;
+  const docs = `https://${mk.repo.split("/")[0].toLowerCase()}.github.io/${mk.repo.split("/")[1]}/`;
+  return `# ${pkg}
+
+${p.description}
+
+Generated from [${mk.repo}](${repo}) — the same skills and hooks that ship as the
+\`${p.name}\` plugin for Claude Code and Codex, packaged for harnesses that install
+from npm. Version ${p.version} of the plugin.
+
+## OpenCode
+
+Hooks: add the package to \`opencode.json\` (\`~/.config/opencode/opencode.json\` for
+every project, or a project's own):
+
+\`\`\`json
+{ "$schema": "https://opencode.ai/config.json", "plugin": ["${pkg}@${p.version}"] }
+\`\`\`
+
+Skills: \`npx skills add ${repo}/tree/main/plugins/${p.name} -a opencode -g\`
+
+## Pi
+
+\`\`\`bash
+pi install npm:${pkg}@${p.version}
+\`\`\`
+
+Installs the skills and the hooks together; invoke a skill as \`/skill:<name>\`.
+
+## Contents
+
+- Skills: ${skillNames.map((s) => `\`${s}\``).join(", ")}
+${hasHooks ? "- Hooks: the plugin's SessionStart primer and PostToolUse validation, as an OpenCode plugin module (`opencode/index.js`) and a Pi extension (`pi/index.js`). Needs `bash` on PATH; the scripts need `uvx` and say so when it is missing.\n" : ""}
+Documentation: ${docs}opencode/ and ${docs}pi/ · License: BSD-3-Clause
+`;
 }
 
 /** Produce every generated artifact. Returns:
@@ -267,6 +590,7 @@ export function buildArtifacts(model) {
     // copies at build time, so a plugin can bundle a dependency's skills and
     // hooks while pinning the tools they invoke to its own chosen versions.
     const pins = pluginTools(p.name, byName);
+    const pkg = npmPackageName(mk, p.name);
 
     // Shared metadata for both harnesses' manifests.
     const base = {
@@ -337,6 +661,7 @@ export function buildArtifacts(model) {
     if (closHooks.length) {
       dirs.push(`plugins/${p.name}/hooks`);
       const seenDest = new Map();
+      const scriptSources = {}; // basename → canonical path, for the OpenCode module
       for (const hp of closHooks) {
         const srcDir = dirname(hp); // e.g. "hooks/astra"
         for (const source of filesUnder(srcDir)) {
@@ -348,12 +673,36 @@ export function buildArtifacts(model) {
             throw new Error(`plugin "${p.name}": hook file collision at ${dest} (${prior} vs ${source})`);
           seenDest.set(dest, source);
           copies.push({ kind: "hook", pins, source, dest });
+          if (rel.startsWith("scripts/") && rel.endsWith(".sh")) scriptSources[rel.slice("scripts/".length)] = source;
         }
       }
       const manifestDest = `plugins/${p.name}/hooks/hooks.json`;
       if (closHooks.length === 1) copies.push({ kind: "hook", pins, source: closHooks[0], dest: manifestDest });
       else files[manifestDest] = mergeHooks(closHooks);
+
+      // The npm-package modules: opencode/index.js and pi/index.js — the same
+      // hooks, the scripts embedded with this plugin's pins applied. Generated
+      // text, so they go through `files` and are drift-checked as a whole.
+      const scripts = {};
+      for (const [base, source] of Object.entries(scriptSources)) {
+        const content = applyPins(readFileSync(join(ROOT, source), "utf8"), pins);
+        const leak = content.match(UNPINNED_RE);
+        if (leak) throw new Error(`plugins/${p.name}: "${leak[0]}" in ${source} left unpinned — declare the tool in a plugin's "tools" map`);
+        scripts[base] = content;
+      }
+      const moduleInput = { name: p.name, version: p.version, pkg, hooks: mergeHooksObject(closHooks), scripts };
+      files[`plugins/${p.name}/opencode/index.js`] = renderOpencodePlugin(moduleInput);
+      files[`plugins/${p.name}/pi/index.js`] = renderPiExtension(moduleInput);
     }
+
+    // The npm package manifest, README and LICENSE: plugins/<name>/ IS the
+    // package (`files` in package.json keeps the Claude/Codex manifests and the
+    // hooks/ tree out of the tarball). Never dependencies, never a lockfile —
+    // Claude Code would run an install for a plugin root that carries both.
+    const pkgInput = { p, mk, pkg, hasHooks: closHooks.length > 0, skillNames: closureSkills };
+    files[`plugins/${p.name}/package.json`] = renderPackageJson(pkgInput);
+    files[`plugins/${p.name}/README.md`] = renderPackageReadme(pkgInput);
+    copies.push({ kind: "license", pins: {}, source: "LICENSE", dest: `plugins/${p.name}/LICENSE` });
   }
 
   // --- Registry (manifest.json) --------------------------------------------
@@ -390,6 +739,8 @@ export function buildArtifacts(model) {
       // Reflect the bundled closure — what installing this one plugin gives you.
       hasHooks: closureHooks(p.name, byName).length > 0,
       hasAgents: closureAgents(p.name, byName).length > 0,
+      // The npm package OpenCode and Pi install (plugins/<name>/ is the package).
+      npmPackage: npmPackageName(mk, p.name),
     })),
   });
 

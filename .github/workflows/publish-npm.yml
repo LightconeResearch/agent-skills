@@ -1,0 +1,75 @@
+# Publish the plugin npm packages (plugins/<name>/ is the package:
+# @lightcone-research/<name>-plugin, consumed by OpenCode via opencode.json
+# `plugin` and by Pi via `pi install npm:`). Runs when a generated
+# plugins/*/package.json changes on main — i.e. when a plugin version was
+# bumped (the version-bump rule in CONTRIBUTING.md is the release rule).
+#
+# Auth is npm trusted publishing (OIDC, no secret), the same pattern as
+# @lightcone-research/brand: `id-token: write` here, and on npmjs.com each
+# package lists this repo + workflow file as its trusted publisher. Two things
+# follow from that:
+#   - the FIRST version of a new package name is published by hand by an npm
+#     org owner (`npm publish --access public` in plugins/<name>, no
+#     provenance), after which the trusted publisher can be configured —
+#     see CONTRIBUTING.md "Releasing the npm packages";
+#   - trusted publishing needs npm >= 11.5, and Node 22 bundles npm 10.9, so
+#     the workflow upgrades npm first.
+# A version that is already on the registry is skipped with a warning: it
+# means plugins/<name>/ changed without a version bump.
+name: publish-npm
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "plugins/*/package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm (trusted publishing needs >= 11.5)
+        run: npm install -g npm@latest && npm --version
+
+      # Never publish from a tree whose generated files drifted from the source.
+      - name: Validate source and generated tree
+        run: npm test
+
+      - name: Publish changed packages
+        run: |
+          set -euo pipefail
+          for manifest in plugins/*/package.json; do
+            dir=$(dirname "$manifest")
+            name=$(node -p "require('./$manifest').name")
+            version=$(node -p "require('./$manifest').version")
+            echo "::group::$name@$version"
+            # `npm view` exits non-zero with E404 both when the version and when
+            # the whole package is missing — both mean "publish". Anything else
+            # (network, auth) is an error, not a reason to publish blindly.
+            if out=$(npm view "$name@$version" version 2>&1); then
+              echo "::warning::$name@$version is already published — plugins/ changed without a version bump? Skipping."
+            elif grep -q "E404" <<<"$out"; then
+              (cd "$dir" && npm publish --provenance --access public)
+              echo "published $name@$version"
+            else
+              echo "npm view failed:"; echo "$out"; exit 1
+            fi
+            echo "::endgroup::"
+          done
