@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/favicon.svg">
-      <meta name="generator" content="zensical-0.0.60">
+      <meta name="generator" content="zensical-0.0.62">
     
     
       
@@ -796,7 +796,7 @@ there is no marketplace step: install the skills with the
 package in <code>opencode.json</code>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>npx<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra<span class="w"> </span>-a<span class="w"> </span>opencode<span class="w"> </span>-g
 </span></code></pre></div>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"$schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://opencode.ai/config.json"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"@lightcone-research/astra-plugin@0.0.5"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"$schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://opencode.ai/config.json"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"@lightcone-research/astra-plugin@0.0.4"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div>
 <p>The skill lands in <code>~/.agents/skills/</code> (drop <code>-g</code> for <code>./.agents/skills/</code>);
 the agent loads it when the task matches, or when you ask it to "use the
@@ -804,7 +804,7 @@ astra skill". See the <a href="../opencode/">OpenCode page</a>.</p>
 </div>
 <div class="tabbed-block">
 <p>One step, skills and hooks together:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pi<span class="w"> </span>install<span class="w"> </span>npm:@lightcone-research/astra-plugin@0.0.5
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pi<span class="w"> </span>install<span class="w"> </span>npm:@lightcone-research/astra-plugin@0.0.4
 </span></code></pre></div>
 <p>Then invoke <code>/skill:astra</code>. See the <a href="../pi/">Pi page</a>.</p>
 </div>
@@ -925,10 +925,14 @@ and a ground-up
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.tabs.link","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.instant.progress","navigation.sections","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight","search.suggest"],"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"provider":"mike"}}</script>
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.tabs.link","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.instant.progress","navigation.sections","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight","search.suggest"],"redirect":null,"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"provider":"mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.88ee1349.min.js"></script>
+      <script src="../assets/javascripts/bundle.8dcc8e9c.min.js"></script>
       
     
   </body>
