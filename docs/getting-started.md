@@ -47,7 +47,7 @@ Then the [`astra` plugin](astra.md), which teaches your agent the format:
     and, in `~/.config/opencode/opencode.json`:
 
     ```json
-    { "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+    { "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.4"] }
     ```
 
     The first installs the skill, the second the plugin's hooks — see the
@@ -56,7 +56,7 @@ Then the [`astra` plugin](astra.md), which teaches your agent the format:
 === "Pi"
 
     ```bash
-    pi install npm:@lightcone-research/astra-plugin@0.0.5
+    pi install npm:@lightcone-research/astra-plugin@0.0.4
     ```
 
     Skills and hooks in one step — see the [Pi page](pi.md).

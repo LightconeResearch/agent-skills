@@ -4,7 +4,7 @@ Reference for the ASTRA specification (astra.yaml): top-level structure, sub-ana
 
 Generated from [LightconeResearch/agent-skills](https://github.com/LightconeResearch/agent-skills) — the same skills and hooks that ship as the
 `astra` plugin for Claude Code and Codex, packaged for harnesses that install
-from npm. Version 0.0.5 of the plugin.
+from npm. Version 0.0.4 of the plugin.
 
 ## OpenCode
 
@@ -12,7 +12,7 @@ Hooks: add the package to `opencode.json` (`~/.config/opencode/opencode.json` fo
 every project, or a project's own):
 
 ```json
-{ "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+{ "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.4"] }
 ```
 
 Skills: `npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g`
@@ -20,7 +20,7 @@ Skills: `npx skills add https://github.com/LightconeResearch/agent-skills/tree/m
 ## Pi
 
 ```bash
-pi install npm:@lightcone-research/astra-plugin@0.0.5
+pi install npm:@lightcone-research/astra-plugin@0.0.4
 ```
 
 Installs the skills and the hooks together; invoke a skill as `/skill:<name>`.

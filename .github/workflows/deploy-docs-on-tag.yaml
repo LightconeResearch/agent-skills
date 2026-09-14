@@ -6,7 +6,7 @@ on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to deploy (without leading v), e.g. 0.0.2"
+        description: "Version to deploy (without leading v), e.g. 0.0.1"
         required: true
 
 permissions: {}

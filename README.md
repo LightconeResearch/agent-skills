@@ -6,7 +6,7 @@
 
 [![Agent Skills standard](https://img.shields.io/badge/standard-Agent%20Skills-7c3aed?style=for-the-badge)](https://agentskills.io)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.0.2-success?style=for-the-badge)](skills.config.json)
+[![Version](https://img.shields.io/badge/version-0.0.1-success?style=for-the-badge)](skills.config.json)
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
@@ -137,7 +137,7 @@ npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugi
 ```json
 // 2. hooks — in ~/.config/opencode/opencode.json (or a project's opencode.json);
 //    installed automatically at the next start. Keep the version pinned.
-{ "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+{ "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.4"] }
 ```
 
 `@lightcone-research/<plugin>-plugin` is the plugin's `plugins/<plugin>/`
@@ -156,7 +156,7 @@ to "use the astra skill". Details in the
 Pi installs skills and hooks together from the same npm package:
 
 ```bash
-pi install npm:@lightcone-research/astra-plugin@0.0.5
+pi install npm:@lightcone-research/astra-plugin@0.0.4
 ```
 
 Then invoke `/skill:astra`, or let the agent load it when the task matches.

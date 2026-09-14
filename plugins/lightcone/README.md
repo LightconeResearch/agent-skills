@@ -4,7 +4,7 @@ Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) 
 
 Generated from [LightconeResearch/agent-skills](https://github.com/LightconeResearch/agent-skills) — the same skills and hooks that ship as the
 `lightcone` plugin for Claude Code and Codex, packaged for harnesses that install
-from npm. Version 0.0.2 of the plugin.
+from npm. Version 0.0.1 of the plugin.
 
 ## OpenCode
 
@@ -12,7 +12,7 @@ Hooks: add the package to `opencode.json` (`~/.config/opencode/opencode.json` fo
 every project, or a project's own):
 
 ```json
-{ "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/lightcone-plugin@0.0.2"] }
+{ "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/lightcone-plugin@0.0.1"] }
 ```
 
 Skills: `npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/lightcone -a opencode -g`
@@ -20,7 +20,7 @@ Skills: `npx skills add https://github.com/LightconeResearch/agent-skills/tree/m
 ## Pi
 
 ```bash
-pi install npm:@lightcone-research/lightcone-plugin@0.0.2
+pi install npm:@lightcone-research/lightcone-plugin@0.0.1
 ```
 
 Installs the skills and the hooks together; invoke a skill as `/skill:<name>`.

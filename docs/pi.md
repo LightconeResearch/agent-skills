@@ -14,7 +14,7 @@ harness. The example installs `astra`; for the full stack substitute
 not install both.
 
 ```bash
-pi install npm:@lightcone-research/astra-plugin@0.0.5
+pi install npm:@lightcone-research/astra-plugin@0.0.4
 ```
 
 Pi installs the package under `~/.pi/agent/npm/` and picks up its `skills/`

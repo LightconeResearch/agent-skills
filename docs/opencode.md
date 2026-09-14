@@ -31,7 +31,7 @@ Drop `-g` to install into the current project (`./.agents/skills/`) instead.
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@lightcone-research/astra-plugin@0.0.5"]
+  "plugin": ["@lightcone-research/astra-plugin@0.0.4"]
 }
 ```
 

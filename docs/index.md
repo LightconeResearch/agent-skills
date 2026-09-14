@@ -65,7 +65,7 @@ Python dependencies install them on first use.
     ```
 
     ```json
-    { "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.5"] }
+    { "$schema": "https://opencode.ai/config.json", "plugin": ["@lightcone-research/astra-plugin@0.0.4"] }
     ```
 
     The skill lands in `~/.agents/skills/` (drop `-g` for `./.agents/skills/`);
@@ -77,7 +77,7 @@ Python dependencies install them on first use.
     One step, skills and hooks together:
 
     ```bash
-    pi install npm:@lightcone-research/astra-plugin@0.0.5
+    pi install npm:@lightcone-research/astra-plugin@0.0.4
     ```
 
     Then invoke `/skill:astra`. See the [Pi page](pi.md).
