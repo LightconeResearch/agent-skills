@@ -49,7 +49,7 @@ case "$rc:$header" in
             "$body"
         ;;
     *)
-        printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ASTRA project — spec at ./astra.yaml\\nCould not run `astra info` (exit %s) — a toolchain problem, or a malformed spec; run `astra validate astra.yaml` to see which.\\n\\nActivate the astra skill when working with ASTRA analyses.\\n"}}\n' \
+        printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ASTRA project — spec at ./astra.yaml\\nCould not run `astra info` (exit %s) — a toolchain problem, or a malformed spec; run `astra validate` to see which.\\n\\nActivate the astra skill when working with ASTRA analyses.\\n"}}\n' \
             "$rc"
         ;;
 esac

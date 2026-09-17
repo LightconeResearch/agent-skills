@@ -60,10 +60,10 @@
 
 plugin: astra
 
-# A genuinely minimal VALID spec (checked against the pinned astra-tools
-# validator), not just a marker file: the stubbed tests only need the file to
-# exist, but a valid fixture keeps the door open to running these same tests
-# against the real toolchain by removing the `stubs` block.
+# A genuinely minimal VALID project (checked against the pinned astra-tools
+# validator): one decision in astra.yaml, and a universe that selects it —
+# so the project is valid as a whole, and deleting the decision from
+# astra.yaml alone leaves the universe pointing at nothing.
 project:
   astra.yaml: |
     version: "0.0.13"
@@ -75,6 +75,16 @@ project:
         type: data
         description: "Placeholder input."
 
+    decisions:
+      example_method:
+        label: "Which method to use."
+        default: option_a
+        options:
+          option_a:
+            label: "Method A."
+          option_b:
+            label: "Method B."
+
     outputs:
       - id: main_result
         type: metric
@@ -82,6 +92,11 @@ project:
         inputs: [primary_data]
         recipe:
           command: python analyze.py --data {inputs.primary_data} --out {output}
+  universes/baseline.yaml: |
+    id: baseline
+    description: Baseline
+    decisions:
+      example_method: option_a
 
 # No stubs: this spec runs the REAL toolchain. Both astra hooks delegate to
 # `uvx astra-tools@<pin>`, so a broken uv install, an unresolvable pin, or a
@@ -115,4 +130,20 @@ tests:
     expect_context: ASTRA validation passed
     forbid_context:
       - validation FAILED   # spec rejected
+      - not validated       # uv missing, or the toolchain crashed
+
+  - name: validate-on-save-stale-universe
+    event: PostToolUse
+    prompt: >-
+      A file named astra.yaml exists in the current directory. Using your file
+      editing tool, delete the entire top-level `decisions:` block from
+      astra.yaml (the key and everything indented under it), leaving the rest
+      of the file unchanged. Do nothing else, and do not explain.
+    edits_file: astra.yaml
+    attempts: 3
+    # astra.yaml is still valid on its own; only whole-project validation sees
+    # that universes/baseline.yaml now selects a decision that no longer exists.
+    expect_context: UNKNOWN_DECISION
+    forbid_context:
+      - ASTRA validation passed   # the hook validated astra.yaml alone
       - not validated       # uv missing, or the toolchain crashed

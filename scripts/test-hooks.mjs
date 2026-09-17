@@ -105,12 +105,12 @@ try {
     run("validate-on-save.sh", writePayload),
     "PostToolUse",
   );
-  assertIncludes("save/fail", context, "ASTRA validation FAILED for ./astra.yaml");
+  assertIncludes("save/fail", context, "ASTRA validation FAILED for the project");
   assertIncludes("save/fail", context, "fake report:");
   assertIncludes("save/fail", context, 'with "quotes" and a \\backslash');
   const [firstCall] = uvxCalls();
   assertIncludes("save/fail uvx args", firstCall, "astra-tools@");
-  assertIncludes("save/fail uvx args", firstCall, "validate astra.yaml --json");
+  assertIncludes("save/fail uvx args", firstCall, "validate --json");
 
   // Passing validation → single-line passed message.
   context = parsedContext(
@@ -137,6 +137,24 @@ try {
   });
   context = parsedContext("save/patch", run("validate-on-save.sh", patchPayload), "PostToolUse");
   assertIncludes("save/patch", context, "ASTRA validation FAILED");
+
+  // Editing a universe file triggers the same whole-project run.
+  mkdirSync(join(project, "universes"), { recursive: true });
+  writeFileSync(join(project, "universes", "baseline.yaml"), "id: baseline\n");
+  context = parsedContext(
+    "save/universe",
+    run(
+      "validate-on-save.sh",
+      JSON.stringify({
+        cwd: project,
+        tool_name: "Edit",
+        tool_input: { file_path: join(project, "universes", "baseline.yaml") },
+        tool_response: {},
+      }),
+    ),
+    "PostToolUse",
+  );
+  assertIncludes("save/universe", context, "ASTRA validation FAILED");
 
   // Non-ASTRA event → silent, and uvx is never invoked.
   let before = uvxCalls().length;
