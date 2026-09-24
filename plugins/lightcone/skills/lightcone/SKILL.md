@@ -38,7 +38,7 @@ The user installs the CLI once, on their machine, and that is the whole
 setup — it puts `lc` on their PATH:
 
 ```bash
-uv tool install lightcone-cli==0.5.0rc2
+uv tool install lightcone-cli==0.5.0rc3
 ```
 
 Name that version. While the line is a pre-release, a bare
@@ -50,7 +50,7 @@ checklist:
   check, already run by the session-start hook. Don't repeat it. You are all good.
 - **Seen the hook report a problem?** It names the remedy and who runs it.
 - **Seen neither?** Run `lc --version` yourself — this skill assumes
-  `lightcone-cli==0.5.0rc2` or newer. Silence is not an all-clear: the skill
+  `lightcone-cli==0.5.0rc3` or newer. Silence is not an all-clear: the skill
   also ships without that hook, and a subagent never sees session start.
   Remedies are in `references/diagnosis.md`.
 
