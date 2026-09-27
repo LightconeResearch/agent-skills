@@ -92,7 +92,7 @@ layers evolve, and the choice of runner stays yours — so don't encode
 runner-specific behavior into the spec.
 
 ```bash
-uvx astra-tools@x.y.z init [DIRECTORY]                          # Scaffold a new analysis
+uvx astra-tools@x.y.z init [DIRECTORY]                          # Scaffold an empty analysis
 uvx astra-tools@x.y.z validate [FILE]                           # Validate the whole project, or one file (run after every change)
 uvx astra-tools@x.y.z validate astra.yaml --verify-evidence     # + verify insight quotes against PDFs
 uvx astra-tools@x.y.z guide                                     # Full agent briefing on the format (read before authoring)
