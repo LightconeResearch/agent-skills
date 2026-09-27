@@ -4,7 +4,8 @@ Read this when the project's report is in play — writing it, previewing it,
 or keeping it honest after the analysis moved.
 
 `lc init` scaffolds a MyST project next to the spec: `myst.yml` (which loads
-the **MySTRA** plugin) and `index.md`. MySTRA resolves `{astra}` paths
+the **MySTRA** plugin and the ASTRA article theme) and `index.md`, a skeleton
+of TODO sections that references nothing yet. MySTRA resolves `{astra}` paths
 against `astra.yaml`, so the report *references* the analysis instead of
 restating it — one source of truth for every number, figure and decision.
 Docs: <https://lightconeresearch.github.io/MySTRA/>.
@@ -214,14 +215,16 @@ work around by typing the number.
 
 ## Keeping it in sync
 
-- `lc init` scaffolds `index.md` against the *placeholder* spec
-  (`decisions.example_method`, `outputs.main_result`). Repoint those ids at
-  real ones as soon as the spec is real — see `references/scoping.md`.
 - Renaming an output or a decision breaks every reference to it, and a plain
   `{astra}` reference to the old id renders as innocuous humanized text
   rather than an error. Grep the report for the old id in the same change —
   nothing else will tell you.
-- `myst.yml` loads MySTRA from a `latest` URL. For a build that reproduces,
-  pin the release tag instead (`.../releases/download/v0.0.1/mystra.mjs`).
+- `myst.yml` loads MySTRA from a `latest` URL and the ASTRA article theme
+  from its git repository, so both track their newest release. For a build
+  that reproduces, pin each to a tag: MySTRA's release asset
+  (`.../releases/download/v0.0.1/mystra.mjs`), the theme's tag archive
+  (`https://github.com/LightconeResearch/astra-article-theme/archive/refs/tags/v0.0.15.zip`).
+  MyST caches the theme under `_build/templates/` and keeps using that copy;
+  `myst clean --templates` fetches it afresh.
 - MySTRA is pre-1.0: syntax can change between releases. Where the preview
   or the docs disagree with this file, they win.
