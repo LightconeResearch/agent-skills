@@ -22,10 +22,10 @@ in place.
 
 | Outcome | What it means | Remedy |
 |---|---|---|
-| Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==0.5.0rc3` |
-| A version below the floor | The rebuild changed the verbs and the status vocabulary, so the skill's instructions will produce errors rather than results | `uv tool install lightcone-cli==0.5.0rc3` — **not** `uv tool upgrade`, which will not move onto a pre-release |
+| Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==0.5.0rc4` |
+| A version below the floor | The rebuild changed the verbs and the status vocabulary, so the skill's instructions will produce errors rather than results | `uv tool install lightcone-cli==0.5.0rc4` — **not** `uv tool upgrade`, which will not move onto a pre-release |
 | A version above the floor | Nothing. Newer is fine | — |
-| `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==0.5.0rc3` |
+| `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==0.5.0rc4` |
 | `lc` not found right after installing | uv put it in `~/.local/bin`, which is not on PATH | `uv tool update-shell`, or check for a shell alias with `type lc` |
 
 Who runs it: offer and wait where a person can answer, act and report where
@@ -129,7 +129,7 @@ does the right thing, and there is no annex command to run to make it happen.
 - **A `git add` that fails on a filter** — the project's file storage is
   not set up in this working tree. In a fresh clone, `lc init` is the
   answer; if it persists, the install is broken and the user repairs it
-  with `uv tool install --force lightcone-cli==0.5.0rc3`. Do not commit past
+  with `uv tool install --force lightcone-cli==0.5.0rc4`. Do not commit past
   such an error: the file would go into history in the wrong form.
 - **`the content is not in this clone`** — the pointer is here but the bytes
   were never fetched. `lc materialize` fetches what a recipe declares; use

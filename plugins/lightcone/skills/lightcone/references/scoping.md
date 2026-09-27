@@ -1,6 +1,6 @@
 # Scoping a new project
 
-Read this when a project has no spec, or only the placeholder `lc init`
+Read this when a project has no spec, or only the empty one `lc init`
 scaffolds — the phase where the analysis gets defined and no implementation
 code is written yet. For the literature pass inside phase 3, read
 `references/literature.md`.
@@ -13,11 +13,17 @@ code is written yet. For the literature pass inside phase 3, read
 
 ## Before you start
 
-`lc init [DIR]` scaffolds the project — spec placeholder, baseline universe,
-uv project, git repository (with `data/` and `results/` backed by git-annex,
-so a plain `git add` there stores the bytes properly), and a MyST report. It
-is idempotent, never overwrites what you own, and does **not** create
+`lc init [DIR]` scaffolds the project — an empty spec (no inputs, outputs or
+decisions yet), a baseline universe that selects nothing, a uv project, a git
+repository (with `data/` and `results/` backed by git-annex, so a plain
+`git add` there stores the bytes properly), and a MyST report. It is
+idempotent, never overwrites what you own, and does **not** create
 `AGENTS.md`; you write that at finalize.
+
+Once the spec gains its first decision, validation (including the
+validate-on-save hook) reports `MISSING_DECISION` for
+`universes/baseline.yaml`. That is expected while decisions are in flux —
+leave the universe alone; finalize regenerates it.
 
 Build the spec through conversation, writing to `astra.yaml` after each
 phase. Announce each phase with its banner so the user can follow.
@@ -34,7 +40,7 @@ Stage banner: **RESEARCH QUESTION**
 
 Sharpen it: what would a clear answer look like, and why does it matter?
 "Analyze this data" is not a research question — push back until it is. Set
-`name` in `astra.yaml`. (Leave the scaffolded `description` TODO for the
+`name` in `astra.yaml`. (Leave the scaffolded empty `description` for the
 finalize step — written too early it goes stale.)
 
 ## 2. Analysis structure
@@ -72,24 +78,18 @@ before scoping is done — never fabricate one.
 Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
 
 1. Checkpoint: "Anything else that should inform this analysis?"
-2. Validate the spec per the astra skill — verifying evidence too, if any
+2. **Regenerate the baseline universe** from the decision defaults,
+   overwriting the scaffolded one that selects nothing:
+   `uvx astra-tools@0.2.18 universe generate -n baseline --force`. Generate
+   no other universe unless the user asks for more (universe commands: astra
+   skill).
+3. Validate the spec per the astra skill — verifying evidence too, if any
    was extracted — and iterate until clean.
-3. Generate only a `baseline` universe unless the user asks for more
-   (universe commands: astra skill).
-4. Replace the `description:` TODO with a short orientation paragraph now
+4. Fill in the empty `description:` with a short orientation paragraph now
    that structure is stable — what the analysis is and how its pieces fit
    together. Keep it brief; per-element prose belongs on each input, output,
    decision and option.
-5. **Repoint the report.** `lc init` scaffolds `index.md` against the
-   *placeholder* spec: it references `decisions.example_method` (both an
-   inline `{astra}` mention and an `:::{astra}` block) and
-   `outputs.main_result`. Those ids no longer exist once scoping has
-   replaced the boilerplate. Swap them for
-   one representative top-level decision id and one representative
-   top-level output id from the finished spec. **Only the reference ids** —
-   leave the TODO narrative under Introduction / Methods / Results for the
-   user to write.
-6. Write `AGENTS.md`. It carries what the spec cannot: how to work in this
+5. Write `AGENTS.md`. It carries what the spec cannot: how to work in this
    project, and the conversation context no later session would otherwise
    have. A useful one has a short orientation paragraph (what the analysis is,
    where the spec lives), the handful of commands this project actually uses
@@ -97,7 +97,7 @@ Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
    outcome — constraints the user mentioned, avenues considered and
    rejected, data quirks. The spec stays the source of truth for structure,
    decisions and evidence; don't restate it here.
-7. Show a summary table and confirm with the user. Scoping is done:
+6. Show a summary table and confirm with the user. Scoping is done:
    everything needed to carry the work into implementation is now in
    `astra.yaml` and `AGENTS.md`.
 
