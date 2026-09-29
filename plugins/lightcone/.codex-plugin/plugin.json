@@ -1,7 +1,7 @@
 {
   "name": "lightcone",
-  "version": "0.0.4",
-  "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (probe with `lc run`, integrate recipes, commit, `lc materialize`), status interpretation (current/behind/stale) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
+  "version": "0.0.5",
+  "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (allocate a local or Slurm cluster with `lc compute`, probe with `lc run`, integrate recipes, commit, `lc materialize`), recipe resources and GPUs, status interpretation (current/behind/stale) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
   "author": {
     "name": "Lightcone Research",
     "email": "info@lightconeresearch.org"
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "Lightcone",
     "shortDescription": "Use Lightcone in Codex.",
-    "longDescription": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (probe with `lc run`, integrate recipes, commit, `lc materialize`), status interpretation (current/behind/stale) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
+    "longDescription": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (allocate a local or Slurm cluster with `lc compute`, probe with `lc run`, integrate recipes, commit, `lc materialize`), recipe resources and GPUs, status interpretation (current/behind/stale) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
     "developerName": "Lightcone Research",
     "category": "Development",
     "capabilities": [],
