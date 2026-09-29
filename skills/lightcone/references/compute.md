@@ -1,18 +1,19 @@
-# Compute: allocations, offers and recipe resources
+# Compute: shapes, GPUs and recipe resources
 
-Read this when the local shortcut is not enough: sizing an allocation,
-running on Slurm, using GPUs, or declaring what a recipe needs.
+Read this when the local shortcut is not enough: a bigger or remote shape,
+GPUs, or declaring what a recipe needs.
 
 - [Choosing a shape](#choosing-a-shape)
-- [Slurm](#slurm)
 - [GPUs](#gpus)
 - [Recipe resources](#recipe-resources)
 - [Waiting and lifetime](#waiting-and-lifetime)
 
 ## Choosing a shape
 
-`lc compute resources` lists the offers in selection order; free capacity
-is never known. A request takes the **first** offer that satisfies it:
+`lc compute resources` lists everything you can get compute from, in
+selection order; free capacity is never known. That list is the whole
+menu — when nothing on it fits the work, tell the user. A request takes
+the **first** offer that satisfies it:
 
 ```bash
 lc compute launch --cpus 32+ --memory 128GB+ --num-nodes 2 --time 2h --name fit-sweep --dry-run
@@ -22,7 +23,7 @@ lc compute launch --cpus 32+ --memory 128GB+ --num-nodes 2 --time 2h --name fit-
   memory is binary: `128`, `128GB` and `128GiB` all mean 128 GiB.
 - Give `--cpus` and `--memory` together, or neither — neither is the local
   shortcut, which never selects a remote offer. The reverse can happen: a
-  request no configured offer fits falls to the built-in local one. The
+  request nothing earlier in the list fits lands on the local offer. The
   plan's `offer` says which.
 - `--gpus A100:4` is exactly four A100s; `--gpus GPU:4` any model; the
   default `0` selects CPU-only offers. No `+` on GPU counts.
@@ -34,45 +35,10 @@ Size it from the recipes. Each recipe runs on **one worker**, so the
 largest `recipe.resources` must fit a single node; more nodes add recipes
 in parallel, never room for one.
 
-## Slurm
-
-The catalog (`~/.lightcone/compute.yaml`, or the file `LC_COMPUTE_CONFIG`
-names) declares `connections` (a stable `namespace` UUID,
-`provider: slurm`, `context:` the Slurm cluster name) and ordered `offers`
-whose `config` carries `submit` (`sbatch` or `salloc`), `account`, `qos`,
-`constraint`, `partition`, `reservation` and `gpu_type`.
-
-Its `local` block shapes the built-in offer: `resources: {cpus: 4,
-memory: 8GiB}` (both or neither) shrinks it, `enabled: false` turns local
-compute off — what a login node's catalog wants, except at NERSC, where
-`lc` already refuses it on login nodes. No connection or offer may be
-named `local`; that name is the built-in's.
-
-Things that surprise on a first Slurm run:
-
-- **Shell `SBATCH_*` / `SALLOC_*` / `SLURM_*` variables are dropped**
-  before `lc` calls Slurm. An account in the profile does nothing; it
-  belongs in the offer's `config.account`.
-- **Workers run the driver's `lc` install.** Launch from a
-  `uv tool install`ed `lc`, never through `uvx`, whose environment can be
-  pruned mid-allocation.
-- **NERSC: move uv's cache first.** Compute nodes cannot lock files in
-  `$HOME`, so every recipe fails with `Could not acquire lock (os error
-  524)`. `export UV_CACHE_DIR=$PSCRATCH/uv-cache` in the user's profile,
-  then relaunch.
-- **Active is not ready.** A job can run with no Dask workers connected.
-  The reason is in the submission log under
-  `~/.lightcone/compute/submissions/<token>/`, on a line starting
-  `Slurm Dask startup failed:`.
-- **Containerized projects** need the image on every node; at NERSC,
-  `podman-hpc` exposes the migrated image across nodes.
-
 ## GPUs
 
-GPUs exist only where an offer declares them (`accelerators: A100:4` or
-`{A100: 4}`); `lc` probes no hardware. On Slurm the offer's
-`config.gpu_type` maps the label to the site's GRES name. A local GPU
-offer also needs the device mask at launch:
+GPUs exist only where `lc compute resources` lists them; `lc` probes no
+hardware. A local GPU offer also needs the device mask at launch:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 lc compute launch --cpus 4 --memory 8GB --gpus GPU:1 --wait
@@ -121,9 +87,11 @@ recipe:
 
 ## Waiting and lifetime
 
-- `--wait` gives up after 300 seconds; pass `--timeout` for a batch queue,
-  or launch without `--wait` and run `lc compute status <name> --wait` in
-  the background.
+- `--wait` gives up after 300 seconds; pass `--timeout` for an offer that
+  is not `fast`, or launch without `--wait` and run
+  `lc compute status <name> --wait` in the background.
+- A cluster that stays unready: relay its `phase` and `reason` from
+  `lc compute status <name>` to the user rather than relaunching.
 - A launch that failed or timed out may still hold an allocation: its
   error carries the `id` or a `submission_token`. Check
   `lc compute status --json` before retrying, never launch a second one.

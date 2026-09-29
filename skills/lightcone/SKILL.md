@@ -6,7 +6,7 @@ description: >
   scope, resume, plan, run, debug, publish or discuss such a project: "new
   analysis", "scope a project", "resume the project", "where were we", "run
   the pipeline", "lc status/materialize/run", "lc compute", "launch a
-  cluster", "run on Slurm / on GPUs", "publish the analysis". Also
+  cluster", "run on GPUs", "publish the analysis". Also
   use it whenever the working directory holds an astra.yaml and the user
   asks to run, re-run, fix or interpret an analysis, even if they never say
   "Lightcone", "ASTRA" or "lc". Do NOT use it for the astra.yaml format
@@ -28,7 +28,7 @@ the MyST report of the analysis is in index.md.
 | Anything that executes — `lc run`, `lc materialize` | [Get a cluster](#get-a-cluster) first |
 | Writing or debugging a script | `lc run <cluster> -- <argv>` — the sandbox a recipe gets |
 | Producing an output for real | [Make an output](#make-an-output) |
-| Slurm, GPUs, recipe `resources:`, the offer catalog | `references/compute.md` |
+| A bigger or remote shape, GPUs, recipe `resources:` | `references/compute.md` |
 | A refusal, a failing recipe, a surprising status | `references/diagnosis.md` |
 | Papers, quotes, prior insights | `references/literature.md`, and `references/extraction-brief.md` per paper |
 | Writing or updating the report | `references/reporting.md` — MyST + `{astra}` references |
@@ -69,9 +69,9 @@ locally. `lc status`, `lc materialize --check`, `lc init`, `lc build` and
 `lc compute` need none.
 
 1. **Reuse.** `lc compute status --json` lists this user's live
-   allocations under the current catalog; `pending` is still queued. For
-   an `active` one, `lc compute status <name> --wait` returns once its
-   workers are connected.
+   allocations; `pending` is still queued. For an `active` one,
+   `lc compute status <name> --wait` returns once its workers are
+   connected.
 2. **Launch.** On a workstation, `lc compute launch --wait` takes the
    built-in local offer — every usable CPU and all RAM, one node, 30
    minutes — names it `local`, and prints that name once it is ready. Only
@@ -86,13 +86,12 @@ locally. `lc status`, `lc materialize --check`, `lc init`, `lc build` and
    the user has not asked to keep it.
 
 The local shortcut is routine: launch it when there is something to run,
-and say that you did. Anything else — a Slurm offer, several nodes, GPUs,
-a long walltime — spends the user's allocation hours and queue time: show
-the `lc compute launch … --dry-run` plan and wait for a yes. Never `down`
-an allocation you did not launch unless the user asks — `lc compute status`
-lists theirs too, some possibly serving another session. The offer catalog
-(`~/.lightcone/compute.yaml`: accounts, QOS, GPU offers) is the user's
-machine configuration; draft it with them, never write it unasked.
+and say that you did. Anything else `lc compute resources` lists — a
+remote shape, several nodes, GPUs — can spend the user's allocation hours
+and queue time: show the `lc compute launch … --dry-run` plan and wait for
+a yes. Never `down` an allocation you did not launch unless the user asks
+— `lc compute status` lists theirs too, some possibly serving another
+session.
 
 ## Make an output
 
@@ -207,7 +206,7 @@ lc compute launch --wait --json  # {plan, id, name, accepted, ready}
 about to run — quote it rather than inferring one. `lc status` always exits
 0, so its JSON is the whole answer; `lc materialize --check` exits nonzero
 when anything is out of date, which is the gate. `lc compute status` exits
-nonzero when any connection could not be queried, even though the
+nonzero when part of its query failed (`errors`), even though the
 allocations it did find are listed. A compute failure under `--json` still
 prints one object, `{error, id, submission_token}`: keep that `id`.
 
@@ -260,15 +259,14 @@ what a later session reads to pick the work up.
   `--verbose`, no `--jobs` (concurrency is the cluster's), no `lc verify`
   and no `lc export`.
 - **Everything runs through `lc`.** Never invoke the container runtime, the
-  sandbox or a scheduler yourself — `podman run`, `salloc`, `sbatch`,
-  `srun`, `scancel` and friends bypass the environment, the isolation and
-  the run record, and whatever they write into `results/` is a foreign
-  write the next run will remake.
+  sandbox or a job scheduler yourself — `podman run` and friends bypass
+  the environment, the isolation and the run record, and whatever they
+  write into `results/` is a foreign write the next run will remake.
 - **An allocation keeps the environment it was launched with.** A variable
   exported afterwards never reaches its workers, nor does `NAME=value lc
   run …` — write `lc run local -- env NAME=value python …` for a probe.
-  After changing `UV_CACHE_DIR` or thread counts, or upgrading `lc`, `down`
-  the cluster and launch a new one.
+  After changing such a variable, or upgrading `lc`, `down` the cluster and
+  launch a new one.
 - **An interrupted run is still running.** Killing `lc run` or
   `lc materialize` detaches the client only; the command goes on on the
   worker. `lc compute down <full-id>` — the `id` from `--json`, since a

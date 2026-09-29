@@ -138,13 +138,13 @@ does the right thing, and there is no annex command to run to make it happen.
 ## Compute and clusters
 
 Most compute refusals name their own remedy; these need more than the
-message says. Slurm and GPU failures are in `references/compute.md`.
+message says.
 
 | You see | Do |
 |---|---|
 | `cluster name 'local' is already in use; choose another name` | Reuse `local`. Another name is refused too: one local cluster per user per machine |
-| `a local cluster is already running or starting for this user on this machine; …` | Reuse the cluster it names — through `LC_COMPUTE_CONFIG=<the catalog it names>` if `lc compute status` does not list it. The `down` or `kill` it prints is for a cluster you launched, or on the user's word |
-| `local compute is disabled …` (by the catalog, or on a NERSC login node) | Nothing in `lc` overrides it: a remote shape with `--cpus`/`--memory` once the user agrees, or at NERSC an interactive compute node |
+| `a local cluster is already running or starting for this user on this machine; …` | Reuse the cluster it names. The `down` or `kill` it prints is for a cluster you launched, or on the user's word |
+| `local compute is disabled …` | Nothing in `lc` overrides it: propose a shape from `lc compute resources` and launch it once the user agrees |
 | `no configured offer matches this resource request; …` | Relay the per-offer reasons it lists; ask before loosening the request |
 | `task needs … on one worker; no worker in this cluster can satisfy that request` | A recipe's `resources` exceed one node: a larger shape, or a smaller declaration if the code allows it |
 
