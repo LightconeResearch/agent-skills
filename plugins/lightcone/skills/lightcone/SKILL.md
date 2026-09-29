@@ -5,7 +5,8 @@ description: >
   executed with the `lc` CLI. Use this skill whenever the user wants to
   scope, resume, plan, run, debug, publish or discuss such a project: "new
   analysis", "scope a project", "resume the project", "where were we", "run
-  the pipeline", "lc status/materialize/run", "publish the analysis". Also
+  the pipeline", "lc status/materialize/run", "lc compute", "launch a
+  cluster", "run on GPUs", "publish the analysis". Also
   use it whenever the working directory holds an astra.yaml and the user
   asks to run, re-run, fix or interpret an analysis, even if they never say
   "Lightcone", "ASTRA" or "lc". Do NOT use it for the astra.yaml format
@@ -24,8 +25,10 @@ the MyST report of the analysis is in index.md.
 |---|---|
 | A research question, no spec yet | `references/scoping.md` — interview first, write no code |
 | Picking up an existing project | `lc status`, then summarize before asking what is next |
-| Writing or debugging a script | `lc run <argv>` — the sandbox a recipe gets |
+| Anything that executes — `lc run`, `lc materialize` | [Get a cluster](#get-a-cluster) first |
+| Writing or debugging a script | `lc run <cluster> -- <argv>` — the sandbox a recipe gets |
 | Producing an output for real | [Make an output](#make-an-output) |
+| A bigger or remote shape, GPUs, recipe `resources:` | `references/compute.md` |
 | A refusal, a failing recipe, a surprising status | `references/diagnosis.md` |
 | Papers, quotes, prior insights | `references/literature.md`, and `references/extraction-brief.md` per paper |
 | Writing or updating the report | `references/reporting.md` — MyST + `{astra}` references |
@@ -38,7 +41,7 @@ The user installs the CLI once, on their machine, and that is the whole
 setup — it puts `lc` on their PATH:
 
 ```bash
-uv tool install lightcone-cli==0.5.0rc4
+uv tool install lightcone-cli==0.5.0rc5
 ```
 
 Name that version. While the line is a pre-release, a bare
@@ -50,7 +53,7 @@ checklist:
   check, already run by the session-start hook. Don't repeat it. You are all good.
 - **Seen the hook report a problem?** It names the remedy and who runs it.
 - **Seen neither?** Run `lc --version` yourself — this skill assumes
-  `lightcone-cli==0.5.0rc4` or newer. Silence is not an all-clear: the skill
+  `lightcone-cli==0.5.0rc5` or newer. Silence is not an all-clear: the skill
   also ships without that hook, and a subagent never sees session start.
   Remedies are in `references/diagnosis.md`.
 
@@ -58,10 +61,47 @@ Where a person can answer, offer and wait — **never install or upgrade
 unasked**, it is their machine. Where none can (headless, CI), act and say
 what you changed.
 
+## Get a cluster
+
+`lc run` and `lc materialize` execute on an allocation named as their first
+argument. Neither starts one, waits for one, or falls back to running
+locally. `lc status`, `lc materialize --check`, `lc init`, `lc build` and
+`lc compute` need none.
+
+`lc compute` is an abstracted view of the user's compute, whatever
+machines and schedulers lie behind it, and it is the only view to use:
+`lc compute resources` lists every shape you can get.
+
+1. **Reuse.** `lc compute status --json` lists this user's live
+   allocations; `pending` is still queued. For an `active` one,
+   `lc compute status <name> --wait` returns once its workers are
+   connected.
+2. **Launch.** On a workstation, `lc compute launch --wait` takes the
+   built-in local offer — every usable CPU and all RAM, one node, 30
+   minutes — names it `local`, and prints that name once it is ready. Only
+   one local cluster runs per user per machine; a second launch is refused
+   and names the live one: reuse it. Size the lifetime to the work
+   (`--time 1h30m`, two hours at most locally); at walltime the allocation
+   is killed, mid-write if a recipe is still running.
+3. **Pass the name.** `lc run local -- python src/fit.py …`,
+   `lc materialize local fit`. Shell variables do not survive between your
+   tool calls, so carry the name itself, not `$CLUSTER`.
+4. **Release it** with `lc compute down <name>` once the work is done and
+   the user has not asked to keep it.
+
+The local shortcut is routine: launch it when there is something to run,
+and say that you did. Anything else `lc compute resources` lists — a
+remote shape, several nodes, GPUs — can spend the user's allocation hours
+and queue time: show the `lc compute launch … --dry-run` plan and wait for
+a yes. Never `down` an allocation you did not launch unless the user asks
+— `lc compute status` lists theirs too, some possibly serving another
+session.
+
 ## Make an output
 
-1. **Probe.** `lc run python src/fit.py --outliers clip` — argv, like
-   `uv run`; `lc run bash -c '...'` for shell syntax. What works here works
+1. **Probe.** `lc run local -- python src/fit.py --outliers clip` —
+   everything after `--` is argv, like `uv run`;
+   `lc run local -- bash -c '...'` for shell syntax. What works here works
    as a recipe. A missing import is environment work: `uv add <pkg>`, which
    is the only way to change the environment. Have the probe write where a
    probe may write (below) — the project root is read-only, so a script
@@ -76,10 +116,13 @@ what you changed.
    `{inputs.<id>}` a declared input (an upstream output's *file*, when
    outputs chain), `{decisions.<id>}` the active option. Everything a
    command references must appear in that output's `inputs:` / `decisions:`
-   — that is also how dependencies are declared.
+   — that is also how dependencies are declared. A recipe needing more
+   than one CPU, a set amount of RAM or a GPU declares it under
+   `recipe.resources` (`references/compute.md`).
 3. **Commit your edits**, by path: `git add src/ astra.yaml && git commit`.
-4. **`lc materialize [targets]`.** Remakes what is `stale`, dependencies
-   first, and commits each output as it lands. Bare takes every output in
+4. **`lc materialize <cluster> [targets]`.** Remakes what is `stale`,
+   dependencies first, in parallel where the graph and the cluster allow,
+   and commits each output as it lands. No target takes every output in
    every universe; `fit` takes that output across universes; `robust/fit`
    takes one universe's. Re-running is idempotent. You are done when
    `lc materialize --check` passes — that, not `lc status`, is the gate.
@@ -158,12 +201,18 @@ lc materialize --check --json  # {ok, up_to_date, planned{target: why}, made, cu
                                #  failed, blocked, warnings, notes}
 lc init --json                 # {converged, created, repaired, unchanged, blocked, warnings}
 lc build --json                # the build's result
+lc compute status --json       # {clusters[{id, name, phase, allocation,
+                               #  dask{observation, ready, workers}, reason}], errors}
+lc compute launch --wait --json  # {plan, id, name, accepted, ready}
 ```
 
 `why` and `planned` carry the engine's own reason a thing is stale or is
 about to run — quote it rather than inferring one. `lc status` always exits
 0, so its JSON is the whole answer; `lc materialize --check` exits nonzero
-when anything is out of date, which is the gate.
+when anything is out of date, which is the gate. `lc compute status` exits
+nonzero when part of its query failed (`errors`), even though the
+allocations it did find are listed. A compute failure under `--json` still
+prints one object, `{error, id, submission_token}`: keep that `id`.
 
 ## Keep the spec and the code in step
 
@@ -207,13 +256,27 @@ what a later session reads to pick the work up.
 - **`pip install` reaches nothing.** The lock is the environment: `uv add`.
 - **Don't re-interview on resume.** The spec and `AGENTS.md` already answer
   the scoping questions; summarize state and ask what is *next*.
-- **Five verbs, and `--help` is the authority.** `init`, `status`,
-  `materialize`, `run`, `build`. Universes and outputs are selected by
-  target (`robust/fit`), not by a flag: there is no `--universe`, no
-  `--force`, no `--verbose`, no `lc verify` and no `lc export`.
+- **Six verbs, and `--help` is the authority.** `init`, `status`,
+  `materialize`, `run`, `build`, and `compute` (`resources`, `launch`,
+  `status`, `down`). Universes and outputs are selected by target
+  (`robust/fit`), not by a flag: there is no `--universe`, no `--force`, no
+  `--verbose`, no `--jobs` (concurrency is the cluster's), no `lc verify`
+  and no `lc export`.
 - **Everything runs through `lc`.** Never invoke the container runtime, the
-  sandbox or a scheduler yourself — `podman run`, `srun`, and friends
-  bypass the environment, the isolation and the run record, and whatever
-  they write into `results/` is a foreign write the next run will remake.
+  sandbox or a job scheduler yourself — `podman run` and friends bypass
+  the environment, the isolation and the run record, and whatever they
+  write into `results/` is a foreign write the next run will remake.
+- **An allocation keeps the environment it was launched with.** A variable
+  exported afterwards never reaches its workers, nor does `NAME=value lc
+  run …` — write `lc run local -- env NAME=value python …` for a probe.
+  After changing such a variable, or upgrading `lc`, `down` the cluster and
+  launch a new one.
+- **An interrupted run is still running.** Killing `lc run` or
+  `lc materialize` detaches the client only; the command goes on on the
+  worker. `lc compute down <full-id>` — the `id` from `--json`, since a
+  name can already belong to a newer allocation — before touching
+  `results/`.
+- **stdin never reaches a command.** Pipe nothing into `lc run`; a file the
+  command reads is a declared input.
 - **A denial is telling you the truth.** Declare the input, the package or
   the system tool it names; there is no `--force` and no sandbox opt-out.

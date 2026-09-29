@@ -11,7 +11,7 @@ rather than working around it.
 - [Reaching for a system tool: containerizing](#reaching-for-a-system-tool-containerizing)
 - [Unexpected status](#unexpected-status)
 - [Clones and bytes](#clones-and-bytes)
-- [HPC and venues](#hpc-and-venues)
+- [Compute and clusters](#compute-and-clusters)
 
 ## The CLI itself
 
@@ -79,8 +79,8 @@ blocked.
 - **A blocked system tool** → the environment has no such tool; see
   containerizing below.
 
-Reproduce any of these cheaply with `lc run <command>`, which runs one
-command under exactly the policy a recipe gets. If it works there, it works
+Reproduce any of these cheaply with `lc run <cluster> -- <command>`, which
+runs one command under exactly the policy a recipe gets. If it works there, it works
 as a recipe.
 
 ## Reaching for a system tool: containerizing
@@ -135,11 +135,21 @@ does the right thing, and there is no annex command to run to make it happen.
   were never fetched. `lc materialize` fetches what a recipe declares; use
   `git annex get <path>` only for bytes you want to inspect yourself.
 
-## HPC and venues
+## Compute and clusters
 
-- **Login-node refusal (NERSC etc.)** — `lc materialize` runs on compute
-  nodes; the refusal prints the center's own `salloc`/`sbatch` lines to
-  copy. `lc status`, `lc materialize --check`, `lc run`, and `lc build`
-  work anywhere.
-- Inside a multi-node allocation the run spans nodes by itself — there is
-  no `--jobs` and nothing to configure.
+Most compute refusals name their own remedy; these need more than the
+message says.
+
+| You see | Do |
+|---|---|
+| `cluster name 'local' is already in use; choose another name` | Reuse `local`. Another name is refused too: one local cluster per user per machine |
+| `a local cluster is already running or starting for this user on this machine; …` | Reuse the cluster it names. The `down` or `kill` it prints is for a cluster you launched, or on the user's word |
+| `local compute is disabled …` | Nothing in `lc` overrides it: propose a shape from `lc compute resources` and launch it once the user agrees |
+| `no configured offer matches this resource request; …` | Relay the per-offer reasons it lists; ask before loosening the request |
+| `task needs … on one worker; no worker in this cluster can satisfy that request` | A recipe's `resources` exceed one node: a larger shape, or a smaller declaration if the code allows it |
+
+After an interrupted run, or an allocation that ended under one, the
+dirty-tree refusal lists stray `results/` files. Discard them only once
+`lc compute status <full-id>` shows `ended`: a recipe still running would
+write them again, and a local container can outlive `down` — check the
+container runtime too.

@@ -8,7 +8,7 @@ no bundle directory. Declaring a license turns on the publication view:
 
 1. Add an SPDX `license` (e.g. `license = "CC-BY-4.0"`) under `[project]`
    in `pyproject.toml`, and set authorship in the spec per the astra skill.
-2. Commit, then run `lc materialize` — nothing is remade; it converges
+2. Commit, then run `lc materialize <cluster>` — nothing is remade; it converges
    `ro-crate-metadata.json` (a Workflow/Provenance Run RO-Crate rendered
    from repository state) and commits it. `lc status`'s `crate:` line says
    whether the view is current.
