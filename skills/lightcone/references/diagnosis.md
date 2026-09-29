@@ -145,8 +145,11 @@ refusal names its remedy.
 | `Missing CLUSTER; create an allocation with lc compute launch.` | No cluster argument | Reuse one from `lc compute status`, or `lc compute launch --wait` |
 | `… has not started yet; wait for readiness with lc compute status CLUSTER --wait` | Allocated, workers not all connected | `lc compute status <name> --wait`, then re-run |
 | A name that no longer resolves | The allocation ended (walltime or `down`) | Launch a new one; names are reused, so never assume it is the same cluster |
-| `a local cluster is already running or starting for this user on this machine` | One local cluster per user per machine | Reuse the live one; `down` it only if you launched it |
-| `local compute is disabled by the compute configuration` | The catalog sets `local.enabled: false` (a login node) | Request a remote shape with `--cpus`/`--memory`, after the user agrees |
+| `a local cluster is already running or starting for this user on this machine; allocation …` | One local cluster per user per machine; the refusal names it and the catalog it was launched with | Reuse it — `LC_COMPUTE_CONFIG=<that catalog> lc compute status` if the current catalog does not list it. The printed `down` command is for a cluster you launched, or on the user's word |
+| The same, ending `retry shortly` | Another launch is still starting that cluster | Wait, then reuse it |
+| The same, with `owner process <pid> has no usable allocation record` | The cluster's record is lost or damaged | Tell the user; `kill <pid>` only with their agreement |
+| `local compute is disabled on NERSC login nodes; …` | `lc` refuses local compute on a NERSC login node, whatever the catalog says | Nothing overrides it: a Slurm shape with `--cpus`/`--memory` after the user agrees, or an interactive compute node |
+| `local compute is disabled by the compute configuration` | The catalog sets `local.enabled: false` | Request a remote shape with `--cpus`/`--memory`, after the user agrees |
 | `no configured offer matches this resource request; … <offer>: <why>` | Nothing in `lc compute resources` fits | Relay the per-offer reasons; ask before loosening the request |
 | `task needs … on one worker; no worker in this cluster can satisfy that request` | A recipe's `resources` exceed one node of this allocation | A larger shape, or a smaller declaration if the code allows it |
 | `time_limit` / `disk` / fractional `cpus` refused | `lc` does not honor them | Remove them from `recipe.resources`; walltime is `launch --time` |

@@ -25,7 +25,10 @@ lc compute launch --cpus 32+ --memory 128GB+ --num-nodes 2 --time 2h --name fit-
 - Quantities are **per node**. `32` is exact, `32+` at least 32. Compute
   memory is binary: `128`, `128GB` and `128GiB` all mean 128 GiB.
 - Give `--cpus` and `--memory` together, or neither — neither is the local
-  shortcut, which never selects a remote offer.
+  shortcut, which never selects a remote offer. The reverse can happen:
+  the built-in local offer comes after the configured ones, so a request
+  no remote offer fits lands on it. The plan's `offer` and `connection`
+  say which you got.
 - `--gpus A100:4` is exactly four A100s; `--gpus GPU:4` any model; the
   default `0` selects CPU-only offers. No `+` on GPU counts.
 - `--startup fast` filters to fast-start offers; it promises no queue time.
@@ -48,9 +51,17 @@ names) declares `connections` (a stable `namespace` UUID,
 `provider: slurm`, `context:` the Slurm cluster name) and ordered `offers`
 whose `config` carries `submit` (`sbatch` or `salloc`), `account`, `qos`,
 `constraint`, `partition`, `reservation` and `gpu_type`. It is the user's:
-the account is theirs to name and the file theirs to approve. Setting
-`local: {enabled: false}` stops a bare `lc compute launch` from taking a
-login node.
+the account is theirs to name and the file theirs to approve.
+
+Its `local` block governs the built-in local offer, which follows the
+configured ones. `local: {resources: {cpus: 4, memory: 8GiB}}` shrinks it
+(both fields, or neither); `local: {enabled: false}` blocks local launch
+and execution, while existing local clusters stay inspectable and
+stoppable. Recognized NERSC login nodes need neither: `lc` refuses local
+compute there on its own, and no setting overrides that — interactive
+compute nodes stay eligible. Elsewhere, a login node's catalog sets
+`enabled: false`. The name `local` is reserved: no configured connection,
+nor (while local is enabled) offer, may take it.
 
 Things that surprise on a first Slurm run:
 

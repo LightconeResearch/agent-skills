@@ -69,17 +69,19 @@ locally. What only reads needs none: `lc status`,
 `lc materialize --check`, `lc init`, `lc build`, and every `lc compute`
 verb work anywhere.
 
-1. **Reuse.** `lc compute status --json` lists every live allocation of
-   this user's, by native state only; `pending` is still queued. For an
-   `active` one, `lc compute status <name> --wait` checks its workers are
-   connected, returning at once when they are.
+1. **Reuse.** `lc compute status --json` lists this user's live
+   allocations under the current catalog, by native state only; `pending`
+   is still queued. For an `active` one, `lc compute status <name> --wait`
+   checks its workers are connected, returning at once when they are.
 2. **Launch.** On a workstation, `lc compute launch --wait` takes the
    built-in local offer — every usable CPU and all RAM, one node, 30
    minutes — names it `local`, and prints that name once every worker is
    connected. Only one local cluster runs per user per machine, so a
-   second launch fails while it lives: reuse it. Size the lifetime to the
-   work (`--time 1h30m`, two hours at most locally); at walltime the
-   allocation is killed, mid-write if a recipe is still running.
+   second launch fails while it lives, naming it: reuse it. Size the
+   lifetime to the work (`--time 1h30m`, two hours at most locally); at
+   walltime the allocation is killed, mid-write if a recipe is still
+   running. A NERSC login node refuses local compute whatever the catalog
+   says — there the work goes to Slurm or an interactive compute node.
 3. **Pass the name.** `lc run local -- python src/fit.py …`,
    `lc materialize local fit`. Shell variables do not survive between your
    tool calls, so carry the name itself, not `$CLUSTER`.
