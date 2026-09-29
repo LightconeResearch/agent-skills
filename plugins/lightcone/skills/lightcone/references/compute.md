@@ -10,10 +10,9 @@ GPUs, or declaring what a recipe needs.
 
 ## Choosing a shape
 
-`lc compute resources` lists everything you can get compute from, in
-selection order; free capacity is never known. That list is the whole
-menu — when nothing on it fits the work, tell the user. A request takes
-the **first** offer that satisfies it:
+`lc compute resources` lists the offers in selection order; free capacity
+is never known. When nothing on it fits the work, tell the user. A
+request takes the **first** offer that satisfies it:
 
 ```bash
 lc compute launch --cpus 32+ --memory 128GB+ --num-nodes 2 --time 2h --name fit-sweep --dry-run

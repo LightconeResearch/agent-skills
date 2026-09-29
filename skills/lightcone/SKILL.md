@@ -68,6 +68,10 @@ argument. Neither starts one, waits for one, or falls back to running
 locally. `lc status`, `lc materialize --check`, `lc init`, `lc build` and
 `lc compute` need none.
 
+`lc compute` is an abstracted view of the user's compute, whatever
+machines and schedulers lie behind it, and it is the only view to use:
+`lc compute resources` lists every shape you can get.
+
 1. **Reuse.** `lc compute status --json` lists this user's live
    allocations; `pending` is still queued. For an `active` one,
    `lc compute status <name> --wait` returns once its workers are
