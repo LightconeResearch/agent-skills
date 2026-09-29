@@ -41,7 +41,7 @@ The user installs the CLI once, on their machine, and that is the whole
 setup — it puts `lc` on their PATH:
 
 ```bash
-uv tool install lightcone-cli==0.5.0rc4
+uv tool install lightcone-cli==0.5.0rc5
 ```
 
 Name that version. While the line is a pre-release, a bare
@@ -53,7 +53,7 @@ checklist:
   check, already run by the session-start hook. Don't repeat it. You are all good.
 - **Seen the hook report a problem?** It names the remedy and who runs it.
 - **Seen neither?** Run `lc --version` yourself — this skill assumes
-  `lightcone-cli==0.5.0rc4` or newer. Silence is not an all-clear: the skill
+  `lightcone-cli==0.5.0rc5` or newer. Silence is not an all-clear: the skill
   also ships without that hook, and a subagent never sees session start.
   Remedies are in `references/diagnosis.md`.
 
@@ -65,23 +65,20 @@ what you changed.
 
 `lc run` and `lc materialize` execute on an allocation named as their first
 argument. Neither starts one, waits for one, or falls back to running
-locally. What only reads needs none: `lc status`,
-`lc materialize --check`, `lc init`, `lc build`, and every `lc compute`
-verb work anywhere.
+locally. `lc status`, `lc materialize --check`, `lc init`, `lc build` and
+`lc compute` need none.
 
 1. **Reuse.** `lc compute status --json` lists this user's live
-   allocations under the current catalog, by native state only; `pending`
-   is still queued. For an `active` one, `lc compute status <name> --wait`
-   checks its workers are connected, returning at once when they are.
+   allocations under the current catalog; `pending` is still queued. For
+   an `active` one, `lc compute status <name> --wait` returns once its
+   workers are connected.
 2. **Launch.** On a workstation, `lc compute launch --wait` takes the
    built-in local offer — every usable CPU and all RAM, one node, 30
-   minutes — names it `local`, and prints that name once every worker is
-   connected. Only one local cluster runs per user per machine, so a
-   second launch fails while it lives, naming it: reuse it. Size the
-   lifetime to the work (`--time 1h30m`, two hours at most locally); at
-   walltime the allocation is killed, mid-write if a recipe is still
-   running. A NERSC login node refuses local compute whatever the catalog
-   says — there the work goes to Slurm or an interactive compute node.
+   minutes — names it `local`, and prints that name once it is ready. Only
+   one local cluster runs per user per machine; a second launch is refused
+   and names the live one: reuse it. Size the lifetime to the work
+   (`--time 1h30m`, two hours at most locally); at walltime the allocation
+   is killed, mid-write if a recipe is still running.
 3. **Pass the name.** `lc run local -- python src/fit.py …`,
    `lc materialize local fit`. Shell variables do not survive between your
    tool calls, so carry the name itself, not `$CLUSTER`.
@@ -95,8 +92,7 @@ the `lc compute launch … --dry-run` plan and wait for a yes. Never `down`
 an allocation you did not launch unless the user asks — `lc compute status`
 lists theirs too, some possibly serving another session. The offer catalog
 (`~/.lightcone/compute.yaml`: accounts, QOS, GPU offers) is the user's
-machine configuration; draft it with them, never write it unasked. Details
-in `references/compute.md`.
+machine configuration; draft it with them, never write it unasked.
 
 ## Make an output
 
@@ -118,18 +114,15 @@ in `references/compute.md`.
    outputs chain), `{decisions.<id>}` the active option. Everything a
    command references must appear in that output's `inputs:` / `decisions:`
    — that is also how dependencies are declared. A recipe needing more
-   than one CPU, a known amount of RAM or a GPU declares it under
-   `recipe.resources` (`cpus: 4`, `memory: 8Gi`, `gpus: 1`); it must fit
-   one worker of the cluster, and it changes no output's identity. See
-   `references/compute.md` for what `lc` honors and refuses.
+   than one CPU, a set amount of RAM or a GPU declares it under
+   `recipe.resources` (`references/compute.md`).
 3. **Commit your edits**, by path: `git add src/ astra.yaml && git commit`.
 4. **`lc materialize <cluster> [targets]`.** Remakes what is `stale`,
    dependencies first, in parallel where the graph and the cluster allow,
    and commits each output as it lands. No target takes every output in
    every universe; `fit` takes that output across universes; `robust/fit`
    takes one universe's. Re-running is idempotent. You are done when
-   `lc materialize --check` passes — that, not `lc status`, is the gate,
-   and it takes no cluster.
+   `lc materialize --check` passes — that, not `lc status`, is the gate.
 
 Outputs land at `results/<universe>/<output_id>.<format>` — `lc` composes
 that path, no recipe chooses it, so the whole contents of `results/` are a
@@ -233,8 +226,7 @@ when its changes should cascade.
 Write to `astra.yaml` as each decision crystallizes rather than in bulk, and
 keep the conversation to a summary with ids — candidate decisions and
 findings belong in the file, where they can be reviewed. Confirm scope
-before anything long or billed (a full multiverse, a first container build,
-a Slurm allocation). Keep
+before anything long (a full multiverse, a first container build). Keep
 `AGENTS.md`'s Project Notes current: it holds what the spec cannot, and it is
 what a later session reads to pick the work up.
 
@@ -271,8 +263,7 @@ what a later session reads to pick the work up.
   sandbox or a scheduler yourself — `podman run`, `salloc`, `sbatch`,
   `srun`, `scancel` and friends bypass the environment, the isolation and
   the run record, and whatever they write into `results/` is a foreign
-  write the next run will remake. Allocate with `lc compute launch`, end
-  with `lc compute down`.
+  write the next run will remake.
 - **An allocation keeps the environment it was launched with.** A variable
   exported afterwards never reaches its workers, nor does `NAME=value lc
   run …` — write `lc run local -- env NAME=value python …` for a probe.
