@@ -20,7 +20,7 @@ Two things on your PATH:
 | Tool | Why | Install |
 |---|---|---|
 | `uv` | Runs Python and the ASTRA CLI | [astral.sh/uv](https://astral.sh/uv) |
-| Claude Code or Codex | The agent doing the work | `npm install -g @anthropic-ai/claude-code` / `npm install -g @openai/codex` |
+| Claude Code, Codex or OpenCode | The agent doing the work | `npm install -g @anthropic-ai/claude-code` / `npm install -g @openai/codex` / [opencode.ai](https://opencode.ai) |
 
 Then the [`astra` plugin](astra.md), which teaches your agent the format:
 
@@ -37,6 +37,16 @@ Then the [`astra` plugin](astra.md), which teaches your agent the format:
     codex plugin marketplace add LightconeResearch/agent-skills
     codex plugin add astra@lightcone-research
     ```
+
+=== "OpenCode"
+
+    ```bash
+    npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
+    ```
+
+    OpenCode runs the skill but not the plugin's hooks, so where the tutorial
+    says a hook validated the file, ask the agent to run
+    `astra validate astra.yaml` instead.
 
 There is nothing else to install: the plugin runs the ASTRA CLI through `uvx`,
 which fetches it on first use.

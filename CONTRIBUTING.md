@@ -133,4 +133,9 @@ claude plugin validate ./plugins/astra   # (Codex plugin.json layout)
 
 # npx skills, from the repo:
 npx skills add ./ --list
+
+# OpenCode (and any other agent the skills CLI targets) consumes a packaged
+# plugin dir — point at plugins/<name>, locally or via the GitHub tree URL:
+npx skills add ./plugins/astra -a opencode --list
+npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode --list
 ```
