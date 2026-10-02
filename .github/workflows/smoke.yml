@@ -181,6 +181,9 @@ jobs:
         run: |
           K=1 N=5 evals/bin/smoke.sh oracle
           python3 evals/bin/report.py render evals/jobs --expect-tasks "${{ steps.plan.outputs.tasks }}" --out oracle-report
+      - name: Redact API keys
+        if: always()
+        run: python3 evals/bin/redact.py evals/jobs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -245,6 +248,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CODEX_FORCE_AUTH_JSON: "0"
         run: N=5 evals/bin/smoke.sh "${{ matrix.leg.spec }}"
+      - name: Redact API keys (trajectories record whatever the agent printed)
+        if: always() && hashFiles('evals/bin/redact.py') != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python3 evals/bin/redact.py evals/jobs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -305,6 +314,12 @@ jobs:
           cat judge-these.txt
           [ -s judge-these.txt ] || { echo "nothing to judge"; exit 0; }
           evals/bin/judge.sh < judge-these.txt
+      - name: Redact API keys before anything is rendered or uploaded
+        if: always()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python3 evals/bin/redact.py evals/jobs
       - name: Report
         id: report
         env:
