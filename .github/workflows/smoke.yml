@@ -198,6 +198,9 @@ jobs:
           LEG_KEY: ${{ secrets[matrix.leg.key] }}
         run: |
           if [ -z "$LEG_KEY" ]; then
+            # The report reads this to show the leg as "not run" with its reason.
+            mkdir -p evals/jobs
+            echo "${{ matrix.leg.key }} not set (or this is a fork PR)" > "evals/jobs/${{ matrix.leg.name }}.status"
             echo "::error::${{ matrix.leg.name }} needs the ${{ matrix.leg.key }} repository secret, which is not set (or this is a fork PR)."
             exit 1
           fi
@@ -289,14 +292,21 @@ jobs:
           BASELINE: ${{ steps.baseline.outputs.path }}
           BASE_LABEL: ${{ steps.baseline.outputs.label && format('{0}, run {1}', steps.baseline.outputs.label, steps.baseline.outputs.run) || '' }}
           RECORD: ${{ github.event_name == 'push' && '--record' || '' }}
-          JUDGE_FAILED: ${{ steps.judge.outcome == 'failure' && '--judge-failed' || '' }}
+          JUDGE_FAILED: ${{ steps.judge.outcome == 'failure' && 'true' || '' }}
+          # Every planned leg appears in the comment, including those that never ran.
+          EXPECT_LEGS: ${{ needs.legs.result != 'skipped' && join(fromJSON(needs.oracle.outputs.legs || '[]').*.name, ' ') || '' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set +e
-          # shellcheck disable=SC2086  # RECORD and JUDGE_FAILED are a flag or empty
+          note=""
+          if [ "$JUDGE_FAILED" = true ]; then
+            note="**The judge did not run to completion**; failures above carry no judge notes. See the run log."
+          fi
+          # shellcheck disable=SC2086  # RECORD is a flag or empty
           python3 evals/bin/report.py render evals/jobs ${BASELINE:+--baseline "$BASELINE"} \
             --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" \
-            --base-label "$BASE_LABEL" --out smoke-report $RECORD $JUDGE_FAILED
+            --base-label "$BASE_LABEL" --judge-note "$note" --expect-legs "$EXPECT_LEGS" \
+            --out smoke-report $RECORD
           echo "gate=$?" >> "$GITHUB_OUTPUT"
           [ -f evals/jobs/judge/analysis.json ] && cp evals/jobs/judge/analysis.json smoke-report/judge-analysis.json
           cat smoke-report/summary.md >> "$GITHUB_STEP_SUMMARY"

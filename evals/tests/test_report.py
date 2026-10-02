@@ -131,3 +131,46 @@ def test_select_failures_and_outliers(tmp_path):
                           capture_output=True, text=True)
     picked = sorted(Path(p).name for p in proc.stdout.split())
     assert picked == [f"astra-author__{LEG}0", f"astra-author__{LEG}1"]
+
+
+def infra_trial(jobs: Path, leg: str, task: str, i: int, exc: str = "ApiUsageLimitError"):
+    tdir = jobs / leg / leg / f"{task}__{leg}{i}"
+    tdir.mkdir(parents=True)
+    (tdir / "result.json").write_text(json.dumps({
+        "trial_name": tdir.name, "task_name": f"lightcone/smoke-{task}",
+        "exception_info": {"exception_type": exc}}))
+
+
+def test_infra_errors_are_not_failures_but_block_as_unmeasured(tmp_path):
+    jobs = tmp_path / "jobs"
+    for task in TASKS:
+        infra_trial(jobs, "codex-luna-skill", task, 0)
+        infra_trial(jobs, "codex-luna-skill", task, 1)
+    run_cell(jobs, "astra-author", 2)
+    base = baseline(tmp_path, {"astra-author": (10, 10)})
+    rc, summary = render(tmp_path, base)
+    assert rc == 1
+    assert not any(c["leg"] == "codex-luna-skill" for c in summary["cells"].values())
+    assert not any(k.startswith("codex-luna-skill/") for k in summary["pool"])
+    luna = next(g for g in summary["leg_status"] if g["leg"] == "codex-luna-skill")
+    assert luna["state"] == "not measured"
+    assert luna["reason"] == "6/6 trials hit ApiUsageLimitError (provider quota)"
+    comment = (tmp_path / "out" / "comment.md").read_text()
+    assert comment.count("ApiUsageLimitError") == 1  # one line for the leg, none per trial
+    proc = subprocess.run([sys.executable, str(REPORT), "select", str(jobs)], capture_output=True, text=True)
+    assert proc.stdout == ""  # infra trials are never judged
+
+
+def test_expected_leg_without_trials_shows_as_not_run(tmp_path):
+    jobs = tmp_path / "jobs"
+    run_cell(jobs, "astra-author", 2)
+    (jobs / "claude-haiku-plugin.status").write_text("ANTHROPIC_API_KEY not set\n")
+    rc, summary = render(tmp_path, baseline(tmp_path, {"astra-author": (10, 10)}),
+                         "--expect-legs", f"{LEG} claude-haiku-plugin")
+    assert rc == 1
+    plugin = next(g for g in summary["leg_status"] if g["leg"] == "claude-haiku-plugin")
+    assert plugin == {"leg": "claude-haiku-plugin", "state": "not run",
+                      "reason": "ANTHROPIC_API_KEY not set", "measured": 0, "infra": 0}
+    comment = (tmp_path / "out" / "comment.md").read_text()
+    assert "**not run** · claude-haiku-plugin: ANTHROPIC_API_KEY not set" in comment
+    assert "| task | claude-haiku-plugin | claude-haiku-skill |" in comment
