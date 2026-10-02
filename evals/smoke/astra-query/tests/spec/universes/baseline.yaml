@@ -1,0 +1,6 @@
+id: baseline
+description: Every decision at its default.
+decisions:
+  outlier_cut: none
+  fit_model: linear
+  uncertainty: analytic

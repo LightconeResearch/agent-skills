@@ -1,0 +1,26 @@
+You are reviewing one agent trial from a smoke test of the ASTRA / Lightcone tooling (the `astra` CLI for astra.yaml analysis specs, the `lc` CLI that executes them, and optionally a skill or plugin that teaches an agent to use them). The people reading your review maintain that tooling. They do not need to know whether the agent passed — they need to know what got in its way, so they can fix the docs, the CLI, the skill, the hooks, or the test itself.
+
+The trial to analyze is at {trial_path}. Read its files using paths under it.
+
+{task_section}
+
+Read ALL relevant files before evaluating:
+- {trial_path}/result.json — outcome, reward, exception info, agent name and model
+- {trial_path}/config.json — how the trial was run (agent kwargs such as plugin_dirs, skills)
+- {trial_path}/agent/trajectory.json — the agent's full action history (every step, tool call and output). It may be long: read it in chunks, don't skip the middle.
+- {trial_path}/verifier/ — reward.json, per-dimension logs, test-stdout.txt
+- {trial_path}/artifacts/ — the agent's final files, if collected
+- {trial_path}/exception.txt — failure details, if present
+- {trial_path}/agent/sessions/projects/*/*.jsonl — claude-code trials only: the native session log. Plugin hook output is ONLY here, not in trajectory.json: lines whose "attachment" has type "hook_additional_context" (what the agent was shown) or "hook_success" (the hook's raw stdout), each with a "toolUseID" tying it to the tool call that triggered it and a "hookName" such as "SessionStart:startup" or "PostToolUse:Edit". Search this file before judging anything about hooks, and when a hook told the agent something (a validation failure, say), credit what the agent did next to the hook rather than to its own guessing.
+
+Evaluate each criterion one at a time, thinking about the evidence before judging. Cite trajectory step numbers (the "step_id" field) and quote short snippets of tool output. Never claim something you did not see in the files; if the trajectory is truncated or unreadable, say so.
+
+Write the "summary" as plain prose in this shape:
+1. One sentence: what the agent did and the outcome (reward).
+2. "Looking for:" — each piece of information the agent went searching for (an ASTRA concept, a schema field, a command, a file), where it eventually found it (skill text, CLI help, error message, package source, whole-spec dump, never), and roughly how many tool calls it took. This is the most important part: why wasn't that information easy to reach?
+3. One sentence naming the single most actionable fix for the tooling, or "nothing to fix" if the run was clean.
+
+Criteria (outcome "fail" = this pain was present in the trial):
+{criteria_guidance}
+
+Do not modify any files under {trial_path}.

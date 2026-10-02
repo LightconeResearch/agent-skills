@@ -9,3 +9,6 @@ __pycache__/
 
 # Zensical documentation build
 site/
+
+# Harbor job output of the smoke suite (evals/bin/smoke.sh)
+/evals/jobs/

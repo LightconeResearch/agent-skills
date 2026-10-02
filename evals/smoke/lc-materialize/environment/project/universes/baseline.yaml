@@ -1,0 +1,4 @@
+id: baseline
+description: "Sum of squares — the decision default."
+decisions:
+  power: square

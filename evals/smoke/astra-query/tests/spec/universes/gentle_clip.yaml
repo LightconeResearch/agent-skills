@@ -1,0 +1,7 @@
+id: gentle_clip
+description: Sigma-clip at 5 sigma, linear model.
+decisions:
+  outlier_cut: sigma_clip
+  clip_threshold: five_sigma
+  fit_model: linear
+  uncertainty: bootstrap

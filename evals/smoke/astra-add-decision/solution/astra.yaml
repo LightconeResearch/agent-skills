@@ -1,0 +1,34 @@
+version: "0.0.14"
+name: Line fit
+description: Clean a small x-y table, then fit a polynomial to it.
+inputs:
+  - id: raw_data
+    type: data
+    source: data/raw.csv
+    description: Raw x-y measurements; some y values are missing or -999.
+outputs:
+  - id: clean_data
+    type: data
+    format: csv
+    description: Rows of raw_data with a valid y value.
+    inputs: [raw_data]
+    recipe:
+      command: python scripts/clean.py {inputs.raw_data} {output}
+  - id: fit_result
+    type: metric
+    format: json
+    description: Best-fit polynomial coefficients.
+    inputs: [clean_data]
+    decisions: [fit_model]
+    recipe:
+      command: >-
+        python scripts/fit.py --clean {inputs.clean_data}
+        --model {decisions.fit_model} --out {output}
+decisions:
+  fit_model:
+    label: Fit model
+    rationale: The trend may curve; a quadratic term changes the fitted slope.
+    default: linear
+    options:
+      linear: { label: "Linear, y = a + b x" }
+      quadratic: { label: "Quadratic, y = a + b x + c x^2" }

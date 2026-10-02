@@ -1,0 +1,4 @@
+id: quadratic
+description: Quadratic fit model.
+decisions:
+  fit_model: quadratic

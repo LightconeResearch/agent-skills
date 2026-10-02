@@ -1,0 +1,86 @@
+version: "0.0.14"
+name: Line fit with outlier handling
+description: >-
+  Clean a small x-y table, optionally sigma-clip outliers, fit a polynomial
+  with uncertainties, and plot the residuals.
+inputs:
+  - id: raw_data
+    type: data
+    source: data/raw.csv
+    description: Raw x-y measurements; some y values are missing or -999.
+outputs:
+  - id: clean_data
+    type: data
+    format: csv
+    description: Rows with a valid y value, after optional outlier clipping.
+    inputs: [raw_data]
+    decisions: [outlier_cut, clip_threshold]
+    recipe:
+      command: >-
+        python scripts/clean.py {inputs.raw_data} {output}
+        --cut {decisions.outlier_cut} --threshold {decisions.clip_threshold}
+  - id: clip_report
+    type: report
+    format: md
+    when: [outlier_cut.sigma_clip]
+    description: Which rows the sigma clip removed, and why.
+    inputs: [raw_data]
+    decisions: [clip_threshold]
+    recipe:
+      command: python scripts/clip_report.py {inputs.raw_data} --threshold {decisions.clip_threshold} --out {output}
+  - id: fit_result
+    type: metric
+    format: json
+    description: Best-fit polynomial coefficients with uncertainties.
+    inputs: [clean_data]
+    decisions: [fit_model, uncertainty]
+    recipe:
+      command: >-
+        python scripts/fit.py --clean {inputs.clean_data}
+        --model {decisions.fit_model} --errors {decisions.uncertainty} --out {output}
+  - id: residual_plot
+    type: figure
+    format: png
+    description: Data minus best-fit model against x.
+    inputs: [clean_data, fit_result]
+    recipe:
+      command: python scripts/plot_residuals.py {inputs.clean_data} {inputs.fit_result} {output}
+  - id: data_summary
+    type: table
+    format: csv
+    description: Row counts and y-range of the raw table.
+    inputs: [raw_data]
+    recipe:
+      command: python scripts/summary.py {inputs.raw_data} {output}
+decisions:
+  outlier_cut:
+    label: Outlier rejection
+    rationale: A few points sit far off the trend; whether to remove them changes the fit.
+    default: none
+    options:
+      none: { label: Keep every valid row }
+      sigma_clip: { label: Iterative sigma clip about a linear trend }
+  clip_threshold:
+    label: Sigma-clip threshold
+    when: [outlier_cut.sigma_clip]
+    rationale: Only meaningful when sigma clipping is enabled.
+    default: five_sigma
+    options:
+      three_sigma: { label: Clip beyond 3 sigma }
+      five_sigma: { label: Clip beyond 5 sigma }
+  fit_model:
+    label: Fit model
+    default: linear
+    options:
+      linear: { label: "Linear, y = a + b x" }
+      quadratic: { label: "Quadratic, y = a + b x + c x^2" }
+  uncertainty:
+    label: Coefficient uncertainties
+    default: analytic
+    options:
+      analytic:
+        label: Analytic least-squares covariance
+        incompatible_with: [outlier_cut.sigma_clip]
+        description: The covariance formula ignores the data-dependent clipping step.
+      bootstrap:
+        label: Bootstrap resampling of the full pipeline

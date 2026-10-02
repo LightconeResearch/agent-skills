@@ -22,6 +22,11 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
   `scripts/e2e-hooks.mjs` (`npm run e2e`, and the `e2e-hooks` CI workflow)
   against real headless Claude Code and Codex sessions. To cover a new
   plugin, add a spec here — no runner changes needed.
+- `evals/` — the agent-level plugin smoke suite: Harbor tasks a cheap model
+  must get through with the plugin loaded, run on PRs by
+  `.github/workflows/smoke.yml` (see `evals/README.md`). Python tooling, run
+  with `uv`; it sits outside the Node generator, and `npm run smoke` is a
+  different, install-level check.
 
 ## Generated — do not hand-edit
 

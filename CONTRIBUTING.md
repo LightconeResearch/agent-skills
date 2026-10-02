@@ -120,6 +120,11 @@ npm run smoke            # CLI install (both harnesses) + interactive tmux insta
 npm run smoke -- --cli   # CLI only (hermetic; isolated config dirs)
 ```
 
+For whether an agent using the plugin still gets its work done — five Harbor
+tasks run by Claude Code and Codex in containers with the real `astra` and
+`lc` — see [`evals/README.md`](evals/README.md); CI runs it on every PR that
+touches the plugins.
+
 ## Local testing of the install paths
 
 ```bash

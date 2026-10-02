@@ -1,0 +1,37 @@
+version: "0.0.14"
+name: "toy_moments"
+description: |
+  A toy analysis: sum the integers 1..10 raised to a chosen power, then
+  write a one-line summary of that sum.
+
+inputs:
+  - id: numbers
+    type: data
+    source: data/numbers.txt
+    description: "The integers 1 to 10, one per line"
+
+outputs:
+  - id: moments
+    type: metric
+    format: json
+    description: "n, power and the sum of each number raised to that power"
+    inputs: [numbers]
+    decisions: [power]
+    recipe:
+      command: python src/moments.py --numbers {inputs.numbers} --power {decisions.power} --output {output}
+
+  - id: summary
+    type: table
+    description: "One-line summary of the moments output"
+    inputs: [moments]
+
+decisions:
+  power:
+    label: "Power"
+    rationale: "Which moment of the numbers to sum."
+    default: square
+    options:
+      linear:
+        label: "Plain sum (power 1)"
+      square:
+        label: "Sum of squares (power 2)"

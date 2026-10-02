@@ -1,0 +1,7 @@
+id: robust
+description: Sigma-clip at 3 sigma, quadratic model, bootstrap errors.
+decisions:
+  outlier_cut: sigma_clip
+  clip_threshold: three_sigma
+  fit_model: quadratic
+  uncertainty: bootstrap

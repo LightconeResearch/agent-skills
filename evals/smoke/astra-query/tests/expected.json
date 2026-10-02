@@ -1,0 +1,19 @@
+{
+  "robust_clip_threshold": "three_sigma",
+  "baseline_clip_threshold": null,
+  "clip_threshold_affected_outputs": [
+    "clean_data",
+    "clip_report",
+    "fit_result",
+    "residual_plot"
+  ],
+  "baseline_outputs": [
+    "clean_data",
+    "data_summary",
+    "fit_result",
+    "residual_plot"
+  ],
+  "sigma_clip_uncertainty_options": [
+    "bootstrap"
+  ]
+}

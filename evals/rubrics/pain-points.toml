@@ -1,0 +1,39 @@
+# Pain-point taxonomy for `harbor analyze` (evals/bin/judge.sh). Each criterion is a
+# badge: outcome "fail" means the pain was observed in this trial (badge lit),
+# "pass" means it was looked for and not seen, "not_applicable" means the trial
+# gives no basis to judge. Every "fail" must cite trajectory steps.
+
+[[criteria]]
+name = "doc_gap"
+description = "Did the agent need information about ASTRA or lc (a concept, schema field, command, workflow step) that it could not find quickly in the skill, the CLI's help, or the project?"
+guidance = "Find the moments the agent was looking for something: grepping or cat-ing the installed package source, reading the JSON schema or whole spec to discover a field, calling help on many subcommands, trying several YAML shapes until validate passed, or guessing a concept (e.g. how a decision depends on another decision, how universes select options, how to name an output). FAIL if at least one such search cost more than ~3 tool calls or ended in a guess; in the explanation name WHAT it was looking for, WHERE it eventually found it (or that it never did), and the step numbers. PASS if everything it needed was found directly (skill text, one help call, an error message that said exactly what to do). NOT_APPLICABLE if the agent never got to the task."
+
+[[criteria]]
+name = "tool_error"
+description = "Did the astra or lc CLI crash, emit a traceback, or give an error message that was wrong, misleading, or did not say how to fix the problem?"
+guidance = "Look at every astra/lc/uvx invocation's output in the trajectory. A clear validation error that names the field and the fix is the tool working — PASS. FAIL on a Python traceback, a non-zero exit with no actionable message, a message that pointed the agent the wrong way, or output that contradicts the docs; quote the message and give the step. Errors caused by the agent's own shell typos are not tool errors."
+
+[[criteria]]
+name = "hook_friction"
+description = "Did plugin hooks (SessionStart context, validate-on-save after Write/Edit) misfire, mislead, add noise, or slow the agent?"
+guidance = "Hook output is in the claude-code session log (agent/sessions/projects/*/*.jsonl, attachments of type hook_additional_context / hook_success), not in trajectory.json: e.g. 'ASTRA project — spec at ./astra.yaml', 'Lightcone CLI ready', 'ASTRA validation FAILED/passed' after a save. NOT_APPLICABLE if the session log shows no hook records (no plugin installed, or a codex trial). FAIL if a hook gave wrong or stale advice, reported errors on intermediate saves that sent the agent off course, told it to install something unnecessary, or fired so often it cluttered the work; cite steps. PASS if hooks fired and helped or were harmless."
+
+[[criteria]]
+name = "redundant_calls"
+description = "Did the agent repeat near-identical tool calls (summary/info/validate/status/help, or rereading the same file) without an intervening change that would alter the result?"
+guidance = "Count repeated calls of the same command or file read with the same arguments and no relevant edit in between. FAIL if any such call happens 3+ times, or if the agent dumped the whole spec/schema repeatedly to find one fact; give the command, the count, and what it was trying to learn. Repeated `astra validate` after each real edit is iteration, not redundancy — PASS."
+
+[[criteria]]
+name = "env_broken"
+description = "Did the environment or harness get in the way — missing package or binary, permission denied, network/rate limit, timeout from infrastructure, broken container?"
+guidance = "Check result.json exception_info, trial.log, and tool outputs for permission errors, 'command not found' for a tool the task says is installed, network failures, rate-limit messages, or the agent being cut off. FAIL with the evidence if the environment (not the product's own behaviour, not the agent) caused trouble. PASS otherwise."
+
+[[criteria]]
+name = "task_underspecified"
+description = "Did the instruction leave out or contradict something the verifier required?"
+guidance = "Compare the task's instruction.md with tests/ (and solution/). FAIL if the verifier checks a name, key, path, or format the instruction does not state, or the instruction is ambiguous in a way that plausibly caused this trial's outcome; say exactly what is missing. PASS if a careful agent could satisfy the verifier from the instruction alone."
+
+[[criteria]]
+name = "verifier_wrong"
+description = "Does the verifier's verdict disagree with what the agent actually produced?"
+guidance = "Read verifier/ outputs (reward.json, per-dimension logs, test-stdout.txt) and compare with the agent's final files (artifacts/ if present) and its last actions. FAIL if the verifier failed correct work or passed work that does not do what the instruction asked; explain. PASS if the verdict matches the work. NOT_APPLICABLE if the verifier never ran."

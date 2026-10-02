@@ -1,0 +1,42 @@
+# Plugin smoke test: materialize one declared output of a ready Lightcone project with lc.
+schema_version = "1.4"
+artifacts = [
+  { source = "/root/toy-moments/results/baseline/summary.txt", destination = "summary.txt" },
+  { source = "/root/toy-moments/results/baseline/.summary.manifest.json", destination = "summary.manifest.json" },
+]
+
+[task]
+name = "lightcone/smoke-lc-materialize"
+version = "0.1.0"
+description = "Materialize one output (and its upstream dependency) of a ready two-recipe Lightcone project with lc, which needs a local compute cluster first."
+keywords = ["lightcone", "lc", "smoke", "materialize"]
+[[task.authors]]
+name = "cailmdaley"
+email = "cailmdaley@gmail.com"
+
+[metadata]
+category = "natural-science"
+difficulty = "easy"
+
+[verifier]
+timeout_sec = 180.0
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 1800.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+gpus = 0
+mcp_servers = []
+
+[environment.env]
+
+[solution.env]
