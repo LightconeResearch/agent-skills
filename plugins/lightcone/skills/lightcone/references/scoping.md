@@ -80,7 +80,7 @@ Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
 1. Checkpoint: "Anything else that should inform this analysis?"
 2. **Regenerate the baseline universe** from the decision defaults,
    overwriting the scaffolded one that selects nothing:
-   `uvx astra-tools@0.2.17 universe generate -n baseline --force`. Generate
+   `uvx astra-tools@0.2.18 universe generate -n baseline --force`. Generate
    no other universe unless the user asks for more (universe commands: astra
    skill).
 3. Validate the spec per the astra skill — verifying evidence too, if any

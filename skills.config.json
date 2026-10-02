@@ -21,7 +21,7 @@
       "hooks": "hooks/astra/hooks.json",
       "tools": {
         "$comment": "Pins for the CLI tools this plugin's skills and hooks invoke via `uvx <name>@<version>`. Canonical skills/ and hooks/ write the literal `@x.y.z` placeholder — never a concrete version — and `npm run build` substitutes each bundling plugin's pin into the generated plugins/<name>/ copies.",
-        "astra-tools": "0.2.17"
+        "astra-tools": "0.2.18"
       },
       "dependencies": []
     },
