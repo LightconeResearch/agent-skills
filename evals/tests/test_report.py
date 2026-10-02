@@ -266,3 +266,13 @@ def test_a_leg_short_of_k_trials_is_partly_measured(tmp_path):
     _, recorded = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in TASKS}),
                          "--expect-tasks", " ".join(TASKS), "--expect-legs", LEG, "--k", "2", "--record")
     assert recorded["gate"] == "pass"  # main records; coverage gates PRs
+
+
+def test_astra_override_blocks_with_a_labelled_line(tmp_path):
+    jobs = tmp_path / "jobs"
+    trial(jobs, "oracle", "astra-author", 0, 1.0)
+    override = "lightcone-cli 0.5.1.dev3 requires astra-tools ==0.2.18, testing astra-tools 0.2.19.dev7"
+    (jobs / "stack.json").write_text(json.dumps({"skew": None, "override": override}))
+    rc, _ = render(tmp_path, None, "--stack", str(jobs / "stack.json"))
+    assert rc == 1
+    assert f"- **blocking** · override: {override}" in (tmp_path / "out" / "comment.md").read_text()

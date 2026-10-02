@@ -197,7 +197,7 @@ jobs:
       - name: Fail on version skew
         if: steps.skew.outcome == 'failure'
         run: |
-          echo "::error::astra-tools version skew between lightcone-cli and the plugin pin (see the 'Version-skew check' step)"
+          echo "::error::astra-tools skew or override against lightcone-cli's requirement (see the 'Version-skew check' step)"
           exit 1
 
   legs:

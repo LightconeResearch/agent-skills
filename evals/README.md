@@ -44,7 +44,7 @@ desktop-linux` on Docker Desktop) and `uv tool install harbor==0.22.0`.
 
 ```bash
 evals/bin/build-images.sh                      # or LIGHTCONE_REF=main evals/bin/build-images.sh
-evals/bin/stack-info.sh                        # versions in the stack; exits 1 on astra-tools skew
+evals/bin/stack-info.sh                        # versions in the stack; exits 1 on astra-tools skew or override
 K=1 evals/bin/smoke.sh oracle                  # reference solutions: every reward must be 1.0
 K=1 evals/bin/smoke.sh claude-code:claude-haiku-4-5:plugin
 evals/bin/report.py select evals/jobs | evals/bin/judge.sh   # judge the failures

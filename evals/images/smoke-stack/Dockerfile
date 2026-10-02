@@ -26,7 +26,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # uv must be >= 0.12: lc 0.5 scaffolds `[tool.uv] required-version = ">=0.12"`.
 # ASTRA_TOOLS overrides lightcone-cli's own astra-tools requirement, so a leg
 # can pair lc with an astra-tools it does not declare (evals/bin/stack-info.sh
-# reports that skew); when the two agree the override changes nothing.
+# reports that as an override, which fails the run); when the two agree the
+# override changes nothing.
 RUN : "${ASTRA_TOOLS:?}" "${ASTRA_PIN:?}" "${LIGHTCONE_CLI:?}" \
     && python -m pip install --no-cache-dir uv==0.12.22 \
     && printf '%s\n' "$ASTRA_TOOLS" > /tmp/astra-override.txt \

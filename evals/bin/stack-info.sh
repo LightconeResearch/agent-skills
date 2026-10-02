@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # What the built lightcone-smoke-stack holds, as one JSON object on stdout, and
-# the version-skew check: "skew" in the JSON names it, and the script exits 1
-# with a one-line message, if the astra-tools
-# lightcone-cli requires differs from the plugin's astra-tools pin. With that
-# split, a plugin user runs one astra through the skill's uvx and another
-# under lc.
+# two checks against the astra-tools requirement lightcone-cli declares:
+#   skew      the plugin's astra-tools pin does not satisfy it;
+#   override  the installed astra-tools does not (the latest leg installs
+#             astra-tools main over lc's pin on purpose; this makes that loud).
+# Each one found is named in the JSON and on stderr, and the script exits 1.
+# Either way a plugin user would run one astra through the skill's uvx and
+# another under lc.
 #
 #   evals/bin/stack-info.sh > stack.json
 set -euo pipefail
@@ -26,11 +28,19 @@ info = {
     "lightcone_cli_requires_astra_tools": required,
     "plugin_astra_tools_pin": pin,
     "skew": None,
+    "override": None,
 }
-if required and not SpecifierSet(required).contains(pin, prereleases=True):
+spec = SpecifierSet(required) if required else None
+if spec is not None and not spec.contains(pin, prereleases=True):
     info["skew"] = (f"lightcone-cli {info['lightcone_cli']} requires astra-tools {required}, "
                     f"the plugin pins astra-tools {pin}")
+if spec is not None and not spec.contains(info["astra_tools"], prereleases=True):
+    info["override"] = (f"lightcone-cli {info['lightcone_cli']} requires astra-tools {required}, "
+                        f"testing astra-tools {info['astra_tools']}")
 print(json.dumps(info))
-if info["skew"]:
-    sys.exit(f"version skew: {info['skew']}")
+for key, label in (("skew", "version skew"), ("override", "override")):
+    if info[key]:
+        print(f"{label}: {info[key]}", file=sys.stderr)
+if info["skew"] or info["override"]:
+    sys.exit(1)
 PY

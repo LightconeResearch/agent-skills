@@ -35,7 +35,7 @@ counted in k/n or the pool, and collapse to one "not measured" line per leg.
 A leg that did not run at all (an expected leg, --expect-legs, with no trials)
 shows as "not run", with the reason from its <leg>.status file. Either one
 blocks: an unmeasured leg must not pass silently.
-A version skew recorded in --stack blocks. So does any upstream job that
+A version skew or an astra-tools override recorded in --stack blocks. So does any upstream job that
 failed (--job name=result, from the workflow's `needs`) when nothing else
 already explains the failure: a failed job never renders as passing.
 Any failure in a cell with baseline rate >= STRONG that does not block is a
@@ -409,6 +409,8 @@ def render(args) -> int:
         upstream.append(f"oracle: no reference run for {', '.join(no_oracle)}")
     if stack and stack.get("skew"):
         upstream.append(f"version skew: {stack['skew']}")
+    if stack and stack.get("override"):
+        upstream.append(f"override: {stack['override']}")
     failed_jobs = [j.split("=", 1) for j in args.job if j.split("=", 1)[-1] in ("failure", "cancelled")]
     if failed_jobs and not (upstream or blocking or blocking_legs or unmeasured_blocking):
         upstream += [f"the {name} job ended in {result}; see the run log" for name, result in failed_jobs]
