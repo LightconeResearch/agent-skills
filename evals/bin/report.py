@@ -36,7 +36,12 @@ A leg that did not run at all (an expected leg, --expect-legs, with no trials)
 shows as "not run", with the reason from its <leg>.status file. Either one
 blocks: an unmeasured leg must not pass silently.
 Any failure in a cell with baseline rate >= STRONG that does not block is a
-warning, listed first. Failures in cells already weak on main are known.
+warning, listed first.
+Effort (a warning, never a block), per leg and separately for turns and
+astra/lc calls: each passing trial is compared with its cell's pooled median.
+The leg is flagged when a one-sided sign test over those comparisons gives
+P(X >= above | n, 1/2) < EFFORT_ALPHA (ties dropped) and the leg's total is
+at least EFFORT_RATIO times the sum of its trials' cell medians. Failures in cells already weak on main are known.
 --record (runs on main) gates on the oracle only: main records what is true.
 """
 
@@ -79,6 +84,8 @@ INFRA = {
 }
 STRONG = 0.8
 LEG_ALPHA = 0.01
+EFFORT_ALPHA = 0.05
+EFFORT_RATIO = 1.25
 STACK_CALL = re.compile(r"(^|[\s;&|(/])(astra|astra-tools(@[\w.]+)?|lc)\s")
 CODEX_CMD = re.compile(r'cmd\s*:\s*"((?:[^"\\]|\\.)*)"')
 
@@ -280,6 +287,29 @@ def leg_status(jobs: Path, expected: list[str], trials: list[dict], infra: list[
     return out
 
 
+def effort_tests(trials: list[dict], bases: dict[str, dict | None]) -> list[dict]:
+    """Per agent leg and metric: passing trials against their cells' pooled medians."""
+    out = []
+    for leg in sorted({t["leg"] for t in trials} - {"oracle"}):
+        for field, what in (("turns", "turns"), ("stack_calls", "astra/lc calls")):
+            rows = []  # (task, this trial's value, the cell's pooled median)
+            for t in trials:
+                base = bases.get(f"{leg}/{t['task']}")
+                if t["leg"] == leg and t["passed"] and t[field] is not None and base and base[field] is not None:
+                    rows.append((t["task"], t[field], base[field]))
+            above = sum(v > m for _, v, m in rows)
+            n = sum(v != m for _, v, m in rows)
+            ref = sum(m for _, _, m in rows)
+            ratio = sum(v for _, v, _ in rows) / ref if ref else None
+            p = 1 - binom_cdf(above - 1, n, 0.5) if above else 1.0
+            cell_meds = {task: median(v for t2, v, _ in rows if t2 == task) for task, _, _ in rows}
+            cells_up = sum(cell_meds[task] > m for task, m in {(t, m) for t, _, m in rows})
+            out.append({"leg": leg, "metric": what, "above": above, "n": n, "p": p, "ratio": ratio,
+                        "cells_up": cells_up, "cells": len(cell_meds),
+                        "flag": p < EFFORT_ALPHA and ratio is not None and ratio >= EFFORT_RATIO})
+    return out
+
+
 def judge_index(judge_dir: str | None) -> tuple[dict[str, dict], float]:
     """Trial name -> judge result, and the judge's total cost."""
     if not judge_dir:
@@ -339,6 +369,7 @@ def render(args) -> int:
         c["verdict"] = verdict(c, bases[key])
         c["base"] = bases[key]
     leg_gate = leg_tests(now, bases)
+    effort = effort_tests(trials, bases)
     for t in trials:
         t["badges"] = badges(judged.get(t["trial"]))
         t["outlier"] = is_outlier(t, bases.get(f"{t['leg']}/{t['task']}"))
@@ -358,6 +389,7 @@ def render(args) -> int:
         "cells": now,
         "legs": leg_gate,
         "leg_status": status,
+        "effort": effort,
         "pool": next_pool(pool, trials),
         "trials": trials,
         "cost_usd": {"agents": agent_cost, "judge": judge_cost},
@@ -382,8 +414,9 @@ def render(args) -> int:
     n_block = len(blocking) + len(blocking_legs) + len(unmeasured_blocking)
     if n_block:
         head = f"## Plugin smoke: failing ({n_block} blocking)"
-    elif warnings:
-        head = f"## Plugin smoke: passing, {len(warnings)} warning{'s' * (len(warnings) != 1)}"
+    elif warnings or any(e["flag"] for e in effort):
+        n_warn = len(warnings) + sum(e["flag"] for e in effort)
+        head = f"## Plugin smoke: passing, {n_warn} warning{'s' * (n_warn != 1)}"
     elif any(c["verdict"] in ("known", "new") for c in now.values()):
         head = "## Plugin smoke: passing, with known failures"
     else:
@@ -402,6 +435,10 @@ def render(args) -> int:
 
     for g in unmeasured:
         lines.append(f"- **{g['state']}** · {g['leg']}: {g['reason']}")
+    for e in (e for e in effort if e["flag"]):
+        lines.append(f"- **warning** · {e['leg']}: {100 * (e['ratio'] - 1):+.0f}% {e['metric']} vs main "
+                     f"across {e['cells_up']}/{e['cells']} cells ({e['above']}/{e['n']} passing trials above "
+                     f"their cell's median, p = {e['p']:.3f})")
     for g in blocking_legs:
         lines.append(f"- **blocking** · leg {g['leg']}: {g['x']}/{g['n']} passed, against "
                      f"{g['base_k']}/{g['base_n']} on main (P = {g['tail']:.1e} < {LEG_ALPHA})")
@@ -418,7 +455,7 @@ def render(args) -> int:
         lines.append(f"- {label} · {t['leg']} · **{t['task']}** ({c['k']}/{c['n']}{b_txt}): {outcome(t)}, "
                      f"{fmt(t['turns'])} turns, {t['stack_calls']} astra/lc calls"
                      + (f" — judge: {badge}" if badge else " — judge: no pain points" if t["trial"] in judged else ""))
-    if failures or blocking_legs or unmeasured:
+    if failures or blocking_legs or unmeasured or any(e["flag"] for e in effort):
         lines.append("")
 
     head_row = "| task | " + " | ".join(agent_legs) + " |"
@@ -486,6 +523,8 @@ def render(args) -> int:
         print(f"::error::smoke leg {g['leg']}: {g['x']}/{g['n']} against {g['base_k']}/{g['base_n']} on main")
     for c in warnings:
         print(f"::warning::smoke {c['leg']} · {c['task']}: {c['k']}/{c['n']}")
+    for e in (e for e in effort if e["flag"]):
+        print(f"::warning::smoke {e['leg']}: {100 * (e['ratio'] - 1):+.0f}% {e['metric']} vs main")
     return 1 if blocking or blocking_legs or unmeasured_blocking else 0
 
 

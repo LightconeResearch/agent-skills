@@ -87,5 +87,10 @@ that passes at least 80% on main goes 0/K, or when a leg passes improbably few
 trials against its pooled rate (one-sided binomial tail below 0.01, the rate
 smoothed to (s + 1) / (t + 2)). Any other failure in a cell that is solid on
 main is a warning, listed first; failures in cells already weak on main are
-known. With no baseline yet, any 0/K cell blocks. Runs on main record and
+known. With no baseline yet, any 0/K cell blocks. A leg whose passing trials
+mostly take more turns (or astra/lc calls) than their cells' pooled medians
+(one-sided sign test p < 0.05, and at least 25% more in total) gets an effort
+warning, never a block. Trials that died on the provider or harness (quota,
+rate limit, auth, setup timeout) are not agent results: the leg shows as not
+measured, and that blocks. Runs on main record and
 gate only on the oracle.

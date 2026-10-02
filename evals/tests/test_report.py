@@ -174,3 +174,29 @@ def test_expected_leg_without_trials_shows_as_not_run(tmp_path):
     comment = (tmp_path / "out" / "comment.md").read_text()
     assert "**not run** · claude-haiku-plugin: ANTHROPIC_API_KEY not set" in comment
     assert "| task | claude-haiku-plugin | claude-haiku-skill |" in comment
+
+
+def effort(summary: dict, metric: str = "turns") -> dict:
+    return next(e for e in summary["effort"] if e["metric"] == metric)
+
+
+def test_effort_warns_when_most_trials_run_long(tmp_path):
+    jobs = tmp_path / "jobs"
+    tasks = [f"task-{i}" for i in range(5)]
+    for task in tasks:
+        for i in range(2):
+            trial(jobs, LEG, task, i, 1.0, turns=15)  # pooled median is 10
+    rc, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in tasks}))
+    e = effort(summary)
+    assert rc == 0 and e["flag"] and e["above"] == 10 and round(e["ratio"], 2) == 1.5
+    assert "+50% turns vs main across 5/5 cells" in (tmp_path / "out" / "comment.md").read_text()
+
+
+def test_effort_stays_quiet_on_mixed_or_small_shifts(tmp_path):
+    jobs = tmp_path / "jobs"
+    tasks = [f"task-{i}" for i in range(5)]
+    for task in tasks:
+        trial(jobs, LEG, task, 0, 1.0, turns=12)
+        trial(jobs, LEG, task, 1, 1.0, turns=9)
+    _, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in tasks}))
+    assert not effort(summary)["flag"]
