@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # What the built lightcone-smoke-stack holds, as one JSON object on stdout, and
-# the version-skew check: exit 1 with a one-line message if the astra-tools
+# the version-skew check: "skew" in the JSON names it, and the script exits 1
+# with a one-line message, if the astra-tools
 # lightcone-cli requires differs from the plugin's astra-tools pin. With that
 # split, a plugin user runs one astra through the skill's uvx and another
 # under lc.
@@ -24,9 +25,12 @@ info = {
     "lightcone_cli": md.version("lightcone-cli"),
     "lightcone_cli_requires_astra_tools": required,
     "plugin_astra_tools_pin": pin,
+    "skew": None,
 }
-print(json.dumps(info))
 if required and not SpecifierSet(required).contains(pin, prereleases=True):
-    sys.exit(f"version skew: lightcone-cli {info['lightcone_cli']} requires astra-tools "
-             f"{required}, the plugin pins astra-tools {pin}")
+    info["skew"] = (f"lightcone-cli {info['lightcone_cli']} requires astra-tools {required}, "
+                    f"the plugin pins astra-tools {pin}")
+print(json.dumps(info))
+if info["skew"]:
+    sys.exit(f"version skew: {info['skew']}")
 PY

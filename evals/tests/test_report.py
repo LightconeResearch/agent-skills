@@ -200,3 +200,33 @@ def test_effort_stays_quiet_on_mixed_or_small_shifts(tmp_path):
         trial(jobs, LEG, task, 1, 1.0, turns=9)
     _, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in tasks}))
     assert not effort(summary)["flag"]
+
+
+def test_version_skew_blocks_and_leads_the_comment(tmp_path):
+    jobs = tmp_path / "jobs"
+    for task in TASKS:
+        trial(jobs, "oracle", task, 0, 1.0)
+    skew = "lightcone-cli 0.5.0rc5 requires astra-tools ==0.2.18, the plugin pins astra-tools 0.2.17"
+    (jobs / "stack.json").write_text(json.dumps({"astra_tools": "0.2.17", "skew": skew}))
+    rc, summary = render(tmp_path, None, "--stack", str(jobs / "stack.json"),
+                         "--expect-legs", f"{LEG} codex-luna-skill", "--not-run-reason", "oracle failed",
+                         "--job", "oracle=failure", "--job", "legs=skipped")
+    assert rc == 1 and summary["gate"] == "fail"
+    comment = (tmp_path / "out" / "comment.md").read_text()
+    lines = [line for line in comment.splitlines() if line.startswith("- ")]
+    assert lines[0] == f"- **blocking** · version skew: {skew}"
+    assert f"- **not run** · {LEG}: oracle failed" in lines
+    assert "passing" not in comment.splitlines()[1]
+    assert f"| task | {LEG} | codex-luna-skill |" in comment
+    assert "| astra-author | not run | not run |" in comment
+
+
+def test_failed_upstream_job_with_no_legs_never_passes(tmp_path):
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    rc, summary = render(tmp_path, None, "--job", "oracle=failure", "--job", "legs=skipped")
+    assert rc == 1 and summary["gate"] == "fail"
+    comment = (tmp_path / "out" / "comment.md").read_text()
+    assert "- **blocking** · the oracle job ended in failure; see the run log" in comment
+    assert "No agent leg was planned or run." in comment
+    assert "| task |  |" not in comment

@@ -300,7 +300,10 @@ jobs:
           JUDGE_SKIPPED: ${{ steps.judge.outputs.skipped }}
           JUDGE_OUTCOME: ${{ steps.judge.outcome }}
           # Every planned leg appears in the comment, including those that never ran.
-          EXPECT_LEGS: ${{ needs.legs.result != 'skipped' && join(fromJSON(needs.oracle.outputs.legs || '[]').*.name, ' ') || '' }}
+          EXPECT_LEGS: ${{ join(fromJSON(needs.oracle.outputs.legs || '[]').*.name, ' ') }}
+          NOT_RUN_REASON: ${{ needs.oracle.result != 'success' && 'oracle failed' || '' }}
+          ORACLE_RESULT: ${{ needs.oracle.result }}
+          LEGS_RESULT: ${{ needs.legs.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set +e
@@ -313,6 +316,7 @@ jobs:
           python3 evals/bin/report.py render evals/jobs ${BASELINE:+--baseline "$BASELINE"} \
             --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" \
             --base-label "$BASE_LABEL" --judge-note "$note" --expect-legs "$EXPECT_LEGS" \
+            --not-run-reason "$NOT_RUN_REASON" --job "oracle=$ORACLE_RESULT" --job "legs=$LEGS_RESULT" \
             --out smoke-report $RECORD
           echo "gate=$?" >> "$GITHUB_OUTPUT"
           [ -f evals/jobs/judge/analysis.json ] && cp evals/jobs/judge/analysis.json smoke-report/judge-analysis.json

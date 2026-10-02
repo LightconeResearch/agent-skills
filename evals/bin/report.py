@@ -35,6 +35,9 @@ counted in k/n or the pool, and collapse to one "not measured" line per leg.
 A leg that did not run at all (an expected leg, --expect-legs, with no trials)
 shows as "not run", with the reason from its <leg>.status file. Either one
 blocks: an unmeasured leg must not pass silently.
+A version skew recorded in --stack blocks. So does any upstream job that
+failed (--job name=result, from the workflow's `needs`) when nothing else
+already explains the failure: a failed job never renders as passing.
 Any failure in a cell with baseline rate >= STRONG that does not block is a
 warning, listed first.
 Effort (a warning, never a block), per leg and separately for turns and
@@ -264,7 +267,8 @@ def leg_tests(now: dict[str, dict], bases: dict[str, dict | None]) -> list[dict]
     return out
 
 
-def leg_status(jobs: Path, expected: list[str], trials: list[dict], infra: list[dict]) -> list[dict]:
+def leg_status(jobs: Path, expected: list[str], trials: list[dict], infra: list[dict],
+               not_run_reason: str = "no trials (see the leg's job log)") -> list[dict]:
     """Per agent leg: measured, not measured (every trial hit INFRA) or not run."""
     out = []
     for leg in sorted(set(expected) | {t["leg"] for t in trials + infra} - {"oracle"}):
@@ -281,7 +285,7 @@ def leg_status(jobs: Path, expected: list[str], trials: list[dict], infra: list[
         else:
             note = jobs / f"{leg}.status"
             state = "not run"
-            reason = note.read_text().strip() if note.is_file() else "no trials (see the leg's job log)"
+            reason = note.read_text().strip() if note.is_file() else not_run_reason
         out.append({"leg": leg, "state": state, "reason": reason,
                     "measured": len(ok), "infra": len(bad)})
     return out
@@ -359,7 +363,8 @@ def render(args) -> int:
     infra = [t for t in trials if t["infra"]]
     trials = [t for t in trials if not t["infra"]]
     now = cells(trials)
-    status = leg_status(jobs, args.expect_legs.split(), trials, infra)
+    status = leg_status(jobs, args.expect_legs.split(), trials, infra,
+                        args.not_run_reason or "no trials (see the leg's job log)")
     pool = load_pool(args.baseline)
     bases = {key: pooled((pool or {}).get(key)) for key in now}
     judged, judge_cost = judge_index(args.judge)
@@ -384,6 +389,12 @@ def render(args) -> int:
     else:
         unmeasured_blocking = unmeasured
     warnings = [c for c in now.values() if c["verdict"] == "warning"]
+    upstream = []  # blocking reasons that are not cells or legs
+    if stack and stack.get("skew"):
+        upstream.append(f"version skew: {stack['skew']}")
+    failed_jobs = [j.split("=", 1) for j in args.job if j.split("=", 1)[-1] in ("failure", "cancelled")]
+    if failed_jobs and not (upstream or blocking or blocking_legs or unmeasured_blocking):
+        upstream += [f"the {name} job ended in {result}; see the run log" for name, result in failed_jobs]
 
     summary = {
         "cells": now,
@@ -394,7 +405,7 @@ def render(args) -> int:
         "trials": trials,
         "cost_usd": {"agents": agent_cost, "judge": judge_cost},
         "stack": stack,
-        "gate": "fail" if blocking or blocking_legs or unmeasured_blocking else "pass",
+        "gate": "fail" if blocking or blocking_legs or unmeasured_blocking or upstream else "pass",
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
 
@@ -411,7 +422,7 @@ def render(args) -> int:
     # --- PR comment -------------------------------------------------------------
     n_pass = sum(t["passed"] for t in trials if t["leg"] != "oracle")
     n_all = sum(1 for t in trials if t["leg"] != "oracle")
-    n_block = len(blocking) + len(blocking_legs) + len(unmeasured_blocking)
+    n_block = len(blocking) + len(blocking_legs) + len(unmeasured_blocking) + len(upstream)
     if n_block:
         head = f"## Plugin smoke: failing ({n_block} blocking)"
     elif warnings or any(e["flag"] for e in effort):
@@ -433,6 +444,8 @@ def render(args) -> int:
         lines.append(stack_line() + ".")
     lines.append("")
 
+    for reason in upstream:
+        lines.append(f"- **blocking** · {reason}")
     for g in unmeasured:
         lines.append(f"- **{g['state']}** · {g['leg']}: {g['reason']}")
     for e in (e for e in effort if e["flag"]):
@@ -455,31 +468,34 @@ def render(args) -> int:
         lines.append(f"- {label} · {t['leg']} · **{t['task']}** ({c['k']}/{c['n']}{b_txt}): {outcome(t)}, "
                      f"{fmt(t['turns'])} turns, {t['stack_calls']} astra/lc calls"
                      + (f" — judge: {badge}" if badge else " — judge: no pain points" if t["trial"] in judged else ""))
-    if failures or blocking_legs or unmeasured or any(e["flag"] for e in effort):
+    if failures or blocking_legs or unmeasured or upstream or any(e["flag"] for e in effort):
         lines.append("")
 
-    head_row = "| task | " + " | ".join(agent_legs) + " |"
-    lines += [head_row, "|---" * (len(agent_legs) + 1) + "|"]
-    for task in tasks:
-        row = []
-        for leg in agent_legs:
-            c = now.get(f"{leg}/{task}")
-            b = c["base"] if c else None
-            state = next(g["state"] for g in status if g["leg"] == leg)
-            if c:
-                txt = cell_text(c)
-            elif state == "not run":
-                txt = "not run"
-            elif any(t["leg"] == leg and t["task"] == task for t in infra):
-                txt = "not measured"
-            else:
-                txt = "—"
-            if c and c["verdict"] in ("blocking", "warning"):
-                txt = f"**{txt}**"
-            if b:
-                txt += f" <sub>(main {b['k']}/{b['n']} · {fmt(b['turns'])})</sub>"
-            row.append(txt)
-        lines.append(f"| {task} | " + " | ".join(row) + " |")
+    if not agent_legs:
+        lines.append("No agent leg was planned or run.")
+    else:
+        head_row = "| task | " + " | ".join(agent_legs) + " |"
+        lines += [head_row, "|---" * (len(agent_legs) + 1) + "|"]
+        for task in tasks:
+            row = []
+            for leg in agent_legs:
+                c = now.get(f"{leg}/{task}")
+                b = c["base"] if c else None
+                state = next(g["state"] for g in status if g["leg"] == leg)
+                if c:
+                    txt = cell_text(c)
+                elif state == "not run":
+                    txt = "not run"
+                elif any(t["leg"] == leg and t["task"] == task for t in infra):
+                    txt = "not measured"
+                else:
+                    txt = "—"
+                if c and c["verdict"] in ("blocking", "warning"):
+                    txt = f"**{txt}**"
+                if b:
+                    txt += f" <sub>(main {b['k']}/{b['n']} · {fmt(b['turns'])})</sub>"
+                row.append(txt)
+            lines.append(f"| {task} | " + " | ".join(row) + " |")
     oracle = [c for c in now.values() if c["leg"] == "oracle"]
     if oracle:
         ok = all(c["verdict"] == "pass" for c in oracle)
@@ -517,6 +533,8 @@ def render(args) -> int:
 
     for c in blocking:
         print(f"::error::smoke {c['leg']} · {c['task']}: {c['k']}/{c['n']}")
+    for reason in upstream:
+        print(f"::error::smoke {reason}")
     for g in unmeasured:
         print(f"::error::smoke {g['leg']}: {g['state']}: {g['reason']}")
     for g in blocking_legs:
@@ -525,7 +543,7 @@ def render(args) -> int:
         print(f"::warning::smoke {c['leg']} · {c['task']}: {c['k']}/{c['n']}")
     for e in (e for e in effort if e["flag"]):
         print(f"::warning::smoke {e['leg']}: {100 * (e['ratio'] - 1):+.0f}% {e['metric']} vs main")
-    return 1 if blocking or blocking_legs or unmeasured_blocking else 0
+    return 1 if blocking or blocking_legs or unmeasured_blocking or upstream else 0
 
 
 def html_page(trials, now, judged, stack_line, agent_cost, judge_cost) -> str:
@@ -593,6 +611,8 @@ def main() -> int:
             p.add_argument("--record", action="store_true")
             p.add_argument("--judge-note", default="", help="a line for the comment about the judge")
             p.add_argument("--expect-legs", default="", help="space-separated legs the run planned")
+            p.add_argument("--not-run-reason", default="", help="why a planned leg without trials did not run")
+            p.add_argument("--job", action="append", default=[], help="upstream job result, name=result")
     args = ap.parse_args()
     return select(args) if args.cmd == "select" else render(args)
 
