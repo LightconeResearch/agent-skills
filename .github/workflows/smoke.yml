@@ -110,6 +110,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       legs: ${{ steps.plan.outputs.legs }}
+      tasks: ${{ steps.plan.outputs.tasks }}
       astra_tools: ${{ steps.stack.outputs.ASTRA_TOOLS }}
       astra_pin: ${{ steps.stack.outputs.ASTRA_PIN }}
       lightcone_cli: ${{ steps.stack.outputs.LIGHTCONE_CLI }}
@@ -138,6 +139,19 @@ jobs:
           done
           [ ${#legs[@]} -gt 0 ] || { echo "::error::no leg matches '$LEGS'"; exit 1; }
           echo "legs=[$(IFS=,; echo "${legs[*]}")]" | tee -a "$GITHUB_OUTPUT"
+          # The task dirs TASKS selects: every one must get an oracle run and K trials per leg.
+          read -ra globs <<<"$TASKS"
+          tasks=()
+          for dir in evals/smoke/*/; do
+            name="$(basename "$dir")"
+            [ -f "$dir/task.toml" ] || continue
+            for glob in "${globs[@]}"; do
+              # shellcheck disable=SC2254  # the glob is meant to match
+              case "$name" in $glob) tasks+=("$name"); break ;; esac
+            done
+          done
+          [ ${#tasks[@]} -gt 0 ] || { echo "::error::no task matches '$TASKS'"; exit 1; }
+          echo "tasks=${tasks[*]}" | tee -a "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@v5
       - run: uv tool install "harbor==${HARBOR_VERSION}"
       - uses: docker/setup-buildx-action@v3
@@ -166,7 +180,7 @@ jobs:
       - name: Oracle (reference solutions must all score 1.0)
         run: |
           K=1 N=5 evals/bin/smoke.sh oracle
-          python3 evals/bin/report.py render evals/jobs --out oracle-report
+          python3 evals/bin/report.py render evals/jobs --expect-tasks "${{ steps.plan.outputs.tasks }}" --out oracle-report
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -301,6 +315,7 @@ jobs:
           JUDGE_OUTCOME: ${{ steps.judge.outcome }}
           # Every planned leg appears in the comment, including those that never ran.
           EXPECT_LEGS: ${{ join(fromJSON(needs.oracle.outputs.legs || '[]').*.name, ' ') }}
+          EXPECT_TASKS: ${{ needs.oracle.outputs.tasks }}
           NOT_RUN_REASON: ${{ needs.oracle.result != 'success' && 'oracle failed' || '' }}
           ORACLE_RESULT: ${{ needs.oracle.result }}
           LEGS_RESULT: ${{ needs.legs.result }}
@@ -317,6 +332,7 @@ jobs:
             --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" \
             --base-label "$BASE_LABEL" --judge-note "$note" --expect-legs "$EXPECT_LEGS" \
             --not-run-reason "$NOT_RUN_REASON" --job "oracle=$ORACLE_RESULT" --job "legs=$LEGS_RESULT" \
+            --expect-tasks "$EXPECT_TASKS" --k "$K" \
             --out smoke-report $RECORD
           echo "gate=$?" >> "$GITHUB_OUTPUT"
           [ -f evals/jobs/judge/analysis.json ] && cp evals/jobs/judge/analysis.json smoke-report/judge-analysis.json

@@ -170,7 +170,7 @@ def test_expected_leg_without_trials_shows_as_not_run(tmp_path):
     assert rc == 1
     plugin = next(g for g in summary["leg_status"] if g["leg"] == "claude-haiku-plugin")
     assert plugin == {"leg": "claude-haiku-plugin", "state": "not run",
-                      "reason": "ANTHROPIC_API_KEY not set", "measured": 0, "infra": 0}
+                      "reason": "ANTHROPIC_API_KEY not set", "measured": 0, "infra": 0, "missing": 0}
     comment = (tmp_path / "out" / "comment.md").read_text()
     assert "**not run** · claude-haiku-plugin: ANTHROPIC_API_KEY not set" in comment
     assert "| task | claude-haiku-plugin | claude-haiku-skill |" in comment
@@ -230,3 +230,39 @@ def test_failed_upstream_job_with_no_legs_never_passes(tmp_path):
     assert "- **blocking** · the oracle job ended in failure; see the run log" in comment
     assert "No agent leg was planned or run." in comment
     assert "| task |  |" not in comment
+
+
+def test_oracle_infra_error_still_blocks(tmp_path):
+    jobs = tmp_path / "jobs"
+    trial(jobs, "oracle", "astra-author", 0, 1.0)
+    infra_trial(jobs, "oracle", "astra-query", 0, "EnvironmentStartTimeoutError")
+    rc, summary = render(tmp_path, None, "--expect-tasks", "astra-author astra-query")
+    assert rc == 1
+    assert summary["cells"]["oracle/astra-query"]["verdict"] == "blocking"
+
+
+def test_every_planned_task_needs_an_oracle_run(tmp_path):
+    jobs = tmp_path / "jobs"
+    trial(jobs, "oracle", "astra-author", 0, 1.0)
+    rc, _ = render(tmp_path, None, "--expect-tasks", "astra-author astra-query")
+    assert rc == 1
+    assert "oracle: no reference run for astra-query" in (tmp_path / "out" / "comment.md").read_text()
+
+
+def test_a_leg_short_of_k_trials_is_partly_measured(tmp_path):
+    jobs = tmp_path / "jobs"
+    for task in TASKS:
+        trial(jobs, "oracle", task, 0, 1.0)
+    run_cell(jobs, "astra-author", 2)
+    run_cell(jobs, "astra-query", 1, n=1)  # one attempt never ran
+    infra_trial(jobs, LEG, "astra-add-decision", 0, "ApiRateLimitError")
+    trial(jobs, LEG, "astra-add-decision", 1, 1.0)
+    rc, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in TASKS}),
+                         "--expect-tasks", " ".join(TASKS), "--expect-legs", LEG, "--k", "2")
+    assert rc == 1
+    leg = next(g for g in summary["leg_status"] if g["leg"] == LEG)
+    assert leg["state"] == "partly measured"
+    assert leg["reason"] == "2/6 trials missing: 1 hit ApiRateLimitError (rate limit); 1 never ran"
+    _, recorded = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in TASKS}),
+                         "--expect-tasks", " ".join(TASKS), "--expect-legs", LEG, "--k", "2", "--record")
+    assert recorded["gate"] == "pass"  # main records; coverage gates PRs

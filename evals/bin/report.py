@@ -268,26 +268,36 @@ def leg_tests(now: dict[str, dict], bases: dict[str, dict | None]) -> list[dict]
 
 
 def leg_status(jobs: Path, expected: list[str], trials: list[dict], infra: list[dict],
-               not_run_reason: str = "no trials (see the leg's job log)") -> list[dict]:
-    """Per agent leg: measured, not measured (every trial hit INFRA) or not run."""
+               not_run_reason: str = "no trials (see the leg's job log)",
+               tasks: list[str] | None = None, k: int | None = None) -> list[dict]:
+    """Per agent leg: measured, partly measured, not measured (every trial hit INFRA) or not run.
+
+    With `tasks` and `k`, a leg owes k measured trials per task; any shortfall
+    (infra errors, or trials that never ran) makes it partly measured.
+    """
     out = []
     for leg in sorted(set(expected) | {t["leg"] for t in trials + infra} - {"oracle"}):
         ok = [t for t in trials if t["leg"] == leg]
         bad = [t for t in infra if t["leg"] == leg]
-        if bad:
-            kinds = Counter(t["exception"] for t in bad)
-            why = ", ".join(f"{e} ({INFRA[e]})" for e, _ in kinds.most_common())
-            total = len(ok) + len(bad)
-            state = "not measured" if not ok else "partly measured"
-            reason = f"{len(bad)}/{total} trials hit {why}"
-        elif ok:
-            state, reason = "measured", ""
-        else:
+        owed = k * len(tasks) if tasks and k else len(ok) + len(bad)
+        missing = max(owed - len(ok), len(bad))
+        total = max(owed, len(ok) + len(bad))
+        kinds = Counter(t["exception"] for t in bad)
+        why = ", ".join(f"{e} ({INFRA[e]})" for e, _ in kinds.most_common())
+        if not ok and not bad:
             note = jobs / f"{leg}.status"
             state = "not run"
             reason = note.read_text().strip() if note.is_file() else not_run_reason
+        elif missing == 0:
+            state, reason = "measured", ""
+        else:
+            state = "not measured" if not ok else "partly measured"
+            never = missing - len(bad)
+            parts = ([f"{len(bad)} hit {why}"] if bad else []) + ([f"{never} never ran"] if never else [])
+            reason = (f"{len(bad)}/{total} trials hit {why}" if not never
+                      else f"{missing}/{total} trials missing: " + "; ".join(parts))
         out.append({"leg": leg, "state": state, "reason": reason,
-                    "measured": len(ok), "infra": len(bad)})
+                    "measured": len(ok), "infra": len(bad), "missing": missing})
     return out
 
 
@@ -360,11 +370,14 @@ def render(args) -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     trials = collect(jobs)
-    infra = [t for t in trials if t["infra"]]
-    trials = [t for t in trials if not t["infra"]]
+    # An oracle trial is never set aside as infra: the reference solutions must all score.
+    infra = [t for t in trials if t["infra"] and t["leg"] != "oracle"]
+    trials = [t for t in trials if not (t["infra"] and t["leg"] != "oracle")]
     now = cells(trials)
+    expect_tasks = args.expect_tasks.split()
     status = leg_status(jobs, args.expect_legs.split(), trials, infra,
-                        args.not_run_reason or "no trials (see the leg's job log)")
+                        args.not_run_reason or "no trials (see the leg's job log)",
+                        expect_tasks, args.k)
     pool = load_pool(args.baseline)
     bases = {key: pooled((pool or {}).get(key)) for key in now}
     judged, judge_cost = judge_index(args.judge)
@@ -390,6 +403,10 @@ def render(args) -> int:
         unmeasured_blocking = unmeasured
     warnings = [c for c in now.values() if c["verdict"] == "warning"]
     upstream = []  # blocking reasons that are not cells or legs
+    no_oracle = [task for task in expect_tasks
+                 if not any(t["leg"] == "oracle" and t["task"] == task for t in trials)]
+    if no_oracle:
+        upstream.append(f"oracle: no reference run for {', '.join(no_oracle)}")
     if stack and stack.get("skew"):
         upstream.append(f"version skew: {stack['skew']}")
     failed_jobs = [j.split("=", 1) for j in args.job if j.split("=", 1)[-1] in ("failure", "cancelled")]
@@ -611,6 +628,8 @@ def main() -> int:
             p.add_argument("--record", action="store_true")
             p.add_argument("--judge-note", default="", help="a line for the comment about the judge")
             p.add_argument("--expect-legs", default="", help="space-separated legs the run planned")
+            p.add_argument("--expect-tasks", default="", help="space-separated task dirs the run planned")
+            p.add_argument("--k", type=int, help="attempts each agent leg owes per task")
             p.add_argument("--not-run-reason", default="", help="why a planned leg without trials did not run")
             p.add_argument("--job", action="append", default=[], help="upstream job result, name=result")
     args = ap.parse_args()
