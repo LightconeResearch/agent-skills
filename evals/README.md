@@ -74,12 +74,18 @@ that lightcone-cli PRs call with their head sha.
 2. **legs**: claude-code haiku `plugin`, claude-code haiku `skill`, codex luna
    `skill`, K=2 each. `plugin` vs `skill` on one model asks whether the hooks
    earn their place. A missing API key fails its leg.
-3. **report** compares each (leg, task) cell with the latest successful push
-   to main, judges failed and outlier trials (turns or astra/lc calls at
-   least twice the baseline median and 5 above it) with `harbor analyze` and
-   `rubrics/pain-points.toml`, writes the job summary and an HTML artifact,
-   and keeps one comment on the PR up to date.
+3. **report** compares each (leg, task) cell with the baseline, judges failed
+   and outlier trials (turns or astra/lc calls at least twice the baseline
+   median and 5 above it) with `harbor analyze` and `rubrics/pain-points.toml`,
+   writes the job summary and an HTML artifact, and keeps one comment on the
+   PR up to date.
 
-The check fails if the oracle fails or a cell regressed: at least one success
-on main, 0/K now. A cell already 0/K on main is a known failure, shown but
-not blocking; with no baseline yet, any 0/K cell blocks.
+The baseline pools the last five pushes to main: each run's `summary.json`
+carries the per-cell pass counts and turn samples of the previous pool plus
+its own, oldest dropped. The check blocks when the oracle fails, when a cell
+that passes at least 80% on main goes 0/K, or when a leg passes improbably few
+trials against its pooled rate (one-sided binomial tail below 0.01, the rate
+smoothed to (s + 1) / (t + 2)). Any other failure in a cell that is solid on
+main is a warning, listed first; failures in cells already weak on main are
+known. With no baseline yet, any 0/K cell blocks. Runs on main record and
+gate only on the oracle.

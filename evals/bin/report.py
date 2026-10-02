@@ -8,21 +8,30 @@
 
 JOBS holds one Harbor job dir per leg (evals/bin/smoke.sh: oracle,
 claude-haiku-plugin, ...). A cell is one (leg, task): k of n trials passed,
-median turns (agent steps) and median astra/lc calls (shell commands invoking
-astra, astra-tools or lc).
+turns (agent steps) and astra/lc calls (shell commands invoking astra,
+astra-tools or lc).
+
+The baseline is a pool: per cell, the records of the last POOL_RUNS recording
+runs (pushes to main). Each summary.json carries the next pool, the baseline's
+records plus this run's, oldest dropped, so one artifact is the whole history.
 
 `select` prints the trial dirs worth judging, one per line: every failed trial,
-and every trial whose turns or astra/lc calls are outliers against the
-baseline cell (at least twice its median and at least OUTLIER_GAP above it).
+and every trial whose turns or astra/lc calls are outliers against the pooled
+baseline median (at least twice it and at least OUTLIER_GAP above it).
 
-`render` writes summary.json (the next baseline, when the run is on main),
-summary.md (the job summary), comment.md (the PR comment) and report.html into
---out, and exits 1 when the gate fails (--record, for runs on main, renders
-without gating the cells: main records what is true, including known failures):
-  - any oracle trial scored below 1.0, or
-  - a cell is 0/n and the baseline had at least one success there (a
-    regression), or there is no baseline for it. A cell already 0/n in the
-    baseline is a known failure: shown red, not blocking.
+`render` writes summary.json, summary.md (the job summary), comment.md (the PR
+comment) and report.html into --out, and exits 1 when the gate blocks:
+  - an oracle trial scored below 1.0;
+  - a cell whose pooled baseline rate is >= STRONG went 0/n;
+  - a leg passed improbably few trials against its pooled baseline: the
+    one-sided binomial tail P(X <= x | n, p) < LEG_ALPHA, with x/n this run's
+    passes over the leg's baselined cells and p the leg's pooled rate,
+    smoothed to (s + 1) / (t + 2) so a spotless history does not make a
+    single failure impossible;
+  - with no baseline for a cell, it went 0/n.
+Any failure in a cell with baseline rate >= STRONG that does not block is a
+warning, listed first. Failures in cells already weak on main are known.
+--record (runs on main) gates on the oracle only: main records what is true.
 """
 
 from __future__ import annotations
@@ -33,11 +42,15 @@ import json
 import re
 import statistics
 import sys
+import math
 from collections import Counter
 from pathlib import Path
 
 MARKER = "<!-- lightcone-smoke-report -->"
 OUTLIER_GAP = 5
+POOL_RUNS = 5
+STRONG = 0.8
+LEG_ALPHA = 0.01
 STACK_CALL = re.compile(r"(^|[\s;&|(/])(astra|astra-tools(@[\w.]+)?|lc)\s")
 CODEX_CMD = re.compile(r'cmd\s*:\s*"((?:[^"\\]|\\.)*)"')
 
@@ -152,11 +165,67 @@ def is_outlier(t: dict, base: dict | None) -> bool:
     return False
 
 
-def baseline_cells(path: str | None) -> dict | None:
-    if not path:
+def load_pool(path: str | None) -> dict | None:
+    """Cell key -> per-run records {k, n, turns: [...], stack_calls: [...]}, or None."""
+    data = load(Path(path)) if path else None
+    pool = data.get("pool") if isinstance(data, dict) else None
+    return pool if isinstance(pool, dict) else None
+
+
+def pooled(records: list[dict] | None) -> dict | None:
+    if not records:
         return None
-    data = load(Path(path))
-    return data.get("cells") if isinstance(data, dict) else None
+    k, n = sum(r["k"] for r in records), sum(r["n"] for r in records)
+    return {"k": k, "n": n, "rate": k / n if n else None, "runs": len(records),
+            "turns": median(v for r in records for v in r.get("turns", [])),
+            "stack_calls": median(v for r in records for v in r.get("stack_calls", []))}
+
+
+def next_pool(pool: dict | None, trials: list[dict]) -> dict:
+    out = {key: list(records) for key, records in (pool or {}).items()}
+    by_cell: dict[str, list[dict]] = {}
+    for t in trials:
+        if t["leg"] != "oracle":
+            by_cell.setdefault(f"{t['leg']}/{t['task']}", []).append(t)
+    for key, ts in by_cell.items():
+        record = {"k": sum(t["passed"] for t in ts), "n": len(ts),
+                  "turns": [t["turns"] for t in ts if t["turns"] is not None],
+                  "stack_calls": [t["stack_calls"] for t in ts]}
+        out[key] = (out.get(key, []) + [record])[-POOL_RUNS:]
+    return dict(sorted(out.items()))
+
+
+def binom_cdf(x: int, n: int, p: float) -> float:
+    return sum(math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(x + 1))
+
+
+def verdict(cell: dict, base: dict | None) -> str:
+    """pass | blocking | warning | known | new (a partial failure with no baseline)"""
+    if cell["k"] == cell["n"]:
+        return "pass"
+    if cell["leg"] == "oracle":
+        return "blocking"
+    if base is None or base["rate"] is None:
+        return "blocking" if cell["k"] == 0 else "new"
+    if base["rate"] >= STRONG:
+        return "blocking" if cell["k"] == 0 else "warning"
+    return "known"
+
+
+def leg_tests(now: dict[str, dict], bases: dict[str, dict | None]) -> list[dict]:
+    """Per agent leg: this run's passes against the leg's pooled rate on the same cells."""
+    out = []
+    for leg in sorted({c["leg"] for c in now.values()} - {"oracle"}):
+        cs = [(c, bases[key]) for key, c in now.items() if c["leg"] == leg and bases[key]]
+        if not cs:
+            continue
+        x, n = sum(c["k"] for c, _ in cs), sum(c["n"] for c, _ in cs)
+        s, t = sum(b["k"] for _, b in cs), sum(b["n"] for _, b in cs)
+        p = (s + 1) / (t + 2)
+        tail = binom_cdf(x, n, p)
+        out.append({"leg": leg, "x": x, "n": n, "base_k": s, "base_n": t, "p": p,
+                    "tail": tail, "blocking": tail < LEG_ALPHA})
+    return out
 
 
 def judge_index(judge_dir: str | None) -> tuple[dict[str, dict], float]:
@@ -174,22 +243,6 @@ def judge_index(judge_dir: str | None) -> tuple[dict[str, dict], float]:
 
 def badges(judge: dict | None) -> list[str]:
     return [k for k, v in ((judge or {}).get("checks") or {}).items() if v.get("outcome") == "fail"]
-
-
-def verdict(cell: dict, base: dict | None, have_baseline: bool) -> str:
-    """pass | flaky | regressed | known | new-fail"""
-    if cell["leg"] == "oracle":
-        return "pass" if cell["k"] == cell["n"] else "regressed"
-    if cell["k"] == cell["n"]:
-        return "pass"
-    if cell["k"] > 0:
-        return "flaky"
-    if base is None:
-        return "new-fail"  # no baseline cell: blocking (with no baseline at all, every 0/n blocks)
-    return "regressed" if base["k"] > 0 else "known"
-
-
-BLOCKING = {"regressed", "new-fail"}
 
 
 def outcome(t: dict) -> str:
@@ -222,24 +275,34 @@ def render(args) -> int:
     out.mkdir(parents=True, exist_ok=True)
     trials = collect(jobs)
     now = cells(trials)
-    base = baseline_cells(args.baseline)
+    pool = load_pool(args.baseline)
+    bases = {key: pooled((pool or {}).get(key)) for key in now}
     judged, judge_cost = judge_index(args.judge)
     stack = load(Path(args.stack)) if args.stack else None
 
-    for c in now.values():
-        c["verdict"] = verdict(c, (base or {}).get(f"{c['leg']}/{c['task']}"), base is not None)
+    for key, c in now.items():
+        c["verdict"] = verdict(c, bases[key])
+        c["base"] = bases[key]
+    leg_gate = leg_tests(now, bases)
     for t in trials:
         t["badges"] = badges(judged.get(t["trial"]))
-        t["outlier"] = is_outlier(t, (base or {}).get(f"{t['leg']}/{t['task']}"))
+        t["outlier"] = is_outlier(t, bases.get(f"{t['leg']}/{t['task']}"))
     agent_cost = sum(t["cost_usd"] or 0.0 for t in trials)
-    blocking = [c for c in now.values() if c["verdict"] in BLOCKING]
+    blocking = [c for c in now.values() if c["verdict"] == "blocking"]
+    blocking_legs = [g for g in leg_gate if g["blocking"]]
+    if args.record:  # main records what is true; only the oracle gates there
+        blocking = [c for c in blocking if c["leg"] == "oracle"]
+        blocking_legs = []
+    warnings = [c for c in now.values() if c["verdict"] == "warning"]
 
     summary = {
         "cells": now,
+        "legs": leg_gate,
+        "pool": next_pool(pool, trials),
         "trials": trials,
         "cost_usd": {"agents": agent_cost, "judge": judge_cost},
         "stack": stack,
-        "gate": "fail" if blocking else "pass",
+        "gate": "fail" if blocking or blocking_legs else "pass",
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
 
@@ -257,33 +320,43 @@ def render(args) -> int:
     # --- PR comment -------------------------------------------------------------
     n_pass = sum(t["passed"] for t in trials if t["leg"] != "oracle")
     n_all = sum(1 for t in trials if t["leg"] != "oracle")
-    if blocking:
-        head = f"## Plugin smoke: failing ({len(blocking)} blocking cell{'s' * (len(blocking) != 1)})"
-    elif any(c["verdict"] in ("known", "flaky") for c in now.values()):
-        head = "## Plugin smoke: passing, with known or flaky failures"
+    n_block = len(blocking) + len(blocking_legs)
+    if n_block:
+        head = f"## Plugin smoke: failing ({n_block} blocking)"
+    elif warnings:
+        head = f"## Plugin smoke: passing, {len(warnings)} warning{'s' * (len(warnings) != 1)}"
+    elif any(c["verdict"] in ("known", "new") for c in now.values()):
+        head = "## Plugin smoke: passing, with known failures"
     else:
         head = "## Plugin smoke: passing"
+    runs = max((b["runs"] for b in bases.values() if b), default=0)
     lines = [MARKER, head, "",
-             f"{n_pass}/{n_all} agent trials passed across {len(agent_legs)} legs × {len(tasks)} tasks."
-             + (f" Baseline: {args.base_label}." if base is not None and args.base_label else
-                " No baseline on main yet, so every 0/n cell blocks." if base is None else "")]
+             f"{n_pass}/{n_all} agent trials passed across {len(agent_legs)} legs × {len(tasks)} tasks. "
+             + (f"Baseline: {args.base_label}, pooled over the last {runs} run{'s' * (runs != 1)} on main."
+                if pool is not None and args.base_label else
+                f"Baseline pooled over the last {runs} run{'s' * (runs != 1)} on main." if pool is not None else
+                "No baseline on main yet, so every 0/n cell blocks.")]
     if stack:
         lines.append(stack_line() + ".")
     lines.append("")
 
+    for g in blocking_legs:
+        lines.append(f"- **blocking** · leg {g['leg']}: {g['x']}/{g['n']} passed, against "
+                     f"{g['base_k']}/{g['base_n']} on main (P = {g['tail']:.1e} < {LEG_ALPHA})")
+    order = {"blocking": 0, "warning": 1, "new": 2, "known": 3, "pass": 4}
     failures = [t for t in trials if not t["passed"]]
-    order = {"regressed": 0, "new-fail": 1, "known": 2, "flaky": 3, "pass": 4}
     failures.sort(key=lambda t: (order[now[f"{t['leg']}/{t['task']}"]["verdict"]], t["leg"], t["task"]))
-    if failures:
-        lines += ["### Failures", ""]
-        for t in failures:
-            v = now[f"{t['leg']}/{t['task']}"]["verdict"]
-            label = {"regressed": "**regressed**", "new-fail": "**failing**",
-                     "known": "known failure", "flaky": "flaky"}[v]
-            b = " ".join(f"`{x}`" for x in t["badges"])
-            lines.append(f"- {label} · {t['leg']} · **{t['task']}**: {outcome(t)}, "
-                         f"{fmt(t['turns'])} turns, {t['stack_calls']} astra/lc calls"
-                         + (f" — judge: {b}" if b else " — judge: no pain points" if t["trial"] in judged else ""))
+    for t in failures:
+        c = now[f"{t['leg']}/{t['task']}"]
+        label = {"blocking": "**blocking**", "warning": "**warning**", "new": "failing (no baseline)",
+                 "known": "known failure"}[c["verdict"]]
+        b = c["base"]
+        b_txt = f", main {b['k']}/{b['n']}" if b else ""
+        badge = " ".join(f"`{x}`" for x in t["badges"])
+        lines.append(f"- {label} · {t['leg']} · **{t['task']}** ({c['k']}/{c['n']}{b_txt}): {outcome(t)}, "
+                     f"{fmt(t['turns'])} turns, {t['stack_calls']} astra/lc calls"
+                     + (f" — judge: {badge}" if badge else " — judge: no pain points" if t["trial"] in judged else ""))
+    if failures or blocking_legs:
         lines.append("")
 
     head_row = "| task | " + " | ".join(agent_legs) + " |"
@@ -292,9 +365,9 @@ def render(args) -> int:
         row = []
         for leg in agent_legs:
             c = now.get(f"{leg}/{task}")
-            b = (base or {}).get(f"{leg}/{task}")
+            b = c["base"] if c else None
             txt = cell_text(c)
-            if c and c["verdict"] in BLOCKING | {"known"}:
+            if c and c["verdict"] in ("blocking", "warning"):
                 txt = f"**{txt}**"
             if b:
                 txt += f" <sub>(main {b['k']}/{b['n']} · {fmt(b['turns'])})</sub>"
@@ -336,10 +409,12 @@ def render(args) -> int:
     (out / "report.html").write_text(html_page(trials, now, judged, stack_line(), agent_cost, judge_cost))
 
     for c in blocking:
-        print(f"::error::smoke {c['leg']} · {c['task']}: {c['k']}/{c['n']} ({c['verdict']})")
-    if args.record:
-        return 1 if any(c["leg"] == "oracle" for c in blocking) else 0
-    return 1 if blocking else 0
+        print(f"::error::smoke {c['leg']} · {c['task']}: {c['k']}/{c['n']}")
+    for g in blocking_legs:
+        print(f"::error::smoke leg {g['leg']}: {g['x']}/{g['n']} against {g['base_k']}/{g['base_n']} on main")
+    for c in warnings:
+        print(f"::warning::smoke {c['leg']} · {c['task']}: {c['k']}/{c['n']}")
+    return 1 if blocking or blocking_legs else 0
 
 
 def html_page(trials, now, judged, stack_line, agent_cost, judge_cost) -> str:
@@ -357,7 +432,7 @@ def html_page(trials, now, judged, stack_line, agent_cost, judge_cost) -> str:
             detail = (f"<details><summary>judge</summary><p>{html.escape(j.get('summary', ''))}</p>"
                       f"<ul>{checks}</ul></details>")
         verdict = now[f"{t['leg']}/{t['task']}"]["verdict"]
-        cls = "ok" if t["passed"] else ("warn" if verdict in ("known", "flaky") else "bad")
+        cls = "ok" if t["passed"] else ("bad" if verdict == "blocking" else "warn")
         rows.append(
             f"<tr><td>{html.escape(t['task'])}</td><td>{html.escape(t['leg'])}</td>"
             f"<td class='{cls}'>{html.escape(outcome(t))}</td><td>{fmt(t['turns'])}</td>"
@@ -382,11 +457,11 @@ Chips are pain points the judge (evals/rubrics/pain-points.toml) found; only fai
 
 def select(args) -> int:
     jobs = Path(args.jobs)
-    base = baseline_cells(args.baseline) or {}
+    pool = load_pool(args.baseline) or {}
     for t in collect(jobs):
         if t["leg"] == "oracle":
             continue
-        if not t["passed"] or is_outlier(t, base.get(f"{t['leg']}/{t['task']}")):
+        if not t["passed"] or is_outlier(t, pooled(pool.get(f"{t['leg']}/{t['task']}"))):
             print(jobs / t["dir"])
     return 0
 

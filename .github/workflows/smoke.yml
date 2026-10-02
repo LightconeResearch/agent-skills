@@ -4,12 +4,13 @@
 #   oracle  reference solutions against the stack under test, no LLM, no secrets
 #           (runs on fork PRs too), plus the astra-tools version-skew check
 #   legs    claude-code haiku plugin | claude-code haiku skill | codex luna skill
-#   report  per (leg, task) k/n against the baseline (the latest successful push
-#           to main), judge failures and outliers, job summary, one sticky PR comment
+#   report  per (leg, task) k/n against the baseline (pooled from the latest
+#           successful push to main), judge failures and outliers, job summary, one sticky PR comment
 #
-# Gate: the oracle fails, or a cell regressed (baseline >= 1 success, now 0/K).
-# A cell already 0/K on main is a known failure: red in the comment, not
-# blocking. With no baseline yet, any 0/K cell blocks. Runs on main record
+# Gate (evals/bin/report.py): the oracle fails; a cell passing >= 80% on main
+# (pooled over the last 5 pushes) goes 0/K; or a leg's passes are improbably
+# low against its pooled rate (binomial tail < 0.01). Other failures in solid
+# cells warn; with no baseline yet, any 0/K cell blocks. Runs on main record
 # the baseline and gate only on the oracle.
 #
 # Secrets: ANTHROPIC_API_KEY (claude-code legs and the judge), OPENAI_API_KEY
