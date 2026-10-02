@@ -264,7 +264,7 @@ jobs:
         run: |
           run="$(gh run list -R "$SKILLS_REPO" --workflow smoke.yml --branch main --event push \
                    --status success --limit 1 --json databaseId,headSha \
-                   --jq '.[0] | "\(.databaseId) \(.headSha)"' || true)"
+                   --jq '.[0] | select(. != null) | "\(.databaseId) \(.headSha)"' || true)"
           if [ -z "$run" ] || ! gh run download "${run%% *}" -R "$SKILLS_REPO" -n smoke-summary -D baseline; then
             echo "::notice::no baseline yet: every 0/K cell blocks"
             exit 0
@@ -282,6 +282,11 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BASELINE: ${{ steps.baseline.outputs.path }}
         run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::notice::judge skipped: no ANTHROPIC_API_KEY"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           python3 evals/bin/report.py select evals/jobs ${BASELINE:+--baseline "$BASELINE"} > judge-these.txt
           cat judge-these.txt
           [ -s judge-these.txt ] || { echo "nothing to judge"; exit 0; }
@@ -292,14 +297,16 @@ jobs:
           BASELINE: ${{ steps.baseline.outputs.path }}
           BASE_LABEL: ${{ steps.baseline.outputs.label && format('{0}, run {1}', steps.baseline.outputs.label, steps.baseline.outputs.run) || '' }}
           RECORD: ${{ github.event_name == 'push' && '--record' || '' }}
-          JUDGE_FAILED: ${{ steps.judge.outcome == 'failure' && 'true' || '' }}
+          JUDGE_SKIPPED: ${{ steps.judge.outputs.skipped }}
+          JUDGE_OUTCOME: ${{ steps.judge.outcome }}
           # Every planned leg appears in the comment, including those that never ran.
           EXPECT_LEGS: ${{ needs.legs.result != 'skipped' && join(fromJSON(needs.oracle.outputs.legs || '[]').*.name, ' ') || '' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set +e
           note=""
-          if [ "$JUDGE_FAILED" = true ]; then
+          if [ "$JUDGE_SKIPPED" = true ]; then note="Judge skipped: no ANTHROPIC_API_KEY."
+          elif [ "$JUDGE_OUTCOME" = failure ]; then
             note="**The judge did not run to completion**; failures above carry no judge notes. See the run log."
           fi
           # shellcheck disable=SC2086  # RECORD is a flag or empty
