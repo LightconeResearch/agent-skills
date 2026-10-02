@@ -6,6 +6,11 @@ each with a deterministic verifier that calls the real `astra` / `lc` and
 scores all-or-nothing. Prompts name the CLI and never teach it; the plugin is
 a run-time axis, never baked into an image.
 
+Hook mechanics are covered deterministically elsewhere: `npm test`
+(`scripts/test-hooks.mjs`, about a second) and the `e2e-hooks` workflow fail
+when a hook says the wrong thing or doesn't fire. This suite asks the question
+those can't: whether an agent reading the skills gets through the work.
+
 | task | the agent must | decided by |
 |---|---|---|
 | `astra-author` | write `astra.yaml` for a stated two-step pipeline | `astra validate`; astra's resolver sees the declared graph |
