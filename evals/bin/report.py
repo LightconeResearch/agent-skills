@@ -457,6 +457,8 @@ def render(args) -> int:
                 if pool is not None and args.base_label else
                 f"Baseline pooled over the last {runs} run{'s' * (runs != 1)} on main." if pool is not None else
                 "No baseline on main yet, so every 0/n cell blocks.")]
+    if args.baseline_error:
+        lines.append(f"**{args.baseline_error}**")
     if stack:
         lines.append(stack_line() + ".")
     lines.append("")
@@ -628,6 +630,7 @@ def main() -> int:
             p.add_argument("--record", action="store_true")
             p.add_argument("--judge-note", default="", help="a line for the comment about the judge")
             p.add_argument("--expect-legs", default="", help="space-separated legs the run planned")
+            p.add_argument("--baseline-error", default="", help="a line for the comment when the baseline fetch failed")
             p.add_argument("--expect-tasks", default="", help="space-separated task dirs the run planned")
             p.add_argument("--k", type=int, help="attempts each agent leg owes per task")
             p.add_argument("--not-run-reason", default="", help="why a planned leg without trials did not run")

@@ -4,8 +4,8 @@
 #   oracle  reference solutions against the stack under test, no LLM, no secrets
 #           (runs on fork PRs too), plus the astra-tools version-skew check
 #   legs    claude-code haiku plugin | claude-code haiku skill | codex luna skill
-#   report  per (leg, task) k/n against the baseline (pooled from the latest
-#           successful push to main), judge failures and outliers, job summary, one sticky PR comment
+#   report  per (leg, task) k/n against the baseline (pooled over recent pushes
+#           to main, see below), judge failures and outliers, job summary, one sticky PR comment
 #
 # Gate (evals/bin/report.py): the oracle fails; a cell passing >= 80% on main
 # (pooled over the last 5 pushes) goes 0/K; or a leg's passes are improbably
@@ -22,7 +22,11 @@
 #   uses: LightconeResearch/agent-skills/.github/workflows/smoke.yml@main
 #   with: { lightcone_ref: "${{ github.event.pull_request.head.sha }}" }
 #   secrets: inherit
-# (the caller grants contents: read, actions: read, pull-requests: write).
+# (the caller grants contents: read, pull-requests: write).
+#
+# Baseline: .github/workflows/smoke-baseline.yml publishes each passing push
+# run's summary to the orphan branch smoke-baseline as baseline.json; every
+# run reads it from raw.githubusercontent.com, no token needed.
 name: smoke
 
 on:
@@ -268,7 +272,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      actions: read
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
@@ -280,22 +283,25 @@ jobs:
           pattern: smoke-leg-*
           path: evals/jobs
           merge-multiple: true
-      - name: Fetch the baseline (latest successful push to main)
+      - name: Fetch the baseline (published by smoke-baseline.yml from main)
         id: baseline
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          run="$(gh run list -R "$SKILLS_REPO" --workflow smoke.yml --branch main --event push \
-                   --status success --limit 1 --json databaseId,headSha \
-                   --jq '.[0] | select(. != null) | "\(.databaseId) \(.headSha)"' || true)"
-          if [ -z "$run" ] || ! gh run download "${run%% *}" -R "$SKILLS_REPO" -n smoke-summary -D baseline; then
-            echo "::notice::no baseline yet: every 0/K cell blocks"
-            exit 0
-          fi
-          echo "path=baseline/summary.json" >> "$GITHUB_OUTPUT"   # smoke-summary holds smoke-report/'s files
-          sha="${run#* }"
-          echo "label=main@${sha:0:7}" >> "$GITHUB_OUTPUT"
-          echo "run=${run%% *}" >> "$GITHUB_OUTPUT"
+          # Public and unauthenticated, so lightcone-cli callers read the same baseline.
+          mkdir -p baseline
+          url="https://raw.githubusercontent.com/$SKILLS_REPO/smoke-baseline/baseline.json"
+          code="$(curl -sS -L -o baseline/baseline.json -w '%{http_code}' "$url" || echo 000)"
+          case "$code" in
+            200)
+              echo "path=baseline/baseline.json" >> "$GITHUB_OUTPUT"
+              sha="$(jq -r '.commit // ""' baseline/baseline.json)"
+              echo "label=main@${sha:0:7}" >> "$GITHUB_OUTPUT"
+              echo "run=$(jq -r '.run // ""' baseline/baseline.json)" >> "$GITHUB_OUTPUT" ;;
+            404)
+              echo "::notice::no baseline yet: every 0/K cell blocks" ;;
+            *)
+              echo "::warning::could not fetch the baseline ($url: HTTP $code); gating as if there were none"
+              echo "error=Baseline fetch failed (HTTP $code), so this run gates as if there were no baseline." >> "$GITHUB_OUTPUT" ;;
+          esac
       - uses: astral-sh/setup-uv@v5
       - run: uv tool install "harbor==${HARBOR_VERSION}"
       - name: Judge failures and outliers
@@ -325,6 +331,7 @@ jobs:
         env:
           BASELINE: ${{ steps.baseline.outputs.path }}
           BASE_LABEL: ${{ steps.baseline.outputs.label && format('{0}, run {1}', steps.baseline.outputs.label, steps.baseline.outputs.run) || '' }}
+          BASELINE_ERROR: ${{ steps.baseline.outputs.error }}
           RECORD: ${{ github.event_name == 'push' && '--record' || '' }}
           JUDGE_SKIPPED: ${{ steps.judge.outputs.skipped }}
           JUDGE_OUTCOME: ${{ steps.judge.outcome }}
@@ -347,7 +354,7 @@ jobs:
             --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" \
             --base-label "$BASE_LABEL" --judge-note "$note" --expect-legs "$EXPECT_LEGS" \
             --not-run-reason "$NOT_RUN_REASON" --job "oracle=$ORACLE_RESULT" --job "legs=$LEGS_RESULT" \
-            --expect-tasks "$EXPECT_TASKS" --k "$K" \
+            --expect-tasks "$EXPECT_TASKS" --k "$K" --baseline-error "$BASELINE_ERROR" \
             --out smoke-report $RECORD
           echo "gate=$?" >> "$GITHUB_OUTPUT"
           [ -f evals/jobs/judge/analysis.json ] && cp evals/jobs/judge/analysis.json smoke-report/judge-analysis.json

@@ -80,7 +80,10 @@ that lightcone-cli PRs call with their head sha.
    writes the job summary and an HTML artifact, and keeps one comment on the
    PR up to date.
 
-The baseline pools the last five pushes to main: each run's `summary.json`
+The baseline pools the last five pushes to main, published by
+`.github/workflows/smoke-baseline.yml` as `baseline.json` on the orphan branch
+`smoke-baseline` and read without a token from raw.githubusercontent.com (so
+lightcone-cli runs see the same one): each run's `summary.json`
 carries the per-cell pass counts and turn samples of the previous pool plus
 its own, oldest dropped. The check blocks when the oracle fails, when a cell
 that passes at least 80% on main goes 0/K, or when a leg passes improbably few
