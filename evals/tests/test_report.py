@@ -276,3 +276,24 @@ def test_astra_override_blocks_with_a_labelled_line(tmp_path):
     rc, _ = render(tmp_path, None, "--stack", str(jobs / "stack.json"))
     assert rc == 1
     assert f"- **blocking** · override: {override}" in (tmp_path / "out" / "comment.md").read_text()
+
+
+def test_leg_test_judges_cells_by_their_own_rates(tmp_path):
+    # History: 15/15 on one task, 0/2 on four. This run: the same outcomes, 2/2 and four 0/2.
+    # A leg-wide pooled p (16/19) made this look improbable (p = 0.006); per cell it is ordinary.
+    jobs = tmp_path / "jobs"
+    tasks = [f"task-{i}" for i in range(5)]
+    run_cell(jobs, tasks[0], 2)
+    for task in tasks[1:]:
+        run_cell(jobs, task, 0)
+    pool = {f"{LEG}/{tasks[0]}": [{"k": 3, "n": 3, "turns": [10] * 3, "stack_calls": [1] * 3}] * 5}
+    for task in tasks[1:]:
+        pool[f"{LEG}/{task}"] = [{"k": 0, "n": 2, "turns": [10, 10], "stack_calls": [1, 1]}]
+    base = tmp_path / "base.json"
+    base.write_text(json.dumps({"pool": pool}))
+    rc, summary = render(tmp_path, base)
+    leg = summary["legs"][0]
+    assert (leg["x"], leg["n"], leg["base_k"], leg["base_n"]) == (2, 10, 15, 23)
+    assert leg["tail"] > 0.1 and not leg["blocking"]
+    assert rc == 0
+    assert {c["verdict"] for c in summary["cells"].values()} == {"pass", "known"}

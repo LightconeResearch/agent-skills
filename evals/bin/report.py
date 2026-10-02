@@ -23,11 +23,12 @@ baseline median (at least twice it and at least OUTLIER_GAP above it).
 comment) and report.html into --out, and exits 1 when the gate blocks:
   - an oracle trial scored below 1.0;
   - a cell whose pooled baseline rate is >= STRONG went 0/n;
-  - a leg passed improbably few trials against its pooled baseline: the
-    one-sided binomial tail P(X <= x | n, p) < LEG_ALPHA, with x/n this run's
-    passes over the leg's baselined cells and p the leg's pooled rate,
-    smoothed to (s + 1) / (t + 2) so a spotless history does not make a
-    single failure impossible;
+  - a leg passed improbably few trials against its baseline: P(X <= x) <
+    LEG_ALPHA, where x is this run's passes over the leg's baselined cells
+    and X sums, per cell, Binomial(this run's attempts, that cell's pooled
+    rate smoothed to (s + 1) / (t + 2)) — a Poisson-binomial lower tail, so a
+    leg mixing solid and known-failing cells is judged cell by cell, and a
+    spotless history does not make a single failure impossible;
   - with no baseline for a cell, it went 0/n.
 Trials that died on the harness or the provider (INFRA: quota, rate limit,
 auth, setup timeout, ...) are not agent results: they are not judged, not
@@ -251,8 +252,17 @@ def verdict(cell: dict, base: dict | None) -> str:
     return "known"
 
 
+def poisson_binomial_cdf(x: int, trials: list[tuple[int, float]]) -> float:
+    """P(X <= x) for X a sum of independent Binomial(n, p), one per (n, p)."""
+    dist = [1.0]  # dist[j] = P(j successes so far)
+    for n, p in trials:
+        for _ in range(n):
+            dist = [a * (1 - p) + b * p for a, b in zip(dist + [0.0], [0.0] + dist)]
+    return sum(dist[: x + 1])
+
+
 def leg_tests(now: dict[str, dict], bases: dict[str, dict | None]) -> list[dict]:
-    """Per agent leg: this run's passes against the leg's pooled rate on the same cells."""
+    """Per agent leg: this run's passes against each baselined cell's pooled rate."""
     out = []
     for leg in sorted({c["leg"] for c in now.values()} - {"oracle"}):
         cs = [(c, bases[key]) for key, c in now.items() if c["leg"] == leg and bases[key]]
@@ -260,9 +270,10 @@ def leg_tests(now: dict[str, dict], bases: dict[str, dict | None]) -> list[dict]
             continue
         x, n = sum(c["k"] for c, _ in cs), sum(c["n"] for c, _ in cs)
         s, t = sum(b["k"] for _, b in cs), sum(b["n"] for _, b in cs)
-        p = (s + 1) / (t + 2)
-        tail = binom_cdf(x, n, p)
-        out.append({"leg": leg, "x": x, "n": n, "base_k": s, "base_n": t, "p": p,
+        rates = [(c["n"], (b["k"] + 1) / (b["n"] + 2)) for c, b in cs]
+        tail = poisson_binomial_cdf(x, rates)
+        out.append({"leg": leg, "x": x, "n": n, "base_k": s, "base_n": t,
+                    "expected": sum(n_c * p_c for n_c, p_c in rates),
                     "tail": tail, "blocking": tail < LEG_ALPHA})
     return out
 

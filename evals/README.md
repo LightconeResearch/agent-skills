@@ -87,8 +87,8 @@ lightcone-cli runs see the same one): each run's `summary.json`
 carries the per-cell pass counts and turn samples of the previous pool plus
 its own, oldest dropped. The check blocks when the oracle fails, when a cell
 that passes at least 80% on main goes 0/K, or when a leg passes improbably few
-trials against its pooled rate (one-sided binomial tail below 0.01, the rate
-smoothed to (s + 1) / (t + 2)). Any other failure in a cell that is solid on
+trials against its cells' pooled rates (Poisson-binomial lower tail below
+0.01, each cell's rate smoothed to (s + 1) / (t + 2)). Any other failure in a cell that is solid on
 main is a warning, listed first; failures in cells already weak on main are
 known. With no baseline yet, any 0/K cell blocks. A leg whose passing trials
 mostly take more turns (or astra/lc calls) than their cells' pooled medians
