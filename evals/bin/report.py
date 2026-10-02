@@ -309,7 +309,7 @@ def render(args) -> int:
     lines += ["", f"Cost of this run: **{money(agent_cost + judge_cost)}** "
               f"(agents {money(agent_cost)}, judge {money(judge_cost)}; the harnesses' API-price estimates)."]
 
-    noted = [t for t in trials if t["trial"] in judged and (t["passed"] or t["badges"])]
+    noted = [t for t in trials if t["trial"] in judged and t["passed"]]  # judged outliers
     lines += ["", "<details><summary>Per-trial detail and judge notes</summary>", "",
               "| leg | task | outcome | turns | astra/lc calls | max repeat | agent min | cost | judge |",
               "|---|---|---|---|---|---|---|---|---|"]

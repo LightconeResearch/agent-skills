@@ -32,6 +32,10 @@ mkdir -p "$src"
 touch "$src/job.log"   # what makes harbor analyze treat the dir as a job of trials
 for t in "${trials[@]}"; do cp -R "$t" "$src/"; done
 
+# The judge's container is a bare python image, so Harbor installs Claude Code
+# in it first; give that install room (Harbor's default allows 360 s).
+printf 'agent_setup_timeout_multiplier: 3\n' > "$OUT/judge-config.yaml"
+
 echo "=== judge: ${#trials[@]} trial(s) with $JUDGE_MODEL"
-harbor analyze "$src" -r "$ROOT/evals/rubrics/pain-points.toml" -p "$ROOT/evals/rubrics/pain-points-prompt.txt" \
+harbor analyze "$src" -c "$OUT/judge-config.yaml" -r "$ROOT/evals/rubrics/pain-points.toml" -p "$ROOT/evals/rubrics/pain-points-prompt.txt" \
   -a claude-code -m "$JUDGE_MODEL" -e docker -n "$N" -o "$OUT" --job-name judge -q
