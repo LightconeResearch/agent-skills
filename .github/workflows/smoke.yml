@@ -312,6 +312,7 @@ jobs:
       - name: Judge failures and outliers
         id: judge
         continue-on-error: true
+        timeout-minutes: 12   # the report, comment and gate below still run
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BASELINE: ${{ steps.baseline.outputs.path }}
@@ -333,6 +334,7 @@ jobs:
         run: python3 evals/bin/redact.py evals/jobs
       - name: Report
         id: report
+        if: always()
         env:
           BASELINE: ${{ steps.baseline.outputs.path }}
           BASE_LABEL: ${{ steps.baseline.outputs.label && format('{0}, run {1}', steps.baseline.outputs.label, steps.baseline.outputs.run) || '' }}
@@ -371,7 +373,7 @@ jobs:
           path: smoke-report/
           retention-days: 90
       - name: Sticky PR comment
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         continue-on-error: true   # a fork PR's token cannot comment
         env:
           GH_TOKEN: ${{ github.token }}
@@ -385,6 +387,7 @@ jobs:
             gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@smoke-report/comment.md >/dev/null
           fi
       - name: Gate
+        if: always()
         env:
           GATE: ${{ steps.report.outputs.gate }}
         run: '[ "$GATE" = 0 ]'
