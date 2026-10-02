@@ -265,7 +265,7 @@ jobs:
             echo "::notice::no baseline yet: every 0/K cell blocks"
             exit 0
           fi
-          echo "path=baseline/summary.json" >> "$GITHUB_OUTPUT"
+          echo "path=baseline/summary.json" >> "$GITHUB_OUTPUT"   # smoke-summary holds smoke-report/'s files
           sha="${run#* }"
           echo "label=main@${sha:0:7}" >> "$GITHUB_OUTPUT"
           echo "run=${run%% *}" >> "$GITHUB_OUTPUT"
@@ -297,14 +297,13 @@ jobs:
             --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" \
             --base-label "$BASE_LABEL" --out smoke-report $RECORD $JUDGE_FAILED
           echo "gate=$?" >> "$GITHUB_OUTPUT"
+          [ -f evals/jobs/judge/analysis.json ] && cp evals/jobs/judge/analysis.json smoke-report/judge-analysis.json
           cat smoke-report/summary.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: smoke-summary
-          path: |
-            smoke-report/
-            evals/jobs/judge/analysis.json
+          path: smoke-report/
           retention-days: 90
       - name: Sticky PR comment
         if: github.event_name == 'pull_request'
