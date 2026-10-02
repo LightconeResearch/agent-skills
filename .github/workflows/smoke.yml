@@ -1,0 +1,326 @@
+# Plugin smoke suite (evals/): can a cheap model, given the lightcone plugin,
+# still get through five core tasks? See evals/README.md.
+#
+#   oracle  reference solutions against the stack under test, no LLM, no secrets
+#           (runs on fork PRs too), plus the astra-tools version-skew check
+#   legs    claude-code haiku plugin | claude-code haiku skill | codex luna skill
+#   report  per (leg, task) k/n against the baseline (the latest successful push
+#           to main), judge failures and outliers, job summary, one sticky PR comment
+#
+# Gate: the oracle fails, or a cell regressed (baseline >= 1 success, now 0/K).
+# A cell already 0/K on main is a known failure: red in the comment, not
+# blocking. With no baseline yet, any 0/K cell blocks. Runs on main record
+# the baseline and gate only on the oracle.
+#
+# Secrets: ANTHROPIC_API_KEY (claude-code legs and the judge), OPENAI_API_KEY
+# (codex leg). API keys only; never a subscription OAuth token. A missing key
+# FAILS its leg (a forgotten key must not silently green the check), so PRs
+# from forks fail the legs: GitHub never exposes secrets to forks.
+#
+# lightcone-cli PRs reuse this through workflow_call with their head sha:
+#   uses: LightconeResearch/agent-skills/.github/workflows/smoke.yml@main
+#   with: { lightcone_ref: "${{ github.event.pull_request.head.sha }}" }
+#   secrets: inherit
+# (the caller grants contents: read, actions: read, pull-requests: write).
+name: smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - skills/**
+      - hooks/**
+      - plugins/**
+      - skills.config.json
+      - evals/**
+      - .github/workflows/smoke.yml
+  push:
+    branches: [main]
+    paths:
+      - skills/**
+      - hooks/**
+      - plugins/**
+      - skills.config.json
+      - evals/**
+      - .github/workflows/smoke.yml
+  schedule:
+    - cron: "23 3 * * *"   # the latest leg: astra-tools and lightcone-cli from main
+  workflow_dispatch:
+    inputs:
+      astra_ref:
+        description: "astra-tools git ref (empty: the plugin's pin from PyPI)"
+        default: ""
+      lightcone_ref:
+        description: "lightcone-cli git ref (empty: the plugin's pin from PyPI)"
+        default: ""
+      k:
+        description: "Attempts per task"
+        default: "2"
+      legs:
+        description: "Space-separated legs, or all (claude-haiku-plugin claude-haiku-skill codex-luna-skill)"
+        default: all
+  workflow_call:
+    inputs:
+      lightcone_ref:
+        description: "lightcone-cli git ref or sha under test"
+        type: string
+        required: true
+      astra_ref:
+        description: "astra-tools git ref (empty: the plugin's pin)"
+        type: string
+        default: ""
+      tasks:
+        description: "Space-separated globs over the evals/smoke task dir names"
+        type: string
+        default: "*"
+      k:
+        description: "Attempts per task"
+        type: number
+        default: 2
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-skills-smoke-${{ github.repository }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  HARBOR_VERSION: 0.22.0
+  HAIKU: claude-haiku-4-5
+  LUNA: gpt-6-luna
+  JUDGE_MODEL: claude-sonnet-5
+  K: ${{ inputs.k || 2 }}
+  TASKS: ${{ inputs.tasks || '*' }}
+  # On a workflow_call the caller's repo is github.repository; the suite always
+  # comes from agent-skills (at the run's own commit when it runs here).
+  SKILLS_REPO: LightconeResearch/agent-skills
+  SKILLS_REF: ${{ github.repository == 'LightconeResearch/agent-skills' && github.sha || 'main' }}
+
+jobs:
+  oracle:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      legs: ${{ steps.plan.outputs.legs }}
+      astra_tools: ${{ steps.stack.outputs.ASTRA_TOOLS }}
+      astra_pin: ${{ steps.stack.outputs.ASTRA_PIN }}
+      lightcone_cli: ${{ steps.stack.outputs.LIGHTCONE_CLI }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SKILLS_REPO }}
+          ref: ${{ env.SKILLS_REF }}
+      - name: Resolve the stack under test
+        id: stack
+        env:
+          ASTRA_REF: ${{ github.event_name == 'schedule' && 'main' || inputs.astra_ref }}
+          LIGHTCONE_REF: ${{ github.event_name == 'schedule' && 'main' || inputs.lightcone_ref }}
+        run: evals/bin/stack.sh | tee -a "$GITHUB_OUTPUT" "$GITHUB_ENV"
+      - name: Plan the legs
+        id: plan
+        env:
+          LEGS: ${{ inputs.legs || 'all' }}
+        run: |
+          legs=()
+          for spec in "claude-code:$HAIKU:plugin" "claude-code:$HAIKU:skill" "codex:$LUNA:skill"; do
+            name="$(evals/bin/smoke.sh --name "$spec")"
+            [ "$LEGS" = all ] || [[ " $LEGS " == *" $name "* ]] || continue
+            key=ANTHROPIC_API_KEY; [ "${spec%%:*}" = codex ] && key=OPENAI_API_KEY
+            legs+=("{\"name\":\"$name\",\"spec\":\"$spec\",\"key\":\"$key\"}")
+          done
+          [ ${#legs[@]} -gt 0 ] || { echo "::error::no leg matches '$LEGS'"; exit 1; }
+          echo "legs=[$(IFS=,; echo "${legs[*]}")]" | tee -a "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool install "harbor==${HARBOR_VERSION}"
+      - uses: docker/setup-buildx-action@v3
+        id: buildx
+        with:
+          use: false   # Harbor builds the task images with the docker-driver default builder
+      - name: Build lightcone-eval-base and lightcone-smoke-stack
+        uses: docker/bake-action@v6
+        with:
+          source: .
+          workdir: evals/images
+          files: docker-bake.hcl
+          builder: ${{ steps.buildx.outputs.name }}
+          load: true
+          set: |
+            eval-base.cache-from=type=gha,scope=eval-base
+            eval-base.cache-to=type=gha,scope=eval-base,mode=max
+            smoke-stack.cache-from=type=gha,scope=smoke-stack
+            smoke-stack.cache-to=type=gha,scope=smoke-stack,mode=max
+      - name: Version-skew check
+        id: skew
+        continue-on-error: true
+        run: mkdir -p evals/jobs && evals/bin/stack-info.sh > evals/jobs/stack.json
+      - name: Gate logic tests
+        run: uv run --with pytest pytest evals/tests -q
+      - name: Oracle (reference solutions must all score 1.0)
+        run: |
+          K=1 N=5 evals/bin/smoke.sh oracle
+          python3 evals/bin/report.py render evals/jobs --out oracle-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-leg-oracle
+          path: evals/jobs/
+          retention-days: 30
+      - name: Fail on version skew
+        if: steps.skew.outcome == 'failure'
+        run: |
+          echo "::error::astra-tools version skew between lightcone-cli and the plugin pin (see the 'Version-skew check' step)"
+          exit 1
+
+  legs:
+    needs: oracle
+    name: ${{ matrix.leg.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.oracle.outputs.legs) }}
+    env:
+      ASTRA_TOOLS: ${{ needs.oracle.outputs.astra_tools }}
+      ASTRA_PIN: ${{ needs.oracle.outputs.astra_pin }}
+      LIGHTCONE_CLI: ${{ needs.oracle.outputs.lightcone_cli }}
+    steps:
+      - name: Require the leg's API key
+        env:
+          LEG_KEY: ${{ secrets[matrix.leg.key] }}
+        run: |
+          if [ -z "$LEG_KEY" ]; then
+            echo "::error::${{ matrix.leg.name }} needs the ${{ matrix.leg.key }} repository secret, which is not set (or this is a fork PR)."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SKILLS_REPO }}
+          ref: ${{ env.SKILLS_REF }}
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool install "harbor==${HARBOR_VERSION}"
+      - uses: docker/setup-buildx-action@v3
+        id: buildx
+        with:
+          use: false
+      - name: Build lightcone-eval-base and lightcone-smoke-stack (from the oracle's cache)
+        uses: docker/bake-action@v6
+        with:
+          source: .
+          workdir: evals/images
+          files: docker-bake.hcl
+          builder: ${{ steps.buildx.outputs.name }}
+          load: true
+          set: |
+            eval-base.cache-from=type=gha,scope=eval-base
+            smoke-stack.cache-from=type=gha,scope=smoke-stack
+      - name: Run ${{ matrix.leg.spec }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_FORCE_AUTH_JSON: "0"
+        run: N=5 evals/bin/smoke.sh "${{ matrix.leg.spec }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-leg-${{ matrix.leg.name }}
+          path: evals/jobs/
+          retention-days: 30
+
+  report:
+    needs: [oracle, legs]
+    if: always() && needs.oracle.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SKILLS_REPO }}
+          ref: ${{ env.SKILLS_REF }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: smoke-leg-*
+          path: evals/jobs
+          merge-multiple: true
+      - name: Fetch the baseline (latest successful push to main)
+        id: baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run="$(gh run list -R "$SKILLS_REPO" --workflow smoke.yml --branch main --event push \
+                   --status success --limit 1 --json databaseId,headSha \
+                   --jq '.[0] | "\(.databaseId) \(.headSha)"' || true)"
+          if [ -z "$run" ] || ! gh run download "${run%% *}" -R "$SKILLS_REPO" -n smoke-summary -D baseline; then
+            echo "::notice::no baseline yet: every 0/K cell blocks"
+            exit 0
+          fi
+          echo "path=baseline/summary.json" >> "$GITHUB_OUTPUT"
+          sha="${run#* }"
+          echo "label=main@${sha:0:7}" >> "$GITHUB_OUTPUT"
+          echo "run=${run%% *}" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool install "harbor==${HARBOR_VERSION}"
+      - name: Judge failures and outliers
+        id: judge
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BASELINE: ${{ steps.baseline.outputs.path }}
+        run: |
+          python3 evals/bin/report.py select evals/jobs ${BASELINE:+--baseline "$BASELINE"} > judge-these.txt
+          cat judge-these.txt
+          [ -s judge-these.txt ] || { echo "nothing to judge"; exit 0; }
+          evals/bin/judge.sh < judge-these.txt
+      - name: Report
+        id: report
+        env:
+          BASELINE: ${{ steps.baseline.outputs.path }}
+          BASE_LABEL: ${{ steps.baseline.outputs.label && format('{0}, run {1}', steps.baseline.outputs.label, steps.baseline.outputs.run) || '' }}
+          RECORD: ${{ github.event_name == 'push' && '--record' || '' }}
+          JUDGE_FAILED: ${{ steps.judge.outcome == 'failure' && '--judge-failed' || '' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          # shellcheck disable=SC2086  # RECORD and JUDGE_FAILED are a flag or empty
+          python3 evals/bin/report.py render evals/jobs ${BASELINE:+--baseline "$BASELINE"} \
+            --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" \
+            --base-label "$BASE_LABEL" --out smoke-report $RECORD $JUDGE_FAILED
+          echo "gate=$?" >> "$GITHUB_OUTPUT"
+          cat smoke-report/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-summary
+          path: |
+            smoke-report/
+            evals/jobs/judge/analysis.json
+          retention-days: 90
+      - name: Sticky PR comment
+        if: github.event_name == 'pull_request'
+        continue-on-error: true   # a fork PR's token cannot comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          id="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+                  --jq '.[] | select(.body | contains("<!-- lightcone-smoke-report -->")) | .id' | head -1)"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@smoke-report/comment.md >/dev/null
+          else
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@smoke-report/comment.md >/dev/null
+          fi
+      - name: Gate
+        env:
+          GATE: ${{ steps.report.outputs.gate }}
+        run: '[ "$GATE" = 0 ]'
