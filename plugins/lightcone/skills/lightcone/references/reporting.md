@@ -87,7 +87,7 @@ id humanized, with no diagnostic, no error token and no clue to the reader.
 
 That reads as ordinary prose, so a typo'd or renamed id can sit in a report
 indefinitely. After renaming anything, grep the report for the old id, and
-check the ids you reference against `uvx astra-tools@0.2.18 info`.
+check the ids you reference against `uvx astra-tools@0.2.17 info`.
 
 ## Paths
 

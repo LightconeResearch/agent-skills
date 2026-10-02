@@ -50,7 +50,7 @@ if ! command -v uvx &>/dev/null; then
     exit 0
 fi
 
-report=$(uvx astra-tools@0.2.18 validate --json 2>/dev/null)
+report=$(uvx astra-tools@0.2.17 validate --json 2>/dev/null)
 rc=$?
 
 case "$report" in
