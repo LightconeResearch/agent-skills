@@ -140,5 +140,16 @@ def test_compound_or_relocated_validate_is_not_evidence():
 
 
 def test_isolated_validate_forms_count():
-    for cmd in ("astra validate", "uvx astra-tools@0.2.18 validate astra.yaml", "astra validate --strict 2>&1"):
+    for cmd in ("astra validate", "uvx astra-tools@0.2.18 validate astra.yaml", "astra validate --json 2>&1",
+                "astra validate --skip-evidence"):
         assert trialview.is_astra_validate({"kind": "call", "tool": "Bash", "what": cmd}), cmd
+    for cmd in ("astra validate --help", "astra validate -h", "astra validate --verify-evidence",
+                "astra validate --analysis astra.yaml universes/x.yaml", "astra validate --strict"):
+        assert not trialview.is_astra_validate({"kind": "call", "tool": "Bash", "what": cmd}), cmd
+
+
+def test_help_after_a_failed_hook_is_not_a_contradiction():
+    rows = rows_for(("Write", "/root/x/astra.yaml", None), ("Bash", "astra validate --help", 0),
+                    claim="fail", text="ASTRA validation FAILED for the project")
+    trialview.mark_contradictions(rows, [{"name": "spec_valid", "ok": False}])
+    assert not any(r.get("contradicted") for r in rows)

@@ -184,10 +184,14 @@ def timeline(tdir: Path, checks: list[dict] | None = None) -> list[dict]:
 
 # Only an isolated, project-wide `astra validate` is evidence about the file the save
 # hook checked: optionally through uvx, optionally naming astra.yaml, optionally with
-# flags and a trailing 2>&1. Anything compound (; && || | subshells) or any change of
-# directory makes what it validated uncertain.
+# a flag that leaves the verdict alone (--json, --skip-evidence; astra-tools 0.2.18)
+# and a trailing 2>&1. --help, --verify-evidence (more checks), --analysis (a
+# universe) or any other flag is not the same check. Anything compound (; && || |,
+# subshells) or any change of directory makes what it validated uncertain.
+VALIDATE_FLAGS = ("--json", "--skip-evidence")
 ASTRA_VALIDATE = re.compile(
-    r"(uvx\s+)?(astra|astra-tools(@[\w.+-]+)?)\s+validate(\s+(\./)?astra\.ya?ml)?(\s+--[\w-]+)*(\s+2>&1)?")
+    r"(uvx\s+)?(astra|astra-tools(@[\w.+-]+)?)\s+validate(\s+(\./)?astra\.ya?ml)?"
+    r"(\s+(" + "|".join(re.escape(f) for f in VALIDATE_FLAGS) + r"))*(\s+2>&1)?")
 COMPOUND = re.compile(r"[;&|()`$<>\n]|\bcd\b|\bpushd\b|\bpopd\b")
 SHELLS = {"bash", "shell", "exec", "exec_command", "local_shell"}
 
