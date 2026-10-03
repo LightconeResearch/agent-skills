@@ -1,9 +1,9 @@
 """The PR comment and the HTML report, each a pure function of summary.json (stdlib only).
 
-Both lead with the verdict (a deterministic headline, its consequence and, when
-knowable, a fix), then the five-link chain (stack -> version check -> reference
-solutions -> agent -> judge), then the tasks. Anything the judge wrote is
-labelled "Judge"; the system never speaks in its voice.
+Both lead with the verdict (a terse, data-built headline and, for mechanical
+causes, a fix), then the five-link chain (stack -> version check -> reference
+solutions -> agent -> judge), then the tasks. The only prose is the judge's
+ranked list of pain points, labelled Judge, each linked to its evidence.
 """
 
 from __future__ import annotations
@@ -98,17 +98,10 @@ def md_trial(t: dict, s: dict) -> list[str]:
             lines.append(f"**`{c['name']}`** ✗{desc}")
             lines += md_fence(c["output"])
     if t["leg"] != "oracle":
-        j = t["judge"]
-        if j:
-            badges = " ".join(f"`{b}`" for b in j["badges"])
-            lines.append(f"**Judge:** {j['summary']}" + (f" {badges}" if badges else ""))
-            if j["fix"]:
-                lines.append(f"**Judge suggests:** {j['fix']}")
-        else:
-            lines.append(f"**Judge not run:** {s['judge']['reason']}")
+        lines += md_judge(t, s, top=3)
         if t["last_message"]:
             first = " / ".join(ln.strip() for ln in t["last_message"].splitlines() if ln.strip())[:240]
-            lines.append(f"**Agent's last message:** {first}")
+            lines.append(f"last message: “{first}”")
         base = t.get("base")
         nums = [f"{fmt(t['turns'])} turns", f"{t['stack_calls']} astra/lc calls"]
         if base:
@@ -120,17 +113,39 @@ def md_trial(t: dict, s: dict) -> list[str]:
     return lines
 
 
+def evidence_link(t: dict, item: dict, s: dict) -> str:
+    if item.get("step") is None:
+        return item.get("evidence") or ""
+    url = s["run"].get("report_url")
+    label = item["evidence"]
+    return f"[{label}]({url}#{t['anchor']}-s{item['step']})" if url else label
+
+
+def md_judge(t: dict, s: dict, top: int | None = None) -> list[str]:
+    j = t["judge"]
+    if not j or j.get("error"):
+        return [f"Judge not run: {j['error'] if j else s['judge']['reason']}"]
+    items = j["items"][:top] if top else j["items"]
+    if not items:
+        return ["Judge: —"]
+    out = ["Judge:"]
+    for i, item in enumerate(items, 1):
+        badge = f"`{item['badge']}` " if item["badge"] else ""
+        ev = evidence_link(t, item, s)
+        out.append(f"{i}. {badge}{item['point']}" + (f" ({ev})" if ev else ""))
+    more = len(j["items"]) - len(items)
+    if more > 0:
+        out.append(f"   …and {more} more on the card")
+    return out
+
+
 def comment_md(s: dict) -> str:
     v = s["verdict"]
     lines = [MARKER, f"## {MARK[v['state']]} Plugin smoke · {v['headline']}", ""]
     meta = [leg_title(s)] + stack_bits(s) + ([f"**{task_score(s)}**"] if task_score(s) else [])
     lines += [" · ".join(meta), ""]
-    if v["consequence"]:
-        lines += [v["consequence"], ""]
     if v["fix"]:
         lines += [f"**Fix:** {v['fix']}", ""]
-    if v.get("judge_fix"):
-        lines += [f"**Judge suggests:** {v['judge_fix']}", ""]
     links = []
     for c in s["chain"]:
         text = f"{c['title'].lower()} {ICON[c['state']]}"
@@ -258,6 +273,7 @@ h2{font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .check.bad{border-color:var(--bad)}.check .cn{font-family:var(--mono);font-size:13px;font-weight:600}
 .check .cd{font-size:13px;color:var(--mute)}.check .out{padding:0 10px 8px 34px}
 .judge{border-left:3px solid var(--warn);padding:2px 0 2px 12px;margin:6px 0 10px}
+.pains{margin:4px 0 0;padding-left:20px}.pains li{margin:4px 0}.ev{font:12px var(--mono);color:var(--mute)}
 .judge .who{font-size:12px;font-weight:600;color:var(--warn);text-transform:uppercase;letter-spacing:.06em}
 .badge{display:inline-block;font:600 11.5px var(--mono);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;background:var(--warn-bg);color:var(--warn)}
 .tl{list-style:none;margin:0;padding:0;position:relative}
@@ -306,36 +322,55 @@ def check_html(c: dict, open_: bool) -> str:
             f'</span></summary>{out}</details>')
 
 
-def timeline_html(rows: list[dict]) -> str:
+def timeline_html(rows: list[dict], prefix: str = "") -> str:
+    seen: set[str] = set()
+
+    def anchor(r: dict, suffix: str = "") -> str:
+        if r.get("step") is None or not prefix:
+            return ""
+        ident = f"{prefix}-s{r['step']}{suffix}"
+        if ident in seen:
+            return ""
+        seen.add(ident)
+        return f' id="{e(ident)}"'
+
     items = []
     for r in rows:
         if r["kind"] == "hook":
             chip = f'<div class="contra">{md(r["contradicted"])}</div>' if r.get("contradicted") else ""
             text = r["text"] if len(r["text"]) < 400 else r["text"][:400] + "…"
-            items.append(f'<li class="hook"><span class="dot"></span><div class="t">{e(r["name"])}</div>'
+            items.append(f'<li class="hook"{anchor(r, "-hook")}><span class="dot"></span><div class="t">{e(r["name"])}</div>'
                          f'<div class="d">{e(text)}</div>{chip}</li>')
         elif r["kind"] == "final":
             items.append(f'<li class="end"><span class="dot"></span><div class="t">Agent\'s last message</div>'
                          f'<div class="d">{e(r["text"])}</div></li>')
         else:
             code = f" · exit {r['exit']}" if r["exit"] not in (None, 0) else ""
-            detail = r["output"] if r["error"] else r["note"][:220]
-            items.append(f'<li class="{"err" if r["error"] else "tool"}"><span class="dot"></span>'
+            detail = r["output"] if r["error"] else ""
+            items.append(f'<li class="{"err" if r["error"] else "tool"}"{anchor(r)}><span class="dot"></span>'
                          f'<div class="t">{e(r["turn"])}. {e(r["tool"])} · <code>{e(r["what"][:240])}</code>{e(code)}</div>'
                          f'<div class="d">{e(detail)}</div></li>')
     return f'<ol class="tl">{"".join(items)}</ol>' if items else '<p class="note">No trajectory.</p>'
 
 
 def judge_html(t: dict, s: dict) -> str:
+    """The judge's ranked pain points, each with a link to its evidence row in the timeline."""
     j = t["judge"]
-    if not j:
-        return f'<div class="judge"><span class="who">Judge not run</span><div>{e(s["judge"]["reason"])}</div></div>'
-    badges = "".join(f'<span class="badge">{e(b)}</span>' for b in j["badges"])
-    fix = f'<div><b>Judge suggests:</b> {md(j["fix"])}</div>' if j["fix"] else ""
-    crit = "".join(f"<li><b>{e(k)}</b> <i>{e(v.get('outcome'))}</i>: {e(v.get('explanation'))}</li>"
-                   for k, v in j["checks"].items())
-    return (f'<div class="judge"><span class="who">Judge</span><div>{md(j["summary"])}</div>{fix}<div>{badges}</div>'
-            f'<details class="more"><summary>every criterion</summary><ul>{crit}</ul></details></div>')
+    if not j or j.get("error"):
+        why = j["error"] if j else s["judge"]["reason"]
+        return f'<div class="judge"><span class="who">Judge not run</span> <span class="note">{e(why)}</span></div>'
+    if not j["items"]:
+        return '<div class="judge"><span class="who">Judge</span> <span class="note">—</span></div>'
+    rows = []
+    for item in j["items"]:
+        badge = f'<span class="badge">{e(item["badge"])}</span>' if item["badge"] else ""
+        ev = ""
+        if item.get("step") is not None:
+            ev = f' <a class="ev" href="#{e(t["anchor"])}-s{item["step"]}">{e(item["evidence"])}</a>'
+        elif item.get("evidence"):
+            ev = f' <span class="note">{e(item["evidence"])}</span>'
+        rows.append(f"<li>{badge}{md(item['point'])}{ev}</li>")
+    return f'<div class="judge"><span class="who">Judge</span><ol class="pains">{"".join(rows)}</ol></div>'
 
 
 def card_html(t: dict, s: dict, folded: bool = False) -> str:
@@ -344,9 +379,12 @@ def card_html(t: dict, s: dict, folded: bool = False) -> str:
     if t["passed"]:
         head, pill = "", '<span class="pill ok">✓ passed</span>'
     else:
-        head = (" and ".join(f"`{b}`" for b in bad) + " failed") if bad else (t["exception"] or "failed")
+        head = " ".join(f"`{b}` ✗" for b in bad) if bad else (t["exception"] or "failed")
+        first = next((c["first_error"] for c in t["checks"] if not c["ok"] and c["first_error"]), "")
+        if first:
+            head += f" · “{first}”"
         if t["contradiction"]:
-            head += f" — the {t['contradiction']}"
+            head += f" · {t['contradiction']}"
         pill = '<span class="pill bad">✗ failed</span>'
     who = "reference solution" if t["leg"] == "oracle" else t["label"]
     top = (f'<span class="name">{e(t["task"])}</span>{pill}<span class="note">{e(who)}</span>'
@@ -372,7 +410,7 @@ def card_html(t: dict, s: dict, folded: bool = False) -> str:
         body = f'<div class="col">{"".join(left)}</div>'
         stats = ""
     else:
-        right = ["<h3>What happened</h3>", judge_html(t, s), "<h3>Timeline</h3>", timeline_html(t["timeline"])]
+        right = [judge_html(t, s), "<h3>Timeline</h3>", timeline_html(t["timeline"], t["anchor"])]
         body = f'<div class="body"><div class="col">{"".join(left)}</div><div class="col">{"".join(right)}</div></div>'
         base = t.get("base")
         stats = (f'<div class="stats"><span><b>{fmt(t["turns"])}</b> turns</span><span><b>{t["stack_calls"]}</b> '
@@ -454,12 +492,8 @@ def page(s: dict) -> str:
     meta.append(cost_line(s))
     link = f' · <a href="{e(run["url"])}">workflow run</a>' if run.get("url") else ""
     parts = [f'<div class="verdict {v["state"]}"><h1>{MARK[v["state"]]} {md(v["headline"])}</h1>']
-    if v["consequence"]:
-        parts.append(f"<p>{md(v['consequence'])}</p>")
     if v["fix"]:
         parts.append(f'<div class="fix"><b>Fix</b>{md(v["fix"])}</div>')
-    if v.get("judge_fix"):
-        parts.append(f'<div class="fix judge"><b>Judge suggests</b>{md(v["judge_fix"])}</div>')
     parts.append(f'<div class="meta">{" · ".join(e(m) for m in meta)}{link}</div></div>')
     others = [r for r in s["reasons"][1:] if r["headline"] != v["headline"]]
     if others:
@@ -468,29 +502,22 @@ def page(s: dict) -> str:
             f'{md(r["headline"])}' + (f" — <i>Fix:</i> {md(r['fix'])}" if r["fix"] else "") + "</li>" for r in others) + "</ul>")
     parts.append(chain_html(s))
     parts.append(tasks_html(s))
-    if not agent_trials(s) and all(t["passed"] for t in s["trials"] if t["leg"] == "oracle") and \
-            any(t["leg"] == "oracle" for t in s["trials"]) and (s.get("stack") or {}).get("skew"):
-        parts.append('<p class="note">The reference solutions still pass: the skew breaks the plugin\'s promise '
-                     "to users, not these tasks' verifiers. That is why the version check is its own link.</p>")
     parts.append(stack_card(s))
     failed = failed_trials(s)
     for t in failed:
         parts.append(card_html(t, s))
     passing = [t for t in agent_trials(s) if t["passed"]] + [t for t in agent_trials(s) if not t["passed"] and t not in failed]
     if passing:
-        parts.append(f'<details class="more"><summary>Other attempts ({len(passing)}), folded</summary>'
+        parts.append(f'<details class="more"><summary>Passing attempts ({len(passing)}), folded</summary>'
                      + "".join(card_html(t, s, folded=True) for t in passing) + "</details>")
     oracle_ok = [t for t in s["trials"] if t["leg"] == "oracle" and t["passed"]]
     if oracle_ok:
         n = sum(len(t["checks"]) for t in oracle_ok)
         parts.append(f'<details class="more"><summary>Reference-solution checks, all {n} (expand)</summary>'
                      + "".join(card_html(t, s, folded=True) for t in oracle_ok) + "</details>")
-    parts.append('<h2>For agents reading this run</h2><p class="note">Every value on this page comes from '
-                 '<code>summary.json</code> (in the run\'s <code>smoke-summary</code> artifact): the verdict, the '
-                 'blocking reasons with their fixes, each check\'s output, the timelines and the judge\'s notes. '
-                 'The PR also carries GitHub annotations at each cause, such as the pin line in '
-                 '<code>skills.config.json</code> for a version skew. Headlines and fixes are rule-based '
-                 '(evals/bin/report.py); text marked Judge is the model judge\'s.</p>')
+    parts.append('<p class="note">for agents: every value here is in <code>summary.json</code> (artifact '
+                 '<code>smoke-summary</code>) · headlines and fixes: rules in <code>evals/bin/report.py</code> · '
+                 'Judge: the model judge</p>')
     return (f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width, initial-scale=1"><title>Plugin smoke run</title>'
             f'<style>{CSS}</style></head><body><div class="page">{"".join(parts)}</div></body></html>')

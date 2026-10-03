@@ -130,7 +130,8 @@ def timeline(tdir: Path, checks: list[dict] | None = None) -> list[dict]:
     """One row per tool call and hook message, in order, ending with the agent's last message.
 
     Row kinds: "hook" (with the hook's validation claim, if any), "call" (with
-    exit code and error flag) and "final". A validation claim that disagrees
+    exit code and error flag) and "final"; call rows and the hooks that followed
+    them carry the trajectory step_id the judge cites as evidence. A validation claim that disagrees
     with what happened next carries "contradicted": the text saying by what.
     """
     traj = _load(tdir / "agent" / "trajectory.json") or {}
@@ -150,10 +151,10 @@ def timeline(tdir: Path, checks: list[dict] | None = None) -> list[dict]:
             m = EXIT_CODE.search(output[:200])
             code = int(m.group(1)) if m else None
             error = (code not in (None, 0)) or "<tool_use_error>" in output[:500]
-            rows.append({"kind": "call", "turn": turn, "tool": tool, "what": what, "exit": code,
-                         "error": error, "output": trim(output, 6) if error else "",
+            rows.append({"kind": "call", "turn": turn, "step": step.get("step_id"), "tool": tool, "what": what,
+                         "exit": code, "error": error, "output": trim(output, 6) if error else "",
                          "note": (step.get("message") or "").strip()})
-            rows += by_call.get(call.get("tool_call_id"), [])
+            rows += [{**h, "step": step.get("step_id")} for h in by_call.get(call.get("tool_call_id"), [])]
     final = final_message(traj)
     if final:
         rows.append({"kind": "final", "text": final})

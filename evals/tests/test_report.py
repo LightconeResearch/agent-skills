@@ -171,8 +171,8 @@ def test_expected_leg_without_trials_shows_as_not_run(tmp_path):
     assert plugin == {"leg": "claude-haiku-plugin", "state": "not run",
                       "reason": "ANTHROPIC_API_KEY not set", "measured": 0, "infra": 0, "missing": 0}
     comment = (tmp_path / "out" / "comment.md").read_text()
-    assert "## ❌ Plugin smoke · The agent did not run: ANTHROPIC_API_KEY is not set" in comment
-    assert "**Fix:** Add the ANTHROPIC_API_KEY repository secret" in comment
+    assert "## ❌ Plugin smoke · not run · Haiku + plugin · ANTHROPIC_API_KEY not set" in comment
+    assert "**Fix:** add the ANTHROPIC_API_KEY repository secret" in comment
 
 
 def effort(summary: dict, metric: str = "turns") -> dict:
@@ -188,7 +188,7 @@ def test_effort_warns_when_most_trials_run_long(tmp_path):
     rc, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in tasks}))
     e = effort(summary)
     assert rc == 0 and e["flag"] and e["above"] == 10 and round(e["ratio"], 2) == 1.5
-    assert "took +50% turns against main across 5/5 tasks" in (tmp_path / "out" / "comment.md").read_text()
+    assert "effort · Haiku + skill · +50% turns · 5/5 tasks above main" in (tmp_path / "out" / "comment.md").read_text()
 
 
 def test_effort_stays_quiet_on_mixed_or_small_shifts(tmp_path):
@@ -214,8 +214,9 @@ def test_version_skew_blocks_and_leads_the_comment(tmp_path):
                          "--job", "oracle=failure", "--job", "legs=skipped")
     assert rc == 1 and summary["gate"] == "fail"
     comment = (tmp_path / "out" / "comment.md").read_text()
-    assert comment.splitlines()[1] == "## ❌ Plugin smoke · The plugin pins an astra-tools that its own lightcone-cli rejects"
-    assert '**Fix:** Set `"astra-tools": "0.2.18"` in `skills.config.json`' in comment
+    assert comment.splitlines()[1] == ("## ❌ Plugin smoke · version skew · lightcone-cli 0.5.0rc5 requires "
+                                       "astra-tools ==0.2.18 · plugin pins 0.2.17")
+    assert '**Fix:** `"astra-tools": "0.2.18"` in `skills.config.json`' in comment
     agent = next(c for c in summary["chain"] if c["key"] == "agent")
     assert agent["state"] == "skip" and agent["sub"] == "blocked by the version check"
     assert [r["class"] for r in summary["reasons"]][0] == "skew"
@@ -227,7 +228,7 @@ def test_failed_upstream_job_with_no_legs_never_passes(tmp_path):
     rc, summary = render(tmp_path, None, "--job", "oracle=failure", "--job", "legs=skipped")
     assert rc == 1 and summary["gate"] == "fail"
     comment = (tmp_path / "out" / "comment.md").read_text()
-    assert "## ❌ Plugin smoke · The oracle job ended in failure" in comment
+    assert "## ❌ Plugin smoke · oracle job · failure" in comment
     assert "agent ⏭ not run" in comment
     assert "| task |  |" not in comment and "### " not in comment
 
@@ -246,7 +247,7 @@ def test_every_planned_task_needs_an_oracle_run(tmp_path):
     trial(jobs, "oracle", "astra-author", 0, 1.0)
     rc, _ = render(tmp_path, None, "--expect-tasks", "astra-author astra-query")
     assert rc == 1
-    assert "No reference run for `astra-query`" in (tmp_path / "out" / "comment.md").read_text()
+    assert "no reference run · astra-query" in (tmp_path / "out" / "comment.md").read_text()
 
 
 def test_a_leg_short_of_k_trials_is_partly_measured(tmp_path):
@@ -279,7 +280,8 @@ def test_astra_override_blocks_with_a_labelled_line(tmp_path):
     rc, _ = render(tmp_path, None, "--stack", str(jobs / "stack.json"))
     assert rc == 1
     comment = (tmp_path / "out" / "comment.md").read_text()
-    assert "## ❌ Plugin smoke · lightcone-cli 0.5.1.dev3 requires astra-tools ==0.2.18, but this run tests astra-tools 0.2.19.dev7" in comment
+    assert ("## ❌ Plugin smoke · override · lightcone-cli 0.5.1.dev3 requires astra-tools ==0.2.18 "
+            "· testing astra-tools 0.2.19.dev7") in comment
 
 
 def test_leg_test_judges_cells_by_their_own_rates(tmp_path):
@@ -328,3 +330,34 @@ def test_coverage_is_per_cell_not_a_total(tmp_path):
     leg = next(g for g in summary["leg_status"] if g["leg"] == LEG)
     assert rc == 1 and leg["state"] == "partly measured" and leg["missing"] == 4
     assert leg["reason"] == "4/6 trials missing: 4 never ran (astra-add-decision 0/2, astra-query 0/2)"
+
+
+def test_judge_renders_a_ranked_list_linked_to_its_evidence(tmp_path):
+    jobs = tmp_path / "jobs"
+    run_cell(jobs, "astra-author", 0, n=1)
+    judge = tmp_path / "judge"
+    judge.mkdir()
+    name = f"astra-author__{LEG}0"
+    items = [{"badge": "hook_friction", "point": "The save hook said pass on an invalid spec.", "evidence": "step 4 hook"},
+             {"badge": "doc_gap", "point": "It guessed the top-level shape.", "evidence": "step 2"}]
+    (judge / "analysis.json").write_text(json.dumps({"results": [
+        {"trial_name": name, "summary": json.dumps(items), "cost_usd": 0.05,
+         "checks": {"hook_friction": {"outcome": "fail", "explanation": "x"}}}]}))
+    _, summary = render(tmp_path, None, "--judge", str(judge), "--report-url", "https://r/")
+    j = summary["trials"][0]["judge"]
+    assert [i["badge"] for i in j["items"]] == ["hook_friction", "doc_gap"] and j["items"][0]["step"] == 4
+    comment = (tmp_path / "out" / "comment.md").read_text()
+    anchor = summary["trials"][0]["anchor"]
+    assert f"1. `hook_friction` The save hook said pass on an invalid spec. ([step 4 hook](https://r/#{anchor}-s4))" in comment
+    page = (tmp_path / "out" / "report.html").read_text()
+    assert f'href="#{anchor}-s4"' in page and "Suggested" not in page and "What happened" not in page
+
+
+def test_a_clean_trial_has_no_judge_items(tmp_path):
+    run_cell(tmp_path / "jobs", "astra-author", 1, n=1)
+    judge = tmp_path / "judge"
+    judge.mkdir()
+    (judge / "analysis.json").write_text(json.dumps({"results": [
+        {"trial_name": f"astra-author__{LEG}0", "summary": "[]", "checks": {}}]}))
+    _, summary = render(tmp_path, None, "--judge", str(judge))
+    assert summary["trials"][0]["judge"]["items"] == [] and summary["judge"]["pain_points"] == 0

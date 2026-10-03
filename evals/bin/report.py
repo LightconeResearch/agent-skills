@@ -353,7 +353,9 @@ def judge_index(judge_dir: str | None) -> tuple[dict[str, dict], float]:
     for path in Path(judge_dir).glob("**/analysis.json"):
         for res in (load(path) or {}).get("results", []):
             cost += res.get("cost_usd") or 0.0
-            if res.get("trial_name") and res.get("summary") and not res.get("error"):
+            if res.get("trial_name") and res.get("error"):
+                index.setdefault(res["trial_name"], {"error": res["error"]})
+            elif res.get("trial_name") and res.get("summary") is not None:
                 index[res["trial_name"]] = res
     return index, cost
 
@@ -369,23 +371,13 @@ def fmt(v, spec="{:.0f}"):
 # --- reasons: the deterministic floor -----------------------------------------------
 #
 # Every reason the run can fail or warn for, in one place. Each class turns data
-# into a headline, a one-sentence consequence and, only where the remedy is
-# knowable from the data, a fix. The judge's words never land here: they render
-# separately, attributed ("Judge: ..."). Order matters: the first blocking
-# reason, most root-cause first, becomes the verdict.
+# into a terse headline of facts (no explanatory prose) and, only for the
+# classes whose remedy is mechanical (skew, override, missing key), a fix. The
+# judge's ranked pain points render separately, attributed. Order matters: the
+# first blocking reason, most root-cause first, becomes the verdict.
 
 ORDER = ("skew", "override", "oracle_red", "no_oracle", "key_missing", "infra", "coverage_gap",
          "agent_check", "leg_test", "upstream_job", "effort", "baseline_error")
-
-INFRA_FIX = {
-    "ApiUsageLimitError": "Top up or replace the {key} secret's quota, then re-run the workflow.",
-    "ApiKeyRejectedError": "Replace the {key} repository secret.",
-    "AgentAuthenticationError": "Replace the {key} repository secret.",
-    "AuthenticationError": "Replace the {key} repository secret.",
-    "NotAuthenticatedError": "Replace the {key} repository secret.",
-    "ApiRateLimitError": "Re-run the workflow; if it recurs, lower the leg's concurrency (N in smoke.sh).",
-    "AgentSetupTimeoutError": "Re-run the workflow; the agent's setup timed out on the runner.",
-}
 
 
 def pin_line(tool: str) -> int | None:
@@ -399,127 +391,105 @@ def pin_line(tool: str) -> int | None:
     return None
 
 
-def and_list(items: list[str]) -> str:
-    items = [f"`{x}`" for x in items]
-    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+def marks(checks: list[str]) -> str:
+    return " ".join(f"{c} ✗" for c in checks)
 
 
 def reason(cls: str, **d) -> dict:
     """One reason, rendered from its class template and the data d."""
-    r = {"class": cls, "blocking": d.get("blocking", True), "headline": "", "consequence": "", "fix": "",
+    r = {"class": cls, "blocking": d.get("blocking", True), "headline": "", "fix": "",
          "annotation": None, "data": {k: v for k, v in d.items() if k != "blocking"}}
     if cls == "skew":
         pin, req, lc = d["pin"], d["required"], d["lightcone_cli"]
         exact = re.fullmatch(r"==\s*([\w.+-]+)", req)
         line = pin_line("astra-tools")
-        r["headline"] = "The plugin pins an astra-tools that its own lightcone-cli rejects"
-        r["consequence"] = (f"`skills.config.json` pins astra-tools {pin}, but lightcone-cli {lc} requires "
-                            f"astra-tools {req}. A user who installs the plugin gets an `lc` that refuses the "
-                            f"plugin's own `astra`.")
+        r["headline"] = f"version skew · lightcone-cli {lc} requires astra-tools {req} · plugin pins {pin}"
         target = f'"astra-tools": "{exact.group(1)}"' if exact else f"an astra-tools satisfying {req}"
-        r["fix"] = (f"Set `{target}` in `skills.config.json`" + (f" (line {line})" if line else "")
-                    + f", or move lightcone-cli to a release that accepts astra-tools {pin}. "
-                    "Then run `npm run build`.")
-        r["annotation"] = {"file": "skills.config.json", "line": line, "title": "smoke: version skew",
-                           "message": r["consequence"].replace("`", "")}
+        r["fix"] = (f"`{target}` in `skills.config.json`" + (f":{line}" if line else "")
+                    + f", or a lightcone-cli that accepts {pin}; then `npm run build`")
+        r["annotation"] = {"file": "skills.config.json", "line": line, "title": "smoke: version skew"}
     elif cls == "override":
-        r["headline"] = (f"lightcone-cli {d['lightcone_cli']} requires astra-tools {d['required']}, "
-                         f"but this run tests astra-tools {d['installed']}")
-        r["consequence"] = ("The latest leg installs astra-tools main over lightcone-cli's pin on purpose: "
-                            "the two have drifted, and a release of either breaks the other.")
-        r["fix"] = (f"Before the next release, widen lightcone-cli's astra-tools requirement to accept "
-                    f"{d['installed']} (lightcone-cli pyproject.toml), or hold astra-tools back.")
+        r["headline"] = (f"override · lightcone-cli {d['lightcone_cli']} requires astra-tools {d['required']} "
+                         f"· testing astra-tools {d['installed']}")
+        r["fix"] = f"widen lightcone-cli's astra-tools requirement to accept {d['installed']} before releasing"
     elif cls == "oracle_red":
-        r["headline"] = (f"The reference solution for {d['task']} fails {and_list(d['checks'])} on "
-                         f"astra-tools {d['astra']} / lightcone-cli {d['lc']}")
-        r["consequence"] = ("A red reference solution means the task or the stack broke, not the agent: "
-                            "the verifier no longer accepts the solution it was written against."
-                            + (f" First error: “{d['error']}”." if d.get("error") else ""))
-        r["annotation"] = {"file": d.get("solution"), "line": None, "title": f"smoke: reference solution fails",
-                           "message": r["headline"].replace("`", "")}
+        r["headline"] = (f"reference solution · {d['task']} · {marks(d['checks'])}"
+                         + (f" · “{d['error']}”" if d.get("error") else ""))
+        r["annotation"] = {"file": d.get("solution"), "line": None, "title": "smoke: reference solution fails"}
     elif cls == "no_oracle":
-        r["headline"] = f"No reference run for {and_list(d['tasks'])}"
-        r["consequence"] = "Without its reference run a task cannot tell an agent failure from a broken task."
-        r["fix"] = "Re-run the workflow; if it recurs, see the oracle job's log."
+        r["headline"] = f"no reference run · {', '.join(d['tasks'])}"
     elif cls == "key_missing":
-        r["headline"] = f"The agent did not run: {d['key']} is not set"
-        r["consequence"] = f"{d['label']} needs the {d['key']} secret, so this run has no agent result."
-        r["fix"] = (f"Add the {d['key']} repository secret (Settings → Secrets and variables → Actions). "
-                    "PRs from forks never receive secrets.")
+        r["headline"] = f"not run · {d['label']} · {d['key']} not set"
+        r["fix"] = f"add the {d['key']} repository secret (forks never receive secrets)"
     elif cls == "infra":
-        kinds = d["kinds"]
-        r["headline"] = (f"{d['label']} was not measured: {d['infra']}/{d['total']} trials hit "
-                         + ", ".join(f"{e} ({INFRA.get(e, 'infrastructure')})" for e in kinds))
-        r["consequence"] = "The provider or the harness failed, not the agent; these trials say nothing about the plugin."
-        fixes = [INFRA_FIX[e].format(key=d.get("key", "API key")) for e in kinds if e in INFRA_FIX]
-        r["fix"] = fixes[0] if fixes else ""
+        r["headline"] = (f"not measured · {d['label']} · {d['infra']}/{d['total']} "
+                         + ", ".join(d["kinds"]))
     elif cls == "coverage_gap":
-        r["headline"] = f"{d['label']} is partly measured: {d['reason']}"
-        r["consequence"] = "Some planned trials produced no result, so the leg's pass rate is incomplete."
-        r["fix"] = "Re-run the workflow; if a task keeps missing, see that leg's job log."
+        r["headline"] = f"partly measured · {d['label']} · {d['reason']}"
     elif cls == "agent_check":
-        checks, contra = d["checks"], d.get("contradiction")
-        head = f"{d['task']}: {and_list(checks)} failed" if checks else f"{d['task']} failed"
+        what = marks(d["checks"]) if d["checks"] else "failed"
         if d.get("exception"):
-            head = f"{d['task']}: the trial ended in {d['exception']}"
-        if contra:
-            head += f" — the {contra}"
-        elif d.get("error"):
-            head += f" (“{d['error']}”)"
-        r["headline"] = head
+            what = d["exception"]
+        r["headline"] = f"{d['task']} · {what}" + (f" · “{d['error']}”" if d.get("error") else "")
+        if d.get("contradiction"):
+            r["headline"] += f" · {d['contradiction']}"
         base = d.get("base")
-        r["consequence"] = {
-            "blocking": (f"It passes on main ({base['k']}/{base['n']}); it failed every attempt here."
-                         if base else "There is no baseline for this task yet, so a failed task blocks."),
-            "warning": f"It failed {d['n'] - d['k']} of {d['n']} attempts; it passes on main ({base['k']}/{base['n']})."
-                       if base else "",
-            "known": f"It already fails on main ({base['k']}/{base['n']})." if base else "",
-            "new": f"{d['k']}/{d['n']} attempts passed; there is no baseline for this task yet.",
-        }[d["verdict"]]
+        r["headline"] += f" · {d['k']}/{d['n']}" + (f" (main {base['k']}/{base['n']})" if base else "")
         r["blocking"] = d["verdict"] == "blocking"
     elif cls == "leg_test":
-        r["headline"] = (f"{d['label']} passed {d['x']}/{d['n']} trials, against {d['base_k']}/{d['base_n']} "
-                         f"on main")
-        r["consequence"] = (f"With each task's own pass rate on main, a result this low has probability "
-                            f"{d['tail']:.1e}: something got worse across tasks, not in one.")
+        r["headline"] = (f"leg test · {d['label']} · {d['x']}/{d['n']} vs {d['base_k']}/{d['base_n']} on main "
+                         f"· P = {d['tail']:.1e}")
     elif cls == "upstream_job":
-        r["headline"] = f"The {d['job']} job ended in {d['result']}"
-        r["consequence"] = "A job this report depends on did not finish; the results below are incomplete."
-        r["fix"] = "See that job's log in the workflow run."
+        r["headline"] = f"{d['job']} job · {d['result']}"
     elif cls == "effort":
-        r["headline"] = (f"{d['label']} took {100 * (d['ratio'] - 1):+.0f}% {d['metric']} against main "
-                         f"across {d['cells_up']}/{d['cells']} tasks")
-        r["consequence"] = (f"{d['above']}/{d['n']} passing trials ran above their task's median on main "
-                            f"(sign test p = {d['p']:.3f}). Nothing failed; the plugin made the work harder.")
+        r["headline"] = (f"effort · {d['label']} · {100 * (d['ratio'] - 1):+.0f}% {d['metric']} · "
+                         f"{d['cells_up']}/{d['cells']} tasks above main · p = {d['p']:.3f}")
         r["blocking"] = False
     elif cls == "baseline_error":
-        r["headline"] = "The baseline could not be fetched"
-        r["consequence"] = "This run gates as if there were no baseline, so any 0/K task blocks."
+        r["headline"] = "baseline · fetch failed · gating as if none"
         r["blocking"] = False
     return r
 
 
 def contradiction(rows: list[dict]) -> str:
-    """The first contradicted hook claim, phrased for a headline."""
+    """The first contradicted hook claim, as terse data for a headline."""
     for row in rows:
         if row.get("contradicted"):
-            said = "pass" if row["claim"] == "pass" else "failure"
             if "itself" in row["contradicted"]:
-                return f"{row['name']} reported failure in a message that says every file passed"
-            rejects = "rejects" if row["claim"] == "pass" else "accepts"
-            return f"{row['name']} reported {said} on a file the verifier {rejects}"
+                return f"{row['name']} said FAILED · its output says passed"
+            return f"{row['name']} said {'pass' if row['claim'] == 'pass' else 'FAILED'} · contradicted"
     return ""
 
 
 # --- the summary: everything the comment and the report render from ----------------
 
 def parse_judge(j: dict | None) -> dict | None:
+    """The judge's ranked pain points: [{badge, point, evidence, step}], most important first.
+
+    The rubric prompt has the judge write its summary as a JSON array; anything
+    else is kept as one unbadged item, marked unparsed, rather than dropped.
+    """
     if not j:
         return None
+    if j.get("error"):
+        return {"items": [], "error": "the judge produced no valid result for this trial", "badges": [],
+                "checks": {}, "cost_usd": None}
     text = (j.get("summary") or "").strip()
-    m = re.search(r"\s*Suggested fix:\s*(.+)$", text, re.S)
-    return {"summary": text[: m.start()].strip() if m else text, "fix": m.group(1).strip() if m else "",
-            "badges": badges(j), "checks": j.get("checks") or {}, "cost_usd": j.get("cost_usd")}
+    try:
+        raw = json.loads(text) if text.startswith("[") else None
+    except ValueError:
+        raw = None
+    if isinstance(raw, list):
+        items = [{"badge": str(i.get("badge") or ""), "point": str(i.get("point") or "").strip(),
+                  "evidence": str(i.get("evidence") or "")} for i in raw if isinstance(i, dict) and i.get("point")]
+    else:
+        items = [{"badge": "", "point": text, "evidence": "", "unparsed": True}] if text else []
+    for item in items:
+        m = re.search(r"step\s+(\d+)", item["evidence"])
+        item["step"] = int(m.group(1)) if m else None
+    ranked = list(dict.fromkeys(i["badge"] for i in items if i["badge"]))
+    return {"items": items, "badges": ranked if isinstance(raw, list) else badges(j),
+            "checks": j.get("checks") or {}, "cost_usd": j.get("cost_usd")}
 
 
 def trial_view(t: dict, jobs: Path, judged: dict, bases: dict) -> dict:
@@ -626,7 +596,10 @@ def build_summary(args) -> dict:
     pool = load_pool(args.baseline)
     history = (base_doc or {}).get("history") or pool or {}
     bases = {key: pooled((pool or {}).get(key)) for key in now}
-    judged, judge_cost = judge_index(args.judge)
+    judged, _ = judge_index(args.judge)
+    names = {t["trial"] for t in trials}
+    judged = {k: v for k, v in judged.items() if k in names}  # a shared judge dir may hold other runs
+    judge_cost = sum(v.get("cost_usd") or 0.0 for v in judged.values())
     stack = load(Path(args.stack)) if args.stack else None
     for key, c in now.items():
         c["verdict"] = verdict(c, bases[key])
@@ -707,11 +680,11 @@ def build_summary(args) -> dict:
     rs.sort(key=lambda r: (not r["blocking"], ORDER.index(r["class"])))
 
     judge_reason = args.judge_not_run or ("nothing to read: the agent did not run" if not agent_views else "")
-    judged_views = [v for v in agent_views if v["judge"]]
+    judged_views = [v for v in agent_views if v["judge"] and not v["judge"].get("error")]
     judge_info = {"ran": bool(judged_views), "reason": "" if judged_views else (judge_reason or "not run"),
                   "judged": len(judged_views), "cost_usd": judge_cost,
                   "badges": sorted({b for v in judged_views for b in v["judge"]["badges"]}),
-                  "pain_points": sum(len(v["judge"]["badges"]) for v in judged_views)}
+                  "pain_points": sum(len(v["judge"]["items"]) for v in judged_views)}
 
     blocking = [r for r in rs if r["blocking"]]
     gate = "fail" if blocking else "pass"
@@ -740,34 +713,17 @@ def build_summary(args) -> dict:
     top = blocking[0] if blocking else None
     state = "fail" if blocking else ("warn" if rs or any(not v["passed"] for v in agent_views) else "pass")
     if top:
-        headline = top["headline"]
-        more = len(blocking) - 1
-        if top["class"] == "agent_check" and sum(r["class"] == "agent_check" for r in blocking) > 1:
-            n_fail = sum(r["class"] == "agent_check" for r in blocking)
-            headline = f"{n_fail} tasks failed; first, {headline}"
-            more -= n_fail - 1
-        verdict_ = {"state": state, "headline": headline, "consequence": top["consequence"], "fix": top["fix"],
-                    "class": top["class"], "more": max(more, 0)}
-    else:
+        n_fail = sum(r["class"] == "agent_check" for r in blocking)
+        headline = (f"{n_fail} tasks failed · " if top["class"] == "agent_check" and n_fail > 1 else "") + top["headline"]
+        verdict_ = {"state": state, "headline": headline, "fix": top["fix"], "class": top["class"]}
+    elif rs:
+        verdict_ = {"state": "warn", "headline": rs[0]["headline"], "fix": rs[0]["fix"], "class": rs[0]["class"]}
+    elif agent_views:
         n_tasks = len({v["task"] for v in agent_views})
-        passed = sum(1 for task in {v["task"] for v in agent_views}
-                     if all(v["passed"] for v in agent_views if v["task"] == task))
-        if rs:
-            r0 = rs[0]
-            verdict_ = {"state": "warn", "headline": r0["headline"], "consequence": r0["consequence"],
-                        "fix": r0["fix"], "class": r0["class"], "more": len(rs) - 1}
-        elif agent_views:
-            verdict_ = {"state": "pass", "headline": f"all {n_tasks} tasks passed", "class": "pass",
-                        "consequence": f"{leg_label(default_leg, trials)}: {passed}/{n_tasks} tasks passed, "
-                                       "and every reference solution scores 1.0." if oracle_views else "",
-                        "fix": "", "more": 0}
-        else:
-            verdict_ = {"state": "pass", "headline": "the reference solutions pass; no agent leg ran",
-                        "class": "pass", "consequence": "", "fix": "", "more": 0}
-    # The judge's own suggestion, attributed, for the verdict's task when it has one.
-    jfix = next((v["judge"]["fix"] for v in agent_views if v["judge"] and v["judge"]["fix"]
-                 and top and top["class"] == "agent_check" and v["anchor"] == top["data"].get("anchor")), "")
-    verdict_["judge_fix"] = jfix
+        verdict_ = {"state": "pass", "headline": f"all {n_tasks} tasks passed", "fix": "", "class": "pass"}
+    else:
+        verdict_ = {"state": "pass", "headline": "reference solutions pass · no agent leg ran", "fix": "",
+                    "class": "pass"}
 
     return {
         "schema": 1,
@@ -806,7 +762,7 @@ def annotations(summary: dict) -> list[str]:
         props = [f"file={prop(a['file'])}"] if a.get("file") else []
         props += [f"line={a['line']}"] if a.get("line") else []
         props.append(f"title={prop(a.get('title') or 'smoke ' + r['class'].replace('_', ' '))}")
-        msg = (r["headline"] + ". " + (r["fix"] or r["consequence"])).replace("`", "")
+        msg = (r["headline"] + (f" · fix: {r['fix']}" if r["fix"] else "")).replace("`", "")
         out.append(f"::{level} {','.join(props)}::{data(msg)}")
     return out
 

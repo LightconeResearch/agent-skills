@@ -1,4 +1,4 @@
-You are reviewing one agent trial from a smoke test of the ASTRA / Lightcone tooling (the `astra` CLI for astra.yaml analysis specs, the `lc` CLI that executes them, and optionally a skill or plugin that teaches an agent to use them). The people reading your review maintain that tooling. They do not need to know whether the agent passed — they need to know what got in its way, so they can fix the docs, the CLI, the skill, the hooks, or the test itself.
+You are reviewing one agent trial from a smoke test of the ASTRA / Lightcone tooling (the `astra` CLI for astra.yaml analysis specs, the `lc` CLI that executes them, and optionally a skill or plugin that teaches an agent to use them). The people reading your review maintain that tooling. They do not need to know whether the agent passed (they see that elsewhere); they need the things that got in its way, ranked, so they can fix the docs, the CLI, the skill, the hooks, or the test itself.
 
 The trial to analyze is at {trial_path}. Read its files using paths under it.
 
@@ -15,9 +15,17 @@ Read ALL relevant files before evaluating:
 
 Evaluate each criterion one at a time, thinking about the evidence before judging. Cite trajectory step numbers (the "step_id" field) and quote short snippets of tool output. Never claim something you did not see in the files; if the trajectory is truncated or unreadable, say so.
 
-Write the "summary" as 2-4 plain sentences that answer, for this trial: what did the agent need (an ASTRA concept, a schema field, a command, a file), where did it look for it (skill text, CLI help, an error message, package source, a whole-spec dump), and what got in its way? Name the outcome only if it explains the friction (for example, it stopped because a hook said validation passed). Readers see the reward elsewhere. If nothing got in the agent's way, the summary is one line beginning "No friction:" and saying in a few words what it did, nothing more. If something in the tooling (the skill, a hook, the CLI, the task) got in the way and you can name the change that would fix it, end the summary with one sentence beginning "Suggested fix:" that names the file or command to change; leave it out otherwise. It is shown to maintainers as your suggestion, labelled as the judge's.
+IMPORTANT, and it overrides the generic "Output" section at the end of these instructions, which calls "summary" a 3-5 sentence overview: for this review the "summary" field is NOT prose and NOT an overview. Its value is a JSON array, serialized as a string, of the pain points you found, ranked from most to least important to fix:
+
+[{{"badge": "<criterion name>", "point": "<one sentence>", "evidence": "step <step_id>"}}, ...]
+
+- "badge" is one of the criterion names below whose outcome you set to "fail".
+- "point" is one plain sentence saying what got in the agent's way: the thing, not a recommendation. No summary of the trial, no suggested fix.
+- "evidence" points at where it shows: "step <step_id>" for a trajectory step, or, for a hook message, "step <step_id> hook" with the step_id of the tool call the hook followed (from its toolUseID).
+- Stop as soon as the next item would be unimportant. A trial where nothing got in the way gets "[]". Do not pad: an empty list is the expected result for a clean run.
+- Example of a complete "summary" value: "[{{\"badge\": \"hook_friction\", \"point\": \"The save hook reported validation passed on a spec that astra validate rejects.\", \"evidence\": \"step 4 hook\"}}]". Write nothing else in it: no overview, no outcome, no fix.
 
 Criteria (outcome "fail" = this pain was present in the trial):
 {criteria_guidance}
 
-Do not modify any files under {trial_path}.
+Do not modify any files under {trial_path}. Write the result file to /app (the directory you start in) by its absolute path, /app/analysis.json, never inside {trial_path}, even if you have cd-ed there.

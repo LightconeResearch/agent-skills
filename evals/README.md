@@ -81,14 +81,16 @@ that lightcone-cli PRs call with their head sha.
    `rubrics/pain-points.toml`, `claude-sonnet-5-5`; failures and outliers only
    on bigger dispatch runs), compares each (leg, task) cell with the baseline,
    and writes `summary.json`, the single source for everything below: the
-   verdict, every reason with its fix, each check's output, the timelines and
-   the judge's notes (`evals/bin/report.py show summary.json` re-renders).
-   The verdict and fixes come from a rule-based catalogue in `report.py`
-   (version skew, override, red reference solution, missing key, infra error,
-   coverage gap, agent check, leg test, failed job, effort); the judge's words
-   are always labelled "Judge". Each reason is also a GitHub annotation, at its
+   verdict, every reason, each check's output, the timelines and the judge's
+   pain points (`evals/bin/report.py show summary.json` re-renders). Headlines
+   are terse data from a rule-based catalogue in `report.py` (version skew,
+   override, red reference solution, missing key, infra error, coverage gap,
+   agent check, leg test, failed job, effort); only the mechanical causes
+   (skew, override, missing key) carry a fix. The only prose is the judge's:
+   a ranked list of pain points, most important first and often empty, each
+   with a badge and a link to its evidence row in the timeline. Each reason is also a GitHub annotation, at its
    cause where there is one (a skew points at the pin's line in
-   `skills.config.json`). One comment on the PR leads with the verdict and fix,
+   `skills.config.json`). One comment on the PR leads with the verdict (and fix),
    then the chain stack → version check → reference solutions → agent → judge,
    then each failed task with its verifier output; it is complete without any
    API key, since the reference solutions alone tell a broken stack or task
@@ -97,7 +99,7 @@ that lightcone-cli PRs call with their head sha.
    at `https://lightconeresearch.github.io/agent-skills/smoke/<run id>/`: the
    same verdict and chain, a task table (what each task proves, check dots,
    history on main), and a card per failure with every check and its output,
-   the deliverable diffed against the reference, the judge's summary, and a
+   the deliverable diffed against the reference, the judge's pain points, and a
    turn-by-turn timeline where hook messages are rows of their own, flagged
    when the verifier contradicts them. Trial artifacts are redacted of API keys
    before anything is uploaded or published, and nothing is if redaction fails.
