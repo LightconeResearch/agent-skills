@@ -370,6 +370,8 @@ def timeline_html(rows: list[dict], prefix: str = "") -> str:
             text = r["text"] if len(r["text"]) < 400 else r["text"][:400] + "…"
             items.append(f'<li class="hook"{anchor(r, "-hook")}><span class="dot"></span><div class="t">{e(r["name"])}</div>'
                          f'<div class="d">{e(text)}</div>{chip}</li>')
+        elif r["kind"] == "note":
+            items.append(f'<li class="tool"><span class="dot"></span><div class="d">{e(r["text"])}</div></li>')
         elif r["kind"] == "final":
             items.append(f'<li class="end"><span class="dot"></span><div class="t">Agent\'s last message</div>'
                          f'<div class="d">{e(r["text"])}</div></li>')

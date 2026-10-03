@@ -100,9 +100,24 @@ def hook_name(hook: str, text: str) -> str:
     return f"{hook.split(':', 1)[0]} hook"
 
 
+def content_text(content) -> str:
+    """A hook attachment's content as text, whatever shape the session log used."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        return str(content.get("text") or json.dumps(content))
+    if isinstance(content, list):
+        return "\n".join(content_text(c) for c in content)
+    return "" if content is None else str(content)
+
+
 def _hooks(tdir: Path) -> tuple[list[dict], dict[str, list[dict]]]:
-    """Hook messages from the Claude Code session log: (session start, by tool call id)."""
-    start, by_call = [], {}
+    """Hook messages from the Claude Code session log: (session start, by tool call id).
+
+    A record that is not shaped as expected is skipped and counted, never fatal:
+    the count comes back as a final "note" row in the session-start list.
+    """
+    start, by_call, skipped = [], {}, 0
     for log in sorted((tdir / "agent" / "sessions" / "projects").glob("*/*.jsonl")):
         for line in _text(log).splitlines():
             try:
@@ -112,17 +127,22 @@ def _hooks(tdir: Path) -> tuple[list[dict], dict[str, list[dict]]]:
             att = event.get("attachment") if isinstance(event, dict) else None
             if not isinstance(att, dict) or att.get("type") != "hook_additional_context":
                 continue
-            content = att.get("content")
-            text = ("\n".join(content) if isinstance(content, list) else str(content or "")).strip()
-            claim = VALIDATE_CLAIM.search(text)
-            row = {"kind": "hook", "hook": att.get("hookName", "hook"),
-                   "name": hook_name(att.get("hookName", ""), text), "text": text,
-                   "claim": ("pass" if claim.group(1) == "passed" else "fail") if claim else None}
-            call = att.get("toolUseID") or ""
+            try:
+                text = content_text(att.get("content")).strip()
+                hook = str(att.get("hookName") or "hook")
+                claim = VALIDATE_CLAIM.search(text)
+                row = {"kind": "hook", "hook": hook, "name": hook_name(hook, text), "text": text,
+                       "claim": ("pass" if claim.group(1) == "passed" else "fail") if claim else None}
+                call = str(att.get("toolUseID") or "")
+            except (TypeError, ValueError, AttributeError):
+                skipped += 1
+                continue
             if call.startswith("toolu_") or call.startswith("call_"):
                 by_call.setdefault(call, []).append(row)
             else:
                 start.append(row)
+    if skipped:
+        start.append({"kind": "note", "text": f"{skipped} malformed hook record(s) in the session log skipped"})
     return start, by_call
 
 

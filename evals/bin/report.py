@@ -611,7 +611,18 @@ def build_summary(args) -> dict:
     for t in trials:
         t["badges"] = badges(judged.get(t["trial"]))
         t["outlier"] = is_outlier(t, bases.get(f"{t['leg']}/{t['task']}"))
-    views = [trial_view(t, jobs, judged, bases) for t in trials]
+    views = []
+    for t in trials:  # one unreadable trial must not take the whole report down
+        try:
+            views.append(trial_view(t, jobs, judged, bases))
+        except Exception as err:  # noqa: BLE001
+            v = {k: t.get(k) for k in ("leg", "task", "trial", "model", "passed", "reward", "failed_checks",
+                                       "exception", "turns", "stack_calls", "max_repeat", "cost_usd", "agent_s")}
+            v.update({"anchor": f"{t['leg']}-{t['task']}-{t['trial'].rsplit('__', 1)[-1]}", "label": None,
+                      "checks": [], "stdout": f"report could not read this trial: {type(err).__name__}: {err}",
+                      "exception_text": "", "deliverable": None, "timeline": [], "last_message": "",
+                      "contradiction": "", "judge": None, "outlier": False, "base": None})
+            views.append(v)
     for v in views:
         if v["leg"] != "oracle":
             v["label"] = leg_label(v["leg"], trials)

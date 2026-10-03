@@ -106,3 +106,22 @@ def test_chip_when_astra_validate_right_after_disagrees():
     rows = rows_for(("Write", "/root/x/astra.yaml", None), ("Bash", "uvx astra-tools@0.2.18 validate", 1))
     trialview.mark_contradictions(rows, [])
     assert rows[1]["contradicted"] == "contradicted: `uvx astra-tools@0.2.18 validate` at turn 2 exits 1"
+
+
+def test_malformed_hook_records_are_skipped_not_fatal(tmp_path):
+    (tmp_path / "agent" / "sessions" / "projects" / "p").mkdir(parents=True)
+    (tmp_path / "agent" / "trajectory.json").write_text(json.dumps({"steps": []}))
+    lines = [
+        {"attachment": {"type": "hook_additional_context", "hookName": "SessionStart",
+                        "content": {"text": "Lightcone CLI ready"}}},
+        {"attachment": {"type": "hook_additional_context", "hookName": "PostToolUse:Write",
+                        "content": [{"text": "ASTRA validation passed"}, 3]}},
+        {"attachment": {"type": "hook_additional_context", "hookName": {"bad": 1}, "content": "x",
+                        "toolUseID": ["not", "a", "string"]}},
+        "not json at all",
+    ]
+    (tmp_path / "agent" / "sessions" / "projects" / "p" / "s.jsonl").write_text(
+        "\n".join(json.dumps(x) if isinstance(x, dict) else x for x in lines))
+    rows = trialview.timeline(tmp_path)
+    texts = [r["text"] for r in rows]
+    assert "Lightcone CLI ready" in texts[0] and any("ASTRA validation passed" in t for t in texts)
