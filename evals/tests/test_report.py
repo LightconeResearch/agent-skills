@@ -297,3 +297,17 @@ def test_leg_test_judges_cells_by_their_own_rates(tmp_path):
     assert leg["tail"] > 0.1 and not leg["blocking"]
     assert rc == 0
     assert {c["verdict"] for c in summary["cells"].values()} == {"pass", "known"}
+
+
+def test_k1_strong_cell_failing_blocks_and_the_leg_test_stays_quiet(tmp_path):
+    # The PR shape: one leg, K=1, five tasks, each 5/5 over the last five runs on main.
+    jobs = tmp_path / "jobs"
+    tasks = [f"task-{i}" for i in range(5)]
+    for i, task in enumerate(tasks):
+        run_cell(jobs, task, 0 if i == 0 else 1, n=1)
+    base = baseline(tmp_path, {t: (5, 5) for t in tasks})
+    rc, summary = render(tmp_path, base, "--k", "1", "--expect-legs", LEG, "--expect-tasks", " ".join(tasks))
+    assert rc == 1
+    assert verdicts(summary)["task-0"] == "blocking"
+    assert not summary["legs"][0]["blocking"]  # 4/5 against ~6/7 per cell is ordinary
+    assert next(g for g in summary["leg_status"] if g["leg"] == LEG)["state"] == "measured"
