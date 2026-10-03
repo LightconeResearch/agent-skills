@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-JUDGE_MODEL="${JUDGE_MODEL:-claude-sonnet-5}"
+JUDGE_MODEL="${JUDGE_MODEL:-claude-sonnet-5-5}"
 OUT="${OUT:-$ROOT/evals/jobs}"
 N="${N:-4}"
 
@@ -33,8 +33,31 @@ touch "$src/job.log"   # what makes harbor analyze treat the dir as a job of tri
 for t in "${trials[@]}"; do cp -R "$t" "$src/"; done
 
 # The judge's container is a bare python image, so Harbor installs Claude Code
-# in it first; give that install room (Harbor's default allows 360 s).
-printf 'agent_setup_timeout_multiplier: 3\n' > "$OUT/judge-config.yaml"
+# in it first (apt-get + npm): give that install room (Harbor's default allows
+# 360 s), and retry a judgement whose setup or provider call failed transiently.
+cat > "$OUT/judge-config.yaml" <<'YAML'
+agent_setup_timeout_multiplier: 3
+retry:
+  max_retries: 2
+  include_exceptions: [NetworkConnectionError, AgentSetupTimeoutError, ApiConnectionError,
+                       ApiOverloadedError, ApiRateLimitError, ApiInternalServerError]
+YAML
+
+# harbor analyze runs the judge in its own task, a prebuilt python:3.13-slim
+# container, where Harbor installs Claude Code with apt-get + npm before every
+# judgement (minutes, and flaky). lightcone-eval-base is python:3.13-slim plus
+# the agent CLIs, so while judging we point that tag at it and Harbor skips the
+# install; the original tag is restored on exit. JUDGE_IMAGE= turns this off.
+JUDGE_IMAGE="${JUDGE_IMAGE-lightcone-eval-base}"
+if [ -n "$JUDGE_IMAGE" ] && docker image inspect "$JUDGE_IMAGE" >/dev/null 2>&1; then
+  original="$(docker image inspect -f '{{.Id}}' python:3.13-slim 2>/dev/null || true)"
+  restore() {
+    if [ -n "$original" ]; then docker tag "$original" python:3.13-slim
+    else docker rmi -f python:3.13-slim >/dev/null 2>&1 || true; fi
+  }
+  trap restore EXIT
+  docker tag "$JUDGE_IMAGE" python:3.13-slim
+fi
 
 echo "=== judge: ${#trials[@]} trial(s) with $JUDGE_MODEL"
 harbor analyze "$src" -c "$OUT/judge-config.yaml" -r "$ROOT/evals/rubrics/pain-points.toml" -p "$ROOT/evals/rubrics/pain-points-prompt.txt" \
