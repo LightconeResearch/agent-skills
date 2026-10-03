@@ -43,22 +43,18 @@ retry:
                        ApiOverloadedError, ApiRateLimitError, ApiInternalServerError]
 YAML
 
-# harbor analyze runs the judge in its own task, a prebuilt python:3.13-slim
-# container, where Harbor installs Claude Code with apt-get + npm before every
-# judgement (minutes, and flaky). lightcone-eval-base is python:3.13-slim plus
-# the agent CLIs, so while judging we point that tag at it and Harbor skips the
-# install; the original tag is restored on exit. JUDGE_IMAGE= turns this off.
+# The judge runs on lightcone-eval-base (the agent CLIs preinstalled), set in a
+# private copy of Harbor's analyze template by judge_analyze.py; without it
+# Harbor apt-get + npm installs Claude Code before every judgement. JUDGE_IMAGE=
+# (empty) keeps Harbor's default image. No Docker tag is ever changed.
 JUDGE_IMAGE="${JUDGE_IMAGE-lightcone-eval-base}"
-if [ -n "$JUDGE_IMAGE" ] && docker image inspect "$JUDGE_IMAGE" >/dev/null 2>&1; then
-  original="$(docker image inspect -f '{{.Id}}' python:3.13-slim 2>/dev/null || true)"
-  restore() {
-    if [ -n "$original" ]; then docker tag "$original" python:3.13-slim
-    else docker rmi -f python:3.13-slim >/dev/null 2>&1 || true; fi
-  }
-  trap restore EXIT
-  docker tag "$JUDGE_IMAGE" python:3.13-slim
+if [ -n "$JUDGE_IMAGE" ] && ! docker image inspect "$JUDGE_IMAGE" >/dev/null 2>&1; then
+  echo "judge.sh: $JUDGE_IMAGE is not built; using Harbor's default judge image" >&2
+  JUDGE_IMAGE=""
 fi
+export JUDGE_IMAGE
+harbor_python="$(head -1 "$(command -v harbor)" | sed 's/^#!//')"
 
 echo "=== judge: ${#trials[@]} trial(s) with $JUDGE_MODEL"
-harbor analyze "$src" -c "$OUT/judge-config.yaml" -r "$ROOT/evals/rubrics/pain-points.toml" -p "$ROOT/evals/rubrics/pain-points-prompt.txt" \
+"$harbor_python" "$ROOT/evals/bin/judge_analyze.py" analyze "$src" -c "$OUT/judge-config.yaml" -r "$ROOT/evals/rubrics/pain-points.toml" -p "$ROOT/evals/rubrics/pain-points-prompt.txt" \
   -a claude-code -m "$JUDGE_MODEL" -e docker -n "$N" -o "$OUT" --job-name judge -q
