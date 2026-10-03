@@ -381,3 +381,14 @@ def test_publication_rerenders_only_a_valid_summary(tmp_path):
     proc = subprocess.run([sys.executable, str(REPORT), "show", str(tmp_path / "bad.json"), "--validate",
                            "--out", str(tmp_path / "pub")], capture_output=True, text=True)
     assert proc.returncode == 2 and not (tmp_path / "pub" / "report.html").exists()
+
+
+def test_a_planned_leg_that_never_ran_blocks_even_when_upstream_says_success(tmp_path):
+    jobs = tmp_path / "jobs"
+    for task in TASKS:
+        trial(jobs, "oracle", task, 0, 1.0)
+    rc, summary = render(tmp_path, None, "--expect-legs", LEG, "--expect-tasks", " ".join(TASKS), "--k", "1",
+                         "--job", "oracle=success", "--job", "legs=success")
+    assert rc == 1 and summary["gate"] == "fail"
+    assert summary["reasons"][0]["class"] == "not_run"
+    assert summary["verdict"]["headline"] == "not run · Haiku + skill · no trials (see the leg's job log)"

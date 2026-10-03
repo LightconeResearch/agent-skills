@@ -376,7 +376,7 @@ def fmt(v, spec="{:.0f}"):
 # judge's ranked pain points render separately, attributed. Order matters: the
 # first blocking reason, most root-cause first, becomes the verdict.
 
-ORDER = ("skew", "override", "oracle_red", "no_oracle", "key_missing", "infra", "coverage_gap",
+ORDER = ("skew", "override", "oracle_red", "no_oracle", "key_missing", "not_run", "infra", "coverage_gap",
          "agent_check", "leg_test", "upstream_job", "effort", "baseline_error")
 
 
@@ -421,6 +421,8 @@ def reason(cls: str, **d) -> dict:
     elif cls == "key_missing":
         r["headline"] = f"not run · {d['label']} · {d['key']} not set"
         r["fix"] = f"add the {d['key']} repository secret (forks never receive secrets)"
+    elif cls == "not_run":
+        r["headline"] = f"not run · {d['label']} · {d['reason']}"
     elif cls == "infra":
         r["headline"] = (f"not measured · {d['label']} · {d['infra']}/{d['total']} "
                          + ", ".join(d["kinds"]))
@@ -650,6 +652,8 @@ def build_summary(args) -> dict:
                 rs.append(reason("coverage_gap", leg=g["leg"], label=label, reason=g["reason"]))
         elif g["state"] == "partly measured":
             rs.append(reason("coverage_gap", leg=g["leg"], label=label, reason=g["reason"]))
+        elif g["state"] == "not run":  # a planned leg with no trials blocks, whatever else reported success
+            rs.append(reason("not_run", leg=g["leg"], label=label, reason=g["reason"]))
     for key, c in now.items():
         if c["leg"] == "oracle" or c["verdict"] == "pass":
             continue

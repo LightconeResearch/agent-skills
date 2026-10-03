@@ -88,6 +88,7 @@ def test_only_mechanical_causes_carry_a_fix():
         "skew": dict(pin="0.2.17", required="==0.2.18", lightcone_cli="0.5.0rc5"),
         "override": dict(lightcone_cli="x", required="==1", installed="2"),
         "key_missing": dict(leg="l", label="L", key="K"),
+        "not_run": dict(leg="l", label="L", reason="no trials (see the leg's job log)"),
         "infra": dict(label="L", kinds=["ApiRateLimitError"], infra=1, total=2),
         "oracle_red": dict(task="t", checks=["c"], astra="a", lc="l"),
         "no_oracle": dict(tasks=["t"]),
