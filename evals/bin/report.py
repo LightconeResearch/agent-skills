@@ -17,7 +17,8 @@ records plus this run's, oldest dropped, so one artifact is the whole history.
 
 `select` prints the trial dirs worth judging, one per line: every failed trial,
 and every trial whose turns or astra/lc calls are outliers against the pooled
-baseline median (at least twice it and at least OUTLIER_GAP above it).
+baseline median (at least twice it and at least OUTLIER_GAP above it); with
+--all, every measured agent trial (a pass with friction is a finding too).
 
 `render` writes summary.json, summary.md (the job summary), comment.md (the PR
 comment) and report.html into --out, and exits 1 when the gate blocks:
@@ -45,7 +46,8 @@ Effort (a warning, never a block), per leg and separately for turns and
 astra/lc calls: each passing trial is compared with its cell's pooled median.
 The leg is flagged when a one-sided sign test over those comparisons gives
 P(X >= above | n, 1/2) < EFFORT_ALPHA (ties dropped) and the leg's total is
-at least EFFORT_RATIO times the sum of its trials' cell medians. Failures in cells already weak on main are known.
+at least EFFORT_RATIO times the sum of its trials' cell medians.
+Failures in cells already weak on main are known.
 --record (runs on main) gates on the oracle only: main records what is true.
 """
 
@@ -56,10 +58,15 @@ import html
 import json
 import re
 import statistics
-import sys
 import math
+import sys
 from collections import Counter
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import report_html  # noqa: E402
+import trialview  # noqa: E402
+from trialview import leg_label, money, outcome  # noqa: E402
 
 MARKER = "<!-- lightcone-smoke-report -->"
 OUTLIER_GAP = 5
@@ -149,6 +156,7 @@ def trial_record(leg: str, tdir: Path, root: Path) -> dict | None:
         "failed_checks": [k for k, v in rewards.items() if k != "reward" and not v],
         "exception": exc,
         "infra": exc in INFRA,
+        "model": ((result.get("agent_info") or {}).get("model_info") or {}).get("name"),
         "passed": exc is None and (rewards.get("reward") or 0) >= 1.0,
         "turns": sum(1 for s in steps if s.get("source") == "agent") if traj else None,
         "stack_calls": sum(1 for c in cmds if STACK_CALL.search(" " + c + " ")),
@@ -352,28 +360,142 @@ def badges(judge: dict | None) -> list[str]:
     return [k for k, v in ((judge or {}).get("checks") or {}).items() if v.get("outcome") == "fail"]
 
 
-def outcome(t: dict) -> str:
-    if t["exception"]:
-        return f"error: {t['exception']}"
-    if t["reward"] is None:
-        return "unscored"
-    if t["passed"]:
-        return "pass"
-    return f"fail {t['reward']:.2f} ({', '.join(t['failed_checks']) or 'reward'})"
-
-
 def fmt(v, spec="{:.0f}"):
     return "—" if v is None else spec.format(v)
-
-
-def money(v):
-    return f"${v:.2f}" if v >= 0.1 else f"${v:.3f}"
 
 
 def cell_text(cell: dict | None) -> str:
     if not cell:
         return "—"
     return f"{cell['k']}/{cell['n']} · {fmt(cell['turns'])} turns"
+
+
+def headline(trials, now, status, upstream, gate) -> str:
+    """The verdict in words: what failed or went unmeasured, and how many tasks passed."""
+    agent = [t for t in trials if t["leg"] != "oracle"]
+    failed = sorted({t["task"] for t in agent if not t["passed"]})
+    oracle_bad = sorted({t["task"] for t in trials if t["leg"] == "oracle" and not t["passed"]})
+    unmeasured = [g for g in status if g["state"] != "measured"]
+    mark = "❌" if gate == "fail" else "⚠️" if failed or unmeasured else "✅"
+    tasks = sorted({t["task"] for t in agent})
+    passed = sum(1 for task in tasks if all(t["passed"] for t in agent if t["task"] == task))
+    count = f" ({passed}/{len(tasks)} tasks passed)" if tasks else ""
+    if oracle_bad:
+        return f"{mark} oracle failed on {', '.join(oracle_bad)}"
+    if upstream:
+        return f"{mark} blocked: {upstream[0].split(':', 1)[0]}{count}"
+    if failed:
+        return f"{mark} {', '.join(failed)} failed{count}"
+    if unmeasured:
+        return f"{mark} " + ", ".join(f"{g['leg']} {g['state']}" for g in unmeasured) + count
+    if not tasks:
+        return f"{mark} no agent trial was measured"
+    return f"{mark} all {len(tasks)} tasks passed"
+
+
+def fence(text: str) -> list[str]:
+    body = trialview.trim(text) or "(no output)"
+    return ["```text", body.replace("```", "ˋˋˋ"), "```"]
+
+
+def comment_md(m: dict) -> str:
+    args, trials, now = m["args"], m["trials"], m["now"]
+    agent_legs = m["agent_legs"]
+    single = len(agent_legs) == 1
+    title = leg_label(agent_legs[0], trials) if single else f"{len(agent_legs)} legs" if agent_legs else "no legs"
+    lines = [MARKER, f"## Plugin smoke · {title} · {m['headline']}", ""]
+    if not agent_legs:
+        lines += ["No agent leg was planned or run.", ""]
+    runs = max((b["runs"] for b in m["bases"].values() if b), default=0)
+    base = (f"baseline {args.base_label or 'main'} ({runs} run{'s' * (runs != 1)})" if m["pool"] is not None
+            else "no baseline yet, so any 0/K cell blocks")
+    lines.append(" · ".join(x for x in (m["stack_line"], base) if x) + ".")
+    if args.baseline_error:
+        lines.append(f"**{args.baseline_error}**")
+    lines.append("")
+
+    notes = [f"- **blocking** · {r}" for r in m["upstream"]]
+    notes += [f"- **{g['state']}** · {g['leg']}: {g['reason']}" for g in m["unmeasured"]]
+    notes += [f"- **blocking** · {g['leg']}: {g['x']}/{g['n']} passed against {g['base_k']}/{g['base_n']} "
+              f"on main (P = {g['tail']:.1e})" for g in m["blocking_legs"]]
+    notes += [f"- **warning** · {e['leg']}: {100 * (e['ratio'] - 1):+.0f}% {e['metric']} vs main across "
+              f"{e['cells_up']}/{e['cells']} cells ({e['above']}/{e['n']} passing trials above their cell's median)"
+              for e in m["effort"] if e["flag"]]
+    if notes:
+        lines += notes + [""]
+
+    order = {"blocking": 0, "warning": 1, "new": 2, "known": 3, "pass": 4}
+    failed = [t for t in trials if not t["passed"]]
+    failed.sort(key=lambda t: (t["leg"] != "oracle", order[now[f"{t['leg']}/{t['task']}"]["verdict"]], t["task"]))
+    for t in failed:
+        c = now[f"{t['leg']}/{t['task']}"]
+        where = "oracle (reference solution)" if t["leg"] == "oracle" else (
+            "" if single else leg_label(t["leg"], trials))
+        b = c["base"]
+        status_txt = {"blocking": "blocking", "warning": "warning, not blocking", "new": "new, no baseline",
+                      "known": "known failure on main"}[c["verdict"]] + (f" (main {b['k']}/{b['n']})" if b else "")
+        lines.append(f"### ❌ {t['task']}" + (f" · {where}" if where else "") + f" · {status_txt}")
+        lines.append("")
+        bad = [ch for ch in t["checks"] if not ch["ok"]]
+        if t["exception"]:
+            lines.append(f"**Why:** the trial ended in `{t['exception']}`.")
+            lines += fence(trialview.exception_text(m["jobs"] / t["dir"]))
+        elif bad:
+            lines.append("**Why, from the verifier:** " + ", ".join(f"✗ `{ch['name']}`" for ch in bad))
+            for ch in bad:
+                lines += ["", f"`{ch['name']}`"] + fence(ch["output"])
+        else:
+            lines.append(f"**Why, from the verifier:** reward {t['reward']}")
+            lines += fence(trialview.verifier_stdout(m["jobs"] / t["dir"]))
+        j = t["judge"]
+        if j:
+            lines += ["", "**What happened, from the judge:** " + j.get("summary", "").strip()
+                      + ("  " + " ".join(f"`{x}`" for x in t["badges"]) if t["badges"] else "")]
+        if t["last_message"] and t["leg"] != "oracle":
+            first = [ln.strip() for ln in t["last_message"].splitlines() if ln.strip()][:2]
+            last = " / ".join(first)
+            lines += ["", f"**The agent's last message:** {last[:280]}{'…' if len(last) > 280 else ''}"]
+        nums = [f"{fmt(t['turns'])} turns", f"{t['stack_calls']} astra/lc calls",
+                fmt(t["cost_usd"], "${:.3f}")] if t["leg"] != "oracle" else []
+        if args.report_url:
+            nums.append(f"[card]({args.report_url}#{t['anchor']})")
+        if nums:
+            lines += ["", " · ".join(nums)]
+        lines.append("")
+
+    passing = [t for t in trials if t["passed"] and t["leg"] != "oracle"]
+    if passing:
+        lines.append("**Passed:** " if failed else "")
+        for t in sorted(passing, key=lambda t: (t["leg"], t["task"])):
+            b = t["base"]
+            delta = f" (main {fmt(b['turns'])})" if b and b.get("turns") is not None else ""
+            label = t["task"] if single else f"{t['task']} · {leg_label(t['leg'], trials)}"
+            badge = " " + " ".join(f"`{x}`" for x in t["badges"]) if t["badges"] else ""
+            lines.append(f"- ✅ {label} · {fmt(t['turns'])} turns{delta}{badge}")
+        lines.append("")
+    oracle = [t for t in trials if t["leg"] == "oracle"]
+    if oracle and all(t["passed"] for t in oracle):
+        lines.append(f"Oracle ✓ all {len(oracle)} reference solutions score 1.0.")
+    if args.judge_note:
+        lines.append(args.judge_note)
+    cost = m["agent_cost"] + m["judge_cost"]
+    tail = [f"Cost of this run: **{money(cost)}** (agent {money(m['agent_cost'])}, judge {money(m['judge_cost'])})"]
+    if args.report_url:
+        tail.append(f"[full report]({args.report_url})")
+    if args.run_url:
+        tail.append(f"[workflow run]({args.run_url})")
+    lines += ["", " · ".join(tail) + "."]
+
+    lines += ["", "<details><summary>Every trial</summary>", "",
+              "| leg | task | outcome | turns | astra/lc calls | agent min | cost | judge |",
+              "|---|---|---|---|---|---|---|---|"]
+    for t in sorted(trials, key=lambda t: (t["leg"] != "oracle", t["leg"], t["task"])):
+        judge = " ".join(t["badges"]) or ("clean" if t["judge"] else "")
+        lines.append(f"| {t['leg']} | {t['task']} | {outcome(t)} | {fmt(t['turns'])} | {t['stack_calls']} "
+                     f"| {fmt(t['agent_s'] and t['agent_s'] / 60, '{:.1f}')} | {fmt(t['cost_usd'], '${:.3f}')} "
+                     f"| {judge} |")
+    lines += ["", "</details>"]
+    return "\n".join(lines) + "\n"
 
 
 def render(args) -> int:
@@ -449,119 +571,28 @@ def render(args) -> int:
                 f"{stack.get('lightcone_cli')} · plugin pin astra-tools "
                 f"{stack.get('plugin_astra_tools_pin')}")
 
-    # --- PR comment -------------------------------------------------------------
-    n_pass = sum(t["passed"] for t in trials if t["leg"] != "oracle")
-    n_all = sum(1 for t in trials if t["leg"] != "oracle")
-    n_block = len(blocking) + len(blocking_legs) + len(unmeasured_blocking) + len(upstream)
-    if n_block:
-        head = f"## Plugin smoke: failing ({n_block} blocking)"
-    elif warnings or any(e["flag"] for e in effort):
-        n_warn = len(warnings) + sum(e["flag"] for e in effort)
-        head = f"## Plugin smoke: passing, {n_warn} warning{'s' * (n_warn != 1)}"
-    elif any(c["verdict"] in ("known", "new") for c in now.values()):
-        head = "## Plugin smoke: passing, with known failures"
-    else:
-        head = "## Plugin smoke: passing"
-    runs = max((b["runs"] for b in bases.values() if b), default=0)
-    lines = [MARKER, head, "",
-             (f"{n_pass}/{n_all} measured agent trials passed across {len(agent_legs)} legs × {len(tasks)} tasks. "
-              if n_all else "No agent trial was measured. ")
-             + (f"Baseline: {args.base_label}, pooled over the last {runs} run{'s' * (runs != 1)} on main."
-                if pool is not None and args.base_label else
-                f"Baseline pooled over the last {runs} run{'s' * (runs != 1)} on main." if pool is not None else
-                "No baseline on main yet, so every 0/n cell blocks.")]
-    if args.baseline_error:
-        lines.append(f"**{args.baseline_error}**")
-    if stack:
-        lines.append(stack_line() + ".")
-    lines.append("")
+    # --- what each trial looked like ----------------------------------------------
+    for t in trials:
+        tdir = jobs / t["dir"]
+        t["checks"] = trialview.verifier_checks(tdir, (load(tdir / "result.json") or {}).get(
+            "verifier_result", {}).get("rewards") or {}) if (tdir / "result.json").exists() else []
+        t["last_message"] = trialview.last_message(tdir)
+        t["judge"] = judged.get(t["trial"])
+        t["anchor"] = f"{t['leg']}-{t['task']}-{t['trial'].rsplit('__', 1)[-1]}"
+        t["base"] = bases.get(f"{t['leg']}/{t['task']}")
+    model = {
+        "trials": trials, "now": now, "status": status, "pool": pool, "bases": bases,
+        "upstream": upstream, "unmeasured": unmeasured, "blocking": blocking,
+        "blocking_legs": blocking_legs, "warnings": warnings, "effort": effort,
+        "stack": stack, "stack_line": stack_line(), "agent_cost": agent_cost, "judge_cost": judge_cost,
+        "gate": summary["gate"], "jobs": jobs, "args": args, "agent_legs": agent_legs, "tasks": tasks,
+        "headline": headline(trials, now, status, upstream, summary["gate"]),
+    }
+    comment = comment_md(model)
 
-    for reason in upstream:
-        lines.append(f"- **blocking** · {reason}")
-    for g in unmeasured:
-        lines.append(f"- **{g['state']}** · {g['leg']}: {g['reason']}")
-    for e in (e for e in effort if e["flag"]):
-        lines.append(f"- **warning** · {e['leg']}: {100 * (e['ratio'] - 1):+.0f}% {e['metric']} vs main "
-                     f"across {e['cells_up']}/{e['cells']} cells ({e['above']}/{e['n']} passing trials above "
-                     f"their cell's median, p = {e['p']:.3f})")
-    for g in blocking_legs:
-        lines.append(f"- **blocking** · leg {g['leg']}: {g['x']}/{g['n']} passed, against "
-                     f"{g['base_k']}/{g['base_n']} on main (P = {g['tail']:.1e} < {LEG_ALPHA})")
-    order = {"blocking": 0, "warning": 1, "new": 2, "known": 3, "pass": 4}
-    failures = [t for t in trials if not t["passed"]]
-    failures.sort(key=lambda t: (order[now[f"{t['leg']}/{t['task']}"]["verdict"]], t["leg"], t["task"]))
-    for t in failures:
-        c = now[f"{t['leg']}/{t['task']}"]
-        label = {"blocking": "**blocking**", "warning": "**warning**", "new": "failing (no baseline)",
-                 "known": "known failure"}[c["verdict"]]
-        b = c["base"]
-        b_txt = f", main {b['k']}/{b['n']}" if b else ""
-        badge = " ".join(f"`{x}`" for x in t["badges"])
-        lines.append(f"- {label} · {t['leg']} · **{t['task']}** ({c['k']}/{c['n']}{b_txt}): {outcome(t)}, "
-                     f"{fmt(t['turns'])} turns, {t['stack_calls']} astra/lc calls"
-                     + (f" — judge: {badge}" if badge else " — judge: no pain points" if t["trial"] in judged else ""))
-    if failures or blocking_legs or unmeasured or upstream or any(e["flag"] for e in effort):
-        lines.append("")
-
-    if not agent_legs:
-        lines.append("No agent leg was planned or run.")
-    else:
-        head_row = "| task | " + " | ".join(agent_legs) + " |"
-        lines += [head_row, "|---" * (len(agent_legs) + 1) + "|"]
-        for task in tasks:
-            row = []
-            for leg in agent_legs:
-                c = now.get(f"{leg}/{task}")
-                b = c["base"] if c else None
-                state = next(g["state"] for g in status if g["leg"] == leg)
-                if c:
-                    txt = cell_text(c)
-                elif state == "not run":
-                    txt = "not run"
-                elif any(t["leg"] == leg and t["task"] == task for t in infra):
-                    txt = "not measured"
-                else:
-                    txt = "—"
-                if c and c["verdict"] in ("blocking", "warning"):
-                    txt = f"**{txt}**"
-                if b:
-                    txt += f" <sub>(main {b['k']}/{b['n']} · {fmt(b['turns'])})</sub>"
-                row.append(txt)
-            lines.append(f"| {task} | " + " | ".join(row) + " |")
-    oracle = [c for c in now.values() if c["leg"] == "oracle"]
-    if oracle:
-        ok = all(c["verdict"] == "pass" for c in oracle)
-        lines += ["", f"Oracle: {'all reference solutions score 1.0' if ok else '**a reference solution failed**'}."]
-    if args.judge_note:
-        lines += ["", args.judge_note]
-    lines += ["", f"Cost of this run: **{money(agent_cost + judge_cost)}** "
-              f"(agents {money(agent_cost)}, judge {money(judge_cost)}; the harnesses' API-price estimates)."]
-
-    noted = [t for t in trials if t["trial"] in judged and t["passed"]]  # judged outliers
-    lines += ["", "<details><summary>Per-trial detail and judge notes</summary>", "",
-              "| leg | task | outcome | turns | astra/lc calls | max repeat | agent min | cost | judge |",
-              "|---|---|---|---|---|---|---|---|---|"]
-    for t in sorted(trials, key=lambda t: (t["leg"] != "oracle", t["leg"], t["task"])):
-        judge = " ".join(t["badges"]) or ("clean" if t["trial"] in judged else "")
-        if t["outlier"]:
-            judge = ("outlier; " + judge).strip("; ")
-        lines.append(f"| {t['leg']} | {t['task']} | {outcome(t)} | {fmt(t['turns'])} | {t['stack_calls']} "
-                     f"| {t['max_repeat']} | {fmt(t['agent_s'] and t['agent_s'] / 60, '{:.1f}')} "
-                     f"| {fmt(t['cost_usd'], '${:.3f}')} | {judge} |")
-    for t in failures + noted:
-        j = judged.get(t["trial"])
-        if not j:
-            continue
-        lines += ["", f"**{t['leg']} · {t['task']}** ({outcome(t)})", "", j.get("summary", "").strip()]
-        for b in t["badges"]:
-            lines.append(f"- `{b}`: {j['checks'][b].get('explanation', '').strip()}")
-    lines += ["", "</details>"]
-    if args.run_url:
-        lines += ["", f"Trajectories, verifier logs and the HTML report: [workflow run]({args.run_url})."]
-    comment = "\n".join(lines) + "\n"
     (out / "comment.md").write_text(comment)
     (out / "summary.md").write_text(comment.replace(MARKER + "\n", ""))
-    (out / "report.html").write_text(html_page(trials, now, judged, stack_line(), agent_cost, judge_cost))
+    (out / "report.html").write_text(report_html.page(model))
 
     for c in blocking:
         print(f"::error::smoke {c['leg']} · {c['task']}: {c['k']}/{c['n']}")
@@ -578,51 +609,13 @@ def render(args) -> int:
     return 1 if blocking or blocking_legs or unmeasured_blocking or upstream else 0
 
 
-def html_page(trials, now, judged, stack_line, agent_cost, judge_cost) -> str:
-    rows = []
-    for t in sorted(trials, key=lambda t: (t["task"], t["leg"] != "oracle", t["leg"])):
-        j = judged.get(t["trial"])
-        chips = "".join(f'<span class="chip">{html.escape(b)}</span>' for b in t["badges"])
-        if t["outlier"]:
-            chips = '<span class="chip">outlier</span>' + chips
-        detail = ""
-        if j:
-            checks = "".join(
-                f"<li><b>{html.escape(k)}</b> <i>{html.escape(v.get('outcome', ''))}</i> — "
-                f"{html.escape(v.get('explanation', ''))}</li>" for k, v in (j.get("checks") or {}).items())
-            detail = (f"<details><summary>judge</summary><p>{html.escape(j.get('summary', ''))}</p>"
-                      f"<ul>{checks}</ul></details>")
-        verdict = now[f"{t['leg']}/{t['task']}"]["verdict"]
-        cls = "ok" if t["passed"] else ("bad" if verdict == "blocking" else "warn")
-        rows.append(
-            f"<tr><td>{html.escape(t['task'])}</td><td>{html.escape(t['leg'])}</td>"
-            f"<td class='{cls}'>{html.escape(outcome(t))}</td><td>{fmt(t['turns'])}</td>"
-            f"<td>{t['stack_calls']}</td><td>{t['max_repeat']}</td>"
-            f"<td>{fmt(t['cost_usd'], '${:.3f}')}</td><td>{chips}{detail}</td></tr>")
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Plugin smoke report</title>
-<style>
-:root{{--bg:#fbfaf7;--fg:#1d1d1b;--mute:#6b6a65;--line:#e4e1d9;--bad:#b3261e;--warn:#8a5a00;--ok:#2e6b3a;--chip:#f3e2dc}}
-@media (prefers-color-scheme: dark){{:root{{--bg:#191917;--fg:#ecebe6;--mute:#a19f97;--line:#36352f;--bad:#ff8a80;--warn:#f2c46d;--ok:#8fd19e;--chip:#4a2b26}}}}
-body{{background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif;margin:0 auto;padding:16px;max-width:1200px}}
-table{{border-collapse:collapse;width:100%}}td,th{{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}}
-.ok{{color:var(--ok)}}.bad{{color:var(--bad);font-weight:600}}.warn{{color:var(--warn)}}small,.mute{{color:var(--mute)}}
-.chip{{display:inline-block;background:var(--chip);border-radius:9px;padding:1px 8px;margin:0 4px 4px 0;font-size:12px}}
-details p,details li{{font-size:13px}}.wrap{{overflow-x:auto}}
-</style></head><body><h1>Plugin smoke report</h1>
-<p class="mute">{html.escape(stack_line)}. Cost: agents {money(agent_cost)}, judge {money(judge_cost)}.
-Chips are pain points the judge (evals/rubrics/pain-points.toml) found; only failed and outlier trials are judged.</p>
-<div class="wrap"><table><tr><th>task</th><th>leg</th><th>outcome</th><th>turns</th><th>astra/lc calls</th>
-<th>max repeat</th><th>cost</th><th>judge</th></tr>{''.join(rows)}</table></div></body></html>"""
-
-
 def select(args) -> int:
     jobs = Path(args.jobs)
     pool = load_pool(args.baseline) or {}
     for t in collect(jobs):
         if t["leg"] == "oracle" or t["infra"]:
             continue
-        if not t["passed"] or is_outlier(t, pooled(pool.get(f"{t['leg']}/{t['task']}"))):
+        if args.all or not t["passed"] or is_outlier(t, pooled(pool.get(f"{t['leg']}/{t['task']}"))):
             print(jobs / t["dir"])
     return 0
 
@@ -634,10 +627,13 @@ def main() -> int:
         p = sub.add_parser(name)
         p.add_argument("jobs")
         p.add_argument("--baseline")
+        if name == "select":
+            p.add_argument("--all", action="store_true", help="every measured agent trial, not only failures and outliers")
         if name == "render":
             p.add_argument("--judge")
             p.add_argument("--stack")
             p.add_argument("--run-url", default="")
+            p.add_argument("--report-url", default="", help="where the HTML report is published")
             p.add_argument("--base-label", default="")
             p.add_argument("--out", default=".")
             p.add_argument("--record", action="store_true")

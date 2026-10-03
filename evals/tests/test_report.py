@@ -173,7 +173,7 @@ def test_expected_leg_without_trials_shows_as_not_run(tmp_path):
                       "reason": "ANTHROPIC_API_KEY not set", "measured": 0, "infra": 0, "missing": 0}
     comment = (tmp_path / "out" / "comment.md").read_text()
     assert "**not run** · claude-haiku-plugin: ANTHROPIC_API_KEY not set" in comment
-    assert "| task | claude-haiku-plugin | claude-haiku-skill |" in comment
+    assert comment.splitlines()[1].startswith("## Plugin smoke · 2 legs · ❌ claude-haiku-plugin not run")
 
 
 def effort(summary: dict, metric: str = "turns") -> dict:
@@ -217,8 +217,8 @@ def test_version_skew_blocks_and_leads_the_comment(tmp_path):
     assert lines[0] == f"- **blocking** · version skew: {skew}"
     assert f"- **not run** · {LEG}: oracle failed" in lines
     assert "passing" not in comment.splitlines()[1]
-    assert f"| task | {LEG} | codex-luna-skill |" in comment
-    assert "| astra-author | not run | not run |" in comment
+    assert f"- **not run** · codex-luna-skill: oracle failed" in lines
+    assert "❌ blocked: version skew" in comment.splitlines()[1]
 
 
 def test_failed_upstream_job_with_no_legs_never_passes(tmp_path):
@@ -229,7 +229,7 @@ def test_failed_upstream_job_with_no_legs_never_passes(tmp_path):
     comment = (tmp_path / "out" / "comment.md").read_text()
     assert "- **blocking** · the oracle job ended in failure; see the run log" in comment
     assert "No agent leg was planned or run." in comment
-    assert "| task |  |" not in comment
+    assert "| task |  |" not in comment and "### " not in comment
 
 
 def test_oracle_infra_error_still_blocks(tmp_path):
