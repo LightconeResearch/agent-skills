@@ -361,3 +361,23 @@ def test_a_clean_trial_has_no_judge_items(tmp_path):
         {"trial_name": f"astra-author__{LEG}0", "summary": "[]", "checks": {}}]}))
     _, summary = render(tmp_path, None, "--judge", str(judge))
     assert summary["trials"][0]["judge"]["items"] == [] and summary["judge"]["pain_points"] == 0
+
+
+def test_publication_rerenders_only_a_valid_summary(tmp_path):
+    run_cell(tmp_path / "jobs", "astra-author", 1, n=1)
+    _, summary = render(tmp_path, None, "--report-url", "https://lightconeresearch.github.io/agent-skills/smoke/1/")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("report", REPORT)
+    report = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(report)
+    assert report.validate_summary(summary) == []
+    bad = json.loads(json.dumps(summary))
+    bad["run"]["url"] = "javascript:alert(1)"
+    bad["trials"][0]["anchor"] = 'x" onmouseover="alert(1)'
+    bad["verdict"] = "<script>"
+    errors = report.validate_summary(bad)
+    assert any("run.url" in e for e in errors) and any("anchor" in e for e in errors) and any("verdict" in e for e in errors)
+    (tmp_path / "bad.json").write_text(json.dumps(bad))
+    proc = subprocess.run([sys.executable, str(REPORT), "show", str(tmp_path / "bad.json"), "--validate",
+                           "--out", str(tmp_path / "pub")], capture_output=True, text=True)
+    assert proc.returncode == 2 and not (tmp_path / "pub" / "report.html").exists()

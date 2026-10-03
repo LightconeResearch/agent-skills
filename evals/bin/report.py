@@ -784,9 +784,71 @@ def render(args) -> int:
     return 1 if summary["gate"] == "fail" else 0
 
 
+SUMMARY_KEYS = {"schema": int, "verdict": dict, "reasons": list, "chain": list, "tasks": list, "trials": list,
+                "legs": list, "judge": dict, "run": dict, "cost_usd": dict, "gate": str}
+URL_OK = re.compile(r"^(https://github\.com/|https://lightconeresearch\.github\.io/)[\w./#%?=&~+-]*$")
+MAX_STRING = 100_000
+MAX_DEPTH = 12
+
+
+def validate_summary(s) -> list[str]:
+    """Shape checks for a summary.json from an artifact, before rendering it for publication.
+
+    Rendering escapes every string, so this guards the rest: plain JSON types
+    only, bounded sizes and depth, the top-level shape, and links that can only
+    point at GitHub or this project's Pages site (no javascript: or data: URLs).
+    """
+    errors: list[str] = []
+    if not isinstance(s, dict):
+        return ["summary.json is not an object"]
+    for key, kind in SUMMARY_KEYS.items():
+        if not isinstance(s.get(key), kind):
+            errors.append(f"{key}: expected {kind.__name__}")
+
+    def walk(v, path: str, depth: int) -> None:
+        if depth > MAX_DEPTH:
+            errors.append(f"{path}: nested deeper than {MAX_DEPTH}")
+        elif isinstance(v, dict):
+            for k, x in v.items():
+                if not isinstance(k, str) or len(k) > 200:
+                    errors.append(f"{path}: bad key")
+                walk(x, f"{path}.{k}", depth + 1)
+        elif isinstance(v, list):
+            for i, x in enumerate(v[:5000]):
+                walk(x, f"{path}[{i}]", depth + 1)
+            if len(v) > 5000:
+                errors.append(f"{path}: more than 5000 items")
+        elif isinstance(v, str):
+            if len(v) > MAX_STRING:
+                errors.append(f"{path}: string longer than {MAX_STRING}")
+        elif not (v is None or isinstance(v, (bool, int, float))):
+            errors.append(f"{path}: unexpected type {type(v).__name__}")
+
+    walk(s, "summary", 0)
+    for key in ("url", "report_url"):
+        url = (s.get("run") or {}).get(key) if isinstance(s.get("run"), dict) else None
+        if url and not (isinstance(url, str) and URL_OK.match(url)):
+            errors.append(f"run.{key}: not a GitHub or Pages URL")
+    for t in s.get("trials") or []:
+        if isinstance(t, dict) and not re.fullmatch(r"[\w.-]{1,200}", str(t.get("anchor", ""))):
+            errors.append("trials[].anchor: unexpected characters")
+            break
+    return errors[:50]
+
+
 def show(args) -> int:
-    """Re-render comment.md and report.html from a summary.json alone."""
-    summary = json.loads(Path(args.summary).read_text())
+    """Re-render comment.md and report.html from a summary.json alone (--validate first, for publication)."""
+    try:
+        summary = json.loads(Path(args.summary).read_text())
+    except (OSError, ValueError) as err:
+        print(f"::error::summary.json unreadable: {err}")
+        return 2
+    if args.validate:
+        errors = validate_summary(summary)
+        if errors:
+            for err in errors:
+                print(f"::error::summary.json rejected: {err}")
+            return 2
     write_outputs(summary, Path(args.out))
     return 0
 
@@ -832,6 +894,7 @@ def main() -> int:
     p = sub.add_parser("show", help="re-render comment.md and report.html from summary.json")
     p.add_argument("summary")
     p.add_argument("--out", default=".")
+    p.add_argument("--validate", action="store_true", help="reject a summary.json of the wrong shape (for publication)")
     args = ap.parse_args()
     return {"select": select, "render": render, "show": show}[args.cmd](args)
 

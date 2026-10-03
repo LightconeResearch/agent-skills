@@ -2,12 +2,14 @@
 # smoke workflow itself never needs contents: write and lightcone-cli can call
 # it without granting that):
 #
-#   report    report.html -> gh-pages at smoke/<run id>/index.html, served at
+#   report    the run's summary.json, validated and re-rendered HERE with the
+#             default branch's renderer (evals/bin/report.py show --validate),
+#             -> gh-pages at smoke/<run id>/index.html, served at
 #             https://lightconeresearch.github.io/agent-skills/smoke/<run id>/
-#             (the link the PR comment already carries). Runs of this repo's
-#             own branches only: a fork's artifact is its own code's output.
-#             gh-pages is shared with the docs (mike's version dirs) and the PR
-#             previews (pr-preview/); this only ever writes under smoke/.
+#             (the link the PR comment already carries). Never the artifact's own
+#             HTML: a PR controls the code that produced it. Runs of this repo's
+#             own branches only. gh-pages is shared with the docs (mike's version
+#             dirs) and the PR previews (pr-preview/); this only writes under smoke/.
 #   baseline  for a push to main whose report gate passed, that run's own record
 #             (summary.json's per-cell counts) -> runs/<run number>-<sha>.json on the
 #             orphan branch smoke-baseline, plus index.json regenerated from the
@@ -65,12 +67,14 @@ jobs:
       - name: Publish the report to gh-pages
         if: steps.summary.outcome == 'success' && steps.summary.outputs.none != 'true'
         run: |
-          [ -f summary/report.html ] || { echo "::notice::no report.html in run $RUN_ID"; exit 0; }
+          [ -f summary/summary.json ] || { echo "::notice::no summary.json in run $RUN_ID"; exit 0; }
+          # The page is rendered by main's evals/, from data that passed validation; the artifact's HTML is ignored.
+          python3 suite/evals/bin/report.py show summary/summary.json --validate --out rendered
           git clone -q --depth 1 --branch gh-pages \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pages
           cd pages
           mkdir -p "smoke/$RUN_ID"
-          cp ../summary/report.html "smoke/$RUN_ID/index.html"
+          cp ../rendered/report.html "smoke/$RUN_ID/index.html"
           git add "smoke/$RUN_ID/index.html"
           git commit -qm "smoke report for run $RUN_ID (${SHA:0:7})"
           # The docs and PR-preview workflows push here too: rebase onto theirs and retry.
