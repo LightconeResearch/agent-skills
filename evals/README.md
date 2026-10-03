@@ -80,16 +80,27 @@ that lightcone-cli PRs call with their head sha.
 3. **report** judges every trial of the default leg (`harbor analyze`,
    `rubrics/pain-points.toml`, `claude-sonnet-5-5`; failures and outliers only
    on bigger dispatch runs), compares each (leg, task) cell with the baseline,
-   and keeps one comment on the PR up to date. The comment leads with the
-   verdict in words; each failed task gets the verifier's own output for its
-   failing checks, the judge's account of what got in the agent's way, and the
-   agent's last message; passes take a line each.
+   and writes `summary.json`, the single source for everything below: the
+   verdict, every reason with its fix, each check's output, the timelines and
+   the judge's notes (`evals/bin/report.py show summary.json` re-renders).
+   The verdict and fixes come from a rule-based catalogue in `report.py`
+   (version skew, override, red reference solution, missing key, infra error,
+   coverage gap, agent check, leg test, failed job, effort); the judge's words
+   are always labelled "Judge". Each reason is also a GitHub annotation, at its
+   cause where there is one (a skew points at the pin's line in
+   `skills.config.json`). One comment on the PR leads with the verdict and fix,
+   then the chain stack → version check → reference solutions → agent → judge,
+   then each failed task with its verifier output; it is complete without any
+   API key, since the reference solutions alone tell a broken stack or task
+   from a working one.
 4. **smoke-publish.yml** (after the run) puts the full report on GitHub Pages
-   at `https://lightconeresearch.github.io/agent-skills/smoke/<run id>/`: one
-   card per task with the prompt, every verifier check, the judge's summary, a
-   turn-by-turn timeline with hook messages inline, the deliverable diffed
-   against the reference, and the task's history on main. Trial artifacts are
-   redacted of API keys before any of this is uploaded or published.
+   at `https://lightconeresearch.github.io/agent-skills/smoke/<run id>/`: the
+   same verdict and chain, a task table (what each task proves, check dots,
+   history on main), and a card per failure with every check and its output,
+   the deliverable diffed against the reference, the judge's summary, and a
+   turn-by-turn timeline where hook messages are rows of their own, flagged
+   when the verifier contradicts them. Trial artifacts are redacted of API keys
+   before anything is uploaded or published, and nothing is if redaction fails.
 
 Measured locally on 2026-10-03 for the default leg: Sonnet 5.5 passed all five
 tasks in 3–6 turns; the agent cost $0.38 and the judge $0.32, so about $0.70
