@@ -205,11 +205,13 @@ jobs:
         run: |
           K=1 N=5 evals/bin/smoke.sh oracle
           python3 evals/bin/report.py render evals/jobs --expect-tasks "${{ steps.plan.outputs.tasks }}" --out oracle-report
+      # Redaction fails closed: nothing is uploaded unless it ran and succeeded.
       - name: Redact API keys
+        id: redact
         if: always()
-        run: python3 evals/bin/redact.py evals/jobs
+        run: python3 evals/bin/redact.py evals/jobs && echo "ok=true" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.redact.outputs.ok == 'true'
         with:
           name: smoke-leg-oracle
           path: evals/jobs/
@@ -273,13 +275,15 @@ jobs:
           CODEX_FORCE_AUTH_JSON: "0"
         run: N=5 evals/bin/smoke.sh "${{ matrix.leg.spec }}"
       - name: Redact API keys (trajectories record whatever the agent printed)
+        id: redact
         if: always() && hashFiles('evals/bin/redact.py') != ''
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python3 evals/bin/redact.py evals/jobs
+        run: python3 evals/bin/redact.py evals/jobs && echo "ok=true" >> "$GITHUB_OUTPUT"
+      # Without a checkout (the key check failed first) the jobs dir holds only the .status file.
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && (steps.redact.outputs.ok == 'true' || hashFiles('evals/bin/redact.py') == '')
         with:
           name: smoke-leg-${{ matrix.leg.name }}
           path: evals/jobs/
@@ -360,14 +364,16 @@ jobs:
           [ -s judge-these.txt ] || { echo "nothing to judge"; exit 0; }
           evals/bin/judge.sh < judge-these.txt
       - name: Redact API keys before anything is rendered or uploaded
+        id: redact
         if: always()
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python3 evals/bin/redact.py evals/jobs
+        run: python3 evals/bin/redact.py evals/jobs && echo "ok=true" >> "$GITHUB_OUTPUT"
+      # Render, upload and comment only after a successful redaction; otherwise the gate fails.
       - name: Report
         id: report
-        if: always()
+        if: always() && steps.redact.outputs.ok == 'true'
         env:
           BASELINE: ${{ steps.baseline.outputs.path }}
           BASE_LABEL: ${{ steps.baseline.outputs.label && format('{0}, run {1}', steps.baseline.outputs.label, steps.baseline.outputs.run) || '' }}
@@ -405,13 +411,13 @@ jobs:
           [ -f evals/jobs/judge/analysis.json ] && cp evals/jobs/judge/analysis.json smoke-report/judge-analysis.json
           cat smoke-report/summary.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.redact.outputs.ok == 'true'
         with:
           name: smoke-summary
           path: smoke-report/
           retention-days: 90
       - name: Sticky PR comment
-        if: always() && github.event_name == 'pull_request'
+        if: always() && steps.redact.outputs.ok == 'true' && github.event_name == 'pull_request'
         continue-on-error: true   # a fork PR's token cannot comment
         env:
           GH_TOKEN: ${{ github.token }}
