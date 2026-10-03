@@ -298,9 +298,11 @@ def leg_status(jobs: Path, expected: list[str], trials: list[dict], infra: list[
     for leg in sorted(set(expected) | {t["leg"] for t in trials + infra} - {"oracle"}):
         ok = [t for t in trials if t["leg"] == leg]
         bad = [t for t in infra if t["leg"] == leg]
-        owed = k * len(tasks) if tasks and k else len(ok) + len(bad)
-        missing = max(owed - len(ok), len(bad))
-        total = max(owed, len(ok) + len(bad))
+        if tasks and k:  # each planned (leg, task) owes k measured trials; extras elsewhere don't count
+            short = {task: max(0, k - sum(t["task"] == task for t in ok)) for task in tasks}
+            missing, total = sum(short.values()), k * len(tasks)
+        else:
+            short, missing, total = {}, len(bad), len(ok) + len(bad)
         kinds = Counter(t["exception"] for t in bad)
         why = ", ".join(f"{e} ({INFRA[e]})" for e, _ in kinds.most_common())
         if not ok and not bad:
@@ -311,10 +313,12 @@ def leg_status(jobs: Path, expected: list[str], trials: list[dict], infra: list[
             state, reason = "measured", ""
         else:
             state = "not measured" if not ok else "partly measured"
-            never = missing - len(bad)
+            never = max(0, missing - len(bad))
             parts = ([f"{len(bad)} hit {why}"] if bad else []) + ([f"{never} never ran"] if never else [])
+            gaps = ", ".join(f"{task} {k - n}/{k}" for task, n in short.items() if n)
             reason = (f"{len(bad)}/{total} trials hit {why}" if not never
-                      else f"{missing}/{total} trials missing: " + "; ".join(parts))
+                      else f"{missing}/{total} trials missing: " + "; ".join(parts)
+                      + (f" ({gaps})" if gaps else ""))
         out.append({"leg": leg, "state": state, "reason": reason,
                     "measured": len(ok), "infra": len(bad), "missing": missing})
     return out

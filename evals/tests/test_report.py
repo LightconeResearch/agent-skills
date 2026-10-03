@@ -262,7 +262,8 @@ def test_a_leg_short_of_k_trials_is_partly_measured(tmp_path):
     assert rc == 1
     leg = next(g for g in summary["leg_status"] if g["leg"] == LEG)
     assert leg["state"] == "partly measured"
-    assert leg["reason"] == "2/6 trials missing: 1 hit ApiRateLimitError (rate limit); 1 never ran"
+    assert leg["reason"] == ("2/6 trials missing: 1 hit ApiRateLimitError (rate limit); 1 never ran"
+                             " (astra-add-decision 1/2, astra-query 1/2)")
     _, recorded = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in TASKS}),
                          "--expect-tasks", " ".join(TASKS), "--expect-legs", LEG, "--k", "2", "--record")
     assert recorded["gate"] == "pass"  # main records; coverage gates PRs
@@ -311,3 +312,16 @@ def test_k1_strong_cell_failing_blocks_and_the_leg_test_stays_quiet(tmp_path):
     assert verdicts(summary)["task-0"] == "blocking"
     assert not summary["legs"][0]["blocking"]  # 4/5 against ~6/7 per cell is ordinary
     assert next(g for g in summary["leg_status"] if g["leg"] == LEG)["state"] == "measured"
+
+
+def test_coverage_is_per_cell_not_a_total(tmp_path):
+    # Six trials in one task and none in two others, at K=2: the total (6) is not the coverage.
+    jobs = tmp_path / "jobs"
+    for task in TASKS:
+        trial(jobs, "oracle", task, 0, 1.0)
+    run_cell(jobs, "astra-author", 6, n=6)
+    rc, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in TASKS}),
+                         "--expect-tasks", " ".join(TASKS), "--expect-legs", LEG, "--k", "2")
+    leg = next(g for g in summary["leg_status"] if g["leg"] == LEG)
+    assert rc == 1 and leg["state"] == "partly measured" and leg["missing"] == 4
+    assert leg["reason"] == "4/6 trials missing: 4 never ran (astra-add-decision 0/2, astra-query 0/2)"
