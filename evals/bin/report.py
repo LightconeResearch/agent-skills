@@ -809,6 +809,48 @@ MAX_STRING = 100_000
 MAX_DEPTH = 12
 
 
+NUM = (int, float)
+INT = (int,)
+OPT = (type(None),)
+# Leaf types the renderer relies on; "*" matches any list index or mapping key.
+FIELD_TYPES = {
+    "schema": INT, "gate": (str,),
+    "verdict.state": (str,), "verdict.headline": (str,), "verdict.fix": (str,), "verdict.class": (str,),
+    "reasons.*.class": (str,), "reasons.*.headline": (str,), "reasons.*.fix": (str,), "reasons.*.blocking": (bool,),
+    "chain.*.key": (str,), "chain.*.title": (str,), "chain.*.state": (str,), "chain.*.value": (str,),
+    "chain.*.sub": (str,),
+    "tasks.*.name": (str,), "tasks.*.proves": (str,), "tasks.*.had_to": (str,), "tasks.*.instruction": (str,),
+    "tasks.*.reference.passed": (bool,) + OPT, "tasks.*.reference.checks.*.ok": (bool,),
+    "tasks.*.reference.checks.*.name": (str,), "tasks.*.reference.anchor": (str,) + OPT,
+    "tasks.*.history.*.k": INT, "tasks.*.history.*.n": INT,
+    "tasks.*.agent.*.state": (str,), "tasks.*.agent.*.infra": INT,
+    "tasks.*.agent.*.trials.*.passed": (bool,), "tasks.*.agent.*.trials.*.turns": INT + OPT,
+    "tasks.*.agent.*.trials.*.anchor": (str,),
+    "trials.*.leg": (str,), "trials.*.task": (str,), "trials.*.trial": (str,), "trials.*.anchor": (str,),
+    "trials.*.passed": (bool,), "trials.*.turns": INT + OPT, "trials.*.stack_calls": INT + OPT,
+    "trials.*.max_repeat": INT + OPT, "trials.*.cost_usd": NUM + OPT, "trials.*.agent_s": NUM + OPT,
+    "trials.*.reward": NUM + OPT, "trials.*.exception": (str,) + OPT, "trials.*.label": (str,) + OPT,
+    "trials.*.checks.*.ok": (bool,), "trials.*.checks.*.name": (str,), "trials.*.checks.*.output": (str,),
+    "trials.*.checks.*.desc": (str,), "trials.*.checks.*.first_error": (str,),
+    "trials.*.timeline.*.kind": (str,), "trials.*.timeline.*.turn": INT + OPT, "trials.*.timeline.*.step": INT + OPT,
+    "trials.*.timeline.*.exit": INT + OPT, "trials.*.timeline.*.error": (bool,),
+    "trials.*.timeline.*.text": (str,), "trials.*.timeline.*.what": (str,), "trials.*.timeline.*.tool": (str,),
+    "trials.*.judge.items.*.step": INT + OPT, "trials.*.judge.items.*.badge": (str,),
+    "trials.*.judge.items.*.point": (str,), "trials.*.judge.items.*.evidence": (str,),
+    "trials.*.deliverable.name": (str,), "trials.*.deliverable.body": (str,), "trials.*.deliverable.diff": (str,),
+    "trials.*.deliverable.changed_lines": INT, "trials.*.deliverable.error_lines.*.line": INT,
+    "legs.*.leg": (str,), "legs.*.label": (str,), "legs.*.state": (str,), "legs.*.reason": (str,),
+    "judge.ran": (bool,), "judge.reason": (str,), "cost_usd.agents": NUM, "cost_usd.judge": NUM,
+    "run.url": (str,) + OPT, "run.report_url": (str,) + OPT, "run.k": INT + OPT,
+}
+
+
+def _type_ok(v, kinds: tuple) -> bool:
+    if isinstance(v, bool) and bool not in kinds:
+        return False  # bool is an int in Python; not here
+    return isinstance(v, kinds)
+
+
 def validate_summary(s) -> list[str]:
     """Shape checks for a summary.json from an artifact, before rendering it for publication.
 
@@ -843,6 +885,22 @@ def validate_summary(s) -> list[str]:
             errors.append(f"{path}: unexpected type {type(v).__name__}")
 
     walk(s, "summary", 0)
+
+    def typed(v, path: tuple) -> None:
+        if isinstance(v, dict):
+            for k, x in v.items():
+                typed(x, path + (str(k),))
+        elif isinstance(v, list):
+            for x in v[:5000]:
+                typed(x, path + ("*",))
+        for pattern, kinds in FIELD_TYPES.items():
+            parts = pattern.split(".")
+            if len(parts) == len(path) and all(p == "*" or p == q for p, q in zip(parts, path)):
+                if not _type_ok(v, kinds):
+                    errors.append(f"{'.'.join(path)}: expected {'/'.join(k.__name__ for k in kinds)}")
+                break
+
+    typed(s, ())
     for key in ("url", "report_url"):
         url = (s.get("run") or {}).get(key) if isinstance(s.get("run"), dict) else None
         if url and not (isinstance(url, str) and URL_OK.match(url)):

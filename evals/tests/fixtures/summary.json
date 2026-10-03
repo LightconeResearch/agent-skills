@@ -1,0 +1,620 @@
+{
+ "schema": 1,
+ "verdict": {
+  "state": "warn",
+  "headline": "astra-author \u00b7 spec_valid \u2717 declares_pipeline \u2717 \u00b7 \u201cversion: Input should be a valid string\u201d \u00b7 validate-on-save hook said pass \u00b7 contradicted \u00b7 1/2 (main 1/1)",
+  "fix": "",
+  "class": "agent_check"
+ },
+ "reasons": [
+  {
+   "class": "agent_check",
+   "blocking": false,
+   "headline": "astra-author \u00b7 spec_valid \u2717 declares_pipeline \u2717 \u00b7 \u201cversion: Input should be a valid string\u201d \u00b7 validate-on-save hook said pass \u00b7 contradicted \u00b7 1/2 (main 1/1)",
+   "fix": "",
+   "annotation": null,
+   "data": {
+    "task": "astra-author",
+    "leg": "claude-haiku-plugin",
+    "checks": [
+     "spec_valid",
+     "declares_pipeline"
+    ],
+    "error": "version: Input should be a valid string",
+    "exception": null,
+    "contradiction": "validate-on-save hook said pass \u00b7 contradicted",
+    "verdict": "warning",
+    "k": 1,
+    "n": 2,
+    "base": {
+     "k": 1,
+     "n": 1,
+     "rate": 1.0,
+     "runs": 1,
+     "turns": 14,
+     "stack_calls": 6
+    },
+    "anchor": "claude-haiku-plugin-astra-author-zHQfph9"
+   }
+  }
+ ],
+ "chain": [
+  {
+   "key": "stack",
+   "title": "Stack",
+   "state": "ok",
+   "value": "built",
+   "sub": "astra-tools 0.2.18 \u00b7 lightcone-cli 0.5.0rc5"
+  },
+  {
+   "key": "version",
+   "title": "Version check",
+   "state": "ok",
+   "value": "consistent",
+   "sub": "lc needs ==0.2.18; plugin pins 0.2.18"
+  },
+  {
+   "key": "oracle",
+   "title": "Reference solutions",
+   "state": "ok",
+   "value": "5 / 5 tasks",
+   "sub": "19 / 19 checks pass"
+  },
+  {
+   "key": "agent",
+   "title": "Agent",
+   "state": "bad",
+   "value": "2 / 3 tasks",
+   "sub": "Haiku 4.5 + plugin"
+  },
+  {
+   "key": "judge",
+   "title": "Judge",
+   "state": "warn",
+   "value": "10 pain points",
+   "sub": "doc_gap \u00b7 hook_friction \u00b7 tool_error"
+  }
+ ],
+ "tasks": [
+  {
+   "name": "astra-author",
+   "proves": "a hand-written spec for a two-step pipeline validates and resolves",
+   "had_to": "write a spec for a two-step pipeline",
+   "instruction": "The project in `/root/line-fit` is a small two-step analysis:\n\n1. `scripts/clean.py` reads `data/raw.csv` and drops rows whose `y` is missing or `-999`, writing `results/clean.csv` (usage: `python scripts/clean.py <raw.csv> <clean.csv>`).\n2. `scripts/fit.py` fits a polynomial to the cleaned table and writes `results/fit.json` (usage: `python scripts/fit.py --clean <clean.csv> --out <fit.json>`).\n\nDescribe this analysis in ASTRA. The `astra` CLI is installed. Write `/root/line-fit/astra.yaml` declaring:\n\n- a data input with id `raw_data` whose source is `data/raw.csv`;\n- an output with id `clean_data` that depends on `raw_data`, with a recipe command that runs `scripts/clean.py`;\n- an output with id `fit_result` that depends on `clean_data`, with a recipe command that runs `scripts/fit.py`.\n\n`astra validate`, run in `/root/line-fit`, must pass. You do not need to run the scripts.",
+   "reference": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "spec_valid",
+      "ok": true
+     },
+     {
+      "name": "declares_pipeline",
+      "ok": true
+     }
+    ],
+    "anchor": "oracle-astra-author-4uGD6A3"
+   },
+   "agent": {
+    "claude-haiku-plugin": {
+     "state": "measured",
+     "trials": [
+      {
+       "anchor": "claude-haiku-plugin-astra-author-73hShBA",
+       "passed": true,
+       "turns": 10
+      },
+      {
+       "anchor": "claude-haiku-plugin-astra-author-zHQfph9",
+       "passed": false,
+       "turns": 3
+      }
+     ],
+     "infra": 0
+    }
+   },
+   "history": [
+    {
+     "k": 1,
+     "n": 1
+    }
+   ]
+  }
+ ],
+ "trials": [
+  {
+   "leg": "claude-haiku-plugin",
+   "task": "astra-author",
+   "trial": "astra-author__73hShBA",
+   "model": "claude-haiku-4-5",
+   "passed": true,
+   "reward": 1.0,
+   "failed_checks": [],
+   "exception": null,
+   "turns": 10,
+   "stack_calls": 5,
+   "max_repeat": 3,
+   "cost_usd": 0.059502900000000004,
+   "agent_s": 53.327892,
+   "anchor": "claude-haiku-plugin-astra-author-73hShBA",
+   "label": "Haiku 4.5 + plugin",
+   "checks": [
+    {
+     "name": "spec_valid",
+     "ok": true,
+     "output": "Validating astra.yaml...\n\u26a0  analysis declares ASTRA spec version 1.0.0, but astra-spec 0.0.14 is \ninstalled; validation reflects the installed version. Pin astra-spec==1.0.0 to \nvalidate against the original spec, or update the analysis's version field after\nconfirming compatibility.\n\u2713 Schema validation passed\n\u2713 Semantic validation passed\n\nValidation successful!\n\nAll 1 file(s) passed validation.\nexit code: 0",
+     "desc": "`astra validate` accepts the project",
+     "first_error": ""
+    },
+    {
+     "name": "declares_pipeline",
+     "ok": true,
+     "output": "resolved outputs: {'clean_data': [('raw_data', None, 'data/raw.csv')], 'fit_result': [('clean_data', 'clean_data', None)]}\nok   output clean_data is declared\nok   clean_data declares input raw_data\nok   raw_data resolves to source data/raw.csv (got 'data/raw.csv')\nok   clean_data recipe command runs scripts/clean.py (got 'python scripts/clean.py data/raw.csv results/clean.csv')\nok   output fit_result is declared\nok   fit_result declares input clean_data\nok   clean_data is produced by output clean_data (got 'clean_data')\nok   fit_result recipe command runs scripts/fit.py (got 'python scripts/fit.py --clean results/clean.csv --out results/fit.json')",
+     "desc": "astra's resolver finds raw_data \u2192 clean_data \u2192 fit_result, each with its script as recipe",
+     "first_error": ""
+    }
+   ],
+   "stdout": "Validating astra.yaml...\n\u26a0  analysis declares ASTRA spec version 1.0.0, but astra-spec 0.0.14 is \ninstalled; validation reflects the installed version. Pin astra-spec==1.0.0 to \nvalidate against the original spec, or update the analysis's version field after\nconfirming compatibility.\n\u2713 Schema validation passed\n\u2713 Semantic validation passed\n\nValidation successful!\n\nAll 1 file(s) passed validation.\nexit code: 0\nresolved outputs: {'clean_data': [('raw_data', None, 'data/raw.csv')], 'fit_result': [('clean_data', 'clean_data', None)]}\nok   output clean_data is declared\nok   clean_data declares input raw_data\nok   raw_data resolves to source data/raw.csv (got 'data/raw.csv')\nok   clean_data recipe command runs scripts/clean.py (got 'python scripts/clean.py data/raw.csv results/clean.csv')\nok   ou",
+   "exception_text": "",
+   "deliverable": {
+    "name": "astra.yaml",
+    "body": "version: 1.0.0\nname: Line fit analysis\ndescription: Two-step analysis to clean data and fit a polynomial model\n\ninputs:\n  - id: raw_data\n    type: data\n    source: data/raw.csv\n    description: Raw dataset with missing and invalid values\n\noutputs:\n  - id: clean_data\n    type: data\n    format: csv\n    description: Cleaned dataset with invalid rows removed\n    inputs:\n      - raw_data\n    recipe:\n      command: python scripts/clean.py data/raw.csv results/clean.csv\n\n  - id: fit_result\n    type: data\n    format: json\n    description: Fitted polynomial model\n    inputs:\n      - clean_data\n    recipe:\n      command: python scripts/fit.py --clean results/clean.csv --out results/fit.json\n",
+    "diff": "--- reference\n+++ agent\n@@ -1,23 +1,28 @@\n-version: \"0.0.14\"\n-name: Line fit\n-description: Clean a small x-y table, then fit a polynomial to it.\n+version: 1.0.0\n+name: Line fit analysis\n+description: Two-step analysis to clean data and fit a polynomial model\n+\n inputs:\n   - id: raw_data\n     type: data\n     source: data/raw.csv\n-    description: Raw x-y measurements; some y values are missing or -999.\n+    description: Raw dataset with missing and invalid values\n+\n outputs:\n   - id: clean_data\n     type: data\n     format: csv\n-    description: Rows of raw_data with a valid y value.\n-    inputs: [raw_data]\n+    description: Cleaned dataset with invalid rows removed\n+    inputs:\n+      - raw_data\n     recipe:\n-      command: python scripts/clean.py {inputs.raw_data} {output}\n+      command: python scripts/clean.py data/raw.csv results/clean.csv\n+\n   - id: fit_result\n-    type: metric\n+    type: data\n     format: json\n-    description: Best-fit polynomial coefficients.\n-    inputs: [clean_data]\n+    description: Fitted polynomial model\n+    inputs:\n+      - clean_data\n     recipe:\n-      command: python scripts/fit.py --clean {inputs.clean_data} --out {output}\n+      command: python scripts/fit.py --clean results/clean.csv --out results/fit.json\n",
+    "changed_lines": 27,
+    "has_reference": true,
+    "error_lines": []
+   },
+   "timeline": [
+    {
+     "kind": "hook",
+     "hook": "SessionStart",
+     "name": "SessionStart hook",
+     "text": "Lightcone CLI ready: lc 0.5.0rc5 (Lightcone plugin active; this directory holds no astra.yaml yet).",
+     "claim": null
+    },
+    {
+     "kind": "call",
+     "turn": 1,
+     "step": 2,
+     "tool": "Skill",
+     "what": "lightcone:astra",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "I'll use the ASTRA skill to help me understand the correct format for this analysis, then write the astra.yaml file."
+    },
+    {
+     "kind": "call",
+     "turn": 2,
+     "step": 4,
+     "tool": "Bash",
+     "what": "uvx astra-tools@0.2.18 spec --full | head -200",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "Let me check the ASTRA spec for the exact format:"
+    },
+    {
+     "kind": "call",
+     "turn": 3,
+     "step": 5,
+     "tool": "Write",
+     "what": "/root/line-fit/astra.yaml",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "Now let me write the astra.yaml file based on the schema. I'll create the file with the data input and two outputs:"
+    },
+    {
+     "kind": "hook",
+     "hook": "PostToolUse:Write",
+     "name": "validate-on-save hook",
+     "text": "ASTRA validation passed for the project (astra.yaml + universes)",
+     "claim": "pass",
+     "step": 5,
+     "contradicted": "contradicted: `uvx astra-tools@0.2.18 validate` at turn 4 exits 1"
+    },
+    {
+     "kind": "call",
+     "turn": 4,
+     "step": 6,
+     "tool": "Bash",
+     "what": "uvx astra-tools@0.2.18 validate",
+     "exit": 1,
+     "error": true,
+     "output": "Exit code 1\nValidating astra.yaml...\n\nSchema validation errors:\n  \u2022 analysis: Extra inputs are not permitted\n\n\u2026",
+     "note": "Perfect! The astra.yaml has been created and validation passed. Let me verify it explicitly:"
+    },
+    {
+     "kind": "call",
+     "turn": 5,
+     "step": 7,
+     "tool": "Bash",
+     "what": "uvx astra-tools@0.2.18 spec analysis",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "Let me check the Analysis structure more carefully:"
+    },
+    {
+     "kind": "call",
+     "turn": 6,
+     "step": 8,
+     "tool": "Edit",
+     "what": "/root/line-fit/astra.yaml",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "I see the issue\u2014the top level should be the Analysis itself, not wrapped in an `analysis` key. Let me fix that:"
+    },
+    {
+     "kind": "hook",
+     "hook": "PostToolUse:Edit",
+     "name": "validate-on-save hook",
+     "text": "ASTRA validation passed for the project (astra.yaml + universes)",
+     "claim": "pass",
+     "step": 8,
+     "contradicted": "contradicted: `uvx astra-tools@0.2.18 validate` at turn 7 exits 1"
+    },
+    {
+     "kind": "call",
+     "turn": 7,
+     "step": 9,
+     "tool": "Bash",
+     "what": "uvx astra-tools@0.2.18 validate",
+     "exit": 1,
+     "error": true,
+     "output": "Exit code 1\nValidating astra.yaml...\n\u2713 Schema validation passed\n\nSemantic validation errors:\n  \u2022 [MISSING_ROOT_FIELD] version: Root analysis is missing required field \n\u2026",
+     "note": "Excellent! Let me verify the validation once more:"
+    },
+    {
+     "kind": "call",
+     "turn": 8,
+     "step": 10,
+     "tool": "Edit",
+     "what": "/root/line-fit/astra.yaml",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "I need to add the `version` field. Let me fix that:"
+    },
+    {
+     "kind": "hook",
+     "hook": "PostToolUse:Edit",
+     "name": "validate-on-save hook",
+     "text": "ASTRA validation FAILED for the project (astra.yaml + universes):\nValidating astra.yaml...\n\u26a0  analysis declares ASTRA spec version 1.0.0, but astra-spec 0.0.14 is \ninstalled; validation reflects the installed version. Pin astra-spec==1.0.0 to \nvalidate against the original spec, or update the analysis's version field after\nconfirming compatibility.\n\u2713 Schema validation passed\n\u2713 Semantic validation passed\n\nValidation successful!\n\nAll 1 file(s) passed validation.",
+     "claim": "fail",
+     "step": 10,
+     "contradicted": "contradicts itself: it says FAILED, and its own output says every file passed"
+    },
+    {
+     "kind": "call",
+     "turn": 9,
+     "step": 11,
+     "tool": "Bash",
+     "what": "uvx astra-tools@0.2.18 validate",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "Perfect! Validation passed. Let me do a final check:"
+    },
+    {
+     "kind": "final",
+     "text": "Done! I've created `/root/line-fit/astra.yaml` that describes your two-step analysis:\n\n- **Input**: `raw_data` from `data/raw.csv`\n- **Output 1**: `clean_data` (CSV) \u2014 depends on `raw_data`, runs `scripts/clean.py`\n- **Output 2**: `fit_result` (JSON) \u2014 depends on `clean_data`, runs `scripts/fit.py`\n\nThe specification passes validation with `astra validate`. The analysis is ready to run with the Lightcone CLI via the `lc` command."
+    }
+   ],
+   "last_message": "Done! I've created `/root/line-fit/astra.yaml` that describes your two-step analysis:\n\n- **Input**: `raw_data` from `data/raw.csv`\n- **Output 1**: `clean_data` (CSV) \u2014 depends on `raw_data`, runs `scripts/clean.py`\n- **Output 2**: `fit_result` (JSON) \u2014 depends on `clean_data`, runs `scripts/fit.py`\n\nThe specification passes validation with `astra validate`. The analysis is ready to run with the Lightcone CLI via the `lc` command.",
+   "contradiction": "validate-on-save hook said pass \u00b7 contradicted",
+   "judge": {
+    "items": [
+     {
+      "badge": "hook_friction",
+      "point": "The PostToolUse hook reported 'ASTRA validation passed' after writes that astra validate rejected (extra 'analysis' key, then missing 'version'), and reported 'FAILED' on a spec that validated successfully.",
+      "evidence": "step 5 hook",
+      "step": 5
+     },
+     {
+      "badge": "doc_gap",
+      "point": "The agent wrote a wrapped 'analysis:' root and omitted the required 'version' field, needing two failed validates and a schema lookup to learn the root shape.",
+      "evidence": "step 6",
+      "step": 6
+     }
+    ],
+    "badges": [
+     "hook_friction",
+     "doc_gap"
+    ],
+    "checks": {
+     "doc_gap": {
+      "explanation": "The agent guessed an 'analysis:' wrapper (step 5), failed validate (step 6), read the schema (step 7), then missed required 'version' (step 9). It converged in about 3 extra calls, so this is a moderate gap in the skill's root-structure guidance.",
+      "outcome": "fail"
+     },
+     "tool_error": {
+      "explanation": "Validation errors were clear ('Extra inputs are not permitted', 'MISSING_ROOT_FIELD version'). The version-mismatch warning is benign.",
+      "outcome": "pass"
+     },
+     "hook_friction": {
+      "explanation": "The hook said 'ASTRA validation passed' after the step 5 Write and the step 8 Edit, when validate actually failed. The agent then announced 'validation passed' at step 6 before running it. After the step 10 edit the hook said 'FAILED' while its own output showed success, apparently because of the warning text.",
+      "outcome": "fail"
+     },
+     "redundant_calls": {
+      "explanation": "No repeated identical calls beyond validation after edits.",
+      "outcome": "pass"
+     },
+     "env_broken": {
+      "explanation": "No environment errors.",
+      "outcome": "pass"
+     },
+     "task_underspecified": {
+      "explanation": "The instruction names the ids, source, dependencies and scripts, which is enough to satisfy the checker.",
+      "outcome": "pass"
+     },
+     "verifier_wrong": {
+      "explanation": "Reward 1.0; the spec validates and the pipeline checks match the final file.",
+      "outcome": "pass"
+     }
+    },
+    "cost_usd": 0.0736212
+   },
+   "outlier": false,
+   "base": {
+    "k": 1,
+    "n": 1,
+    "rate": 1.0,
+    "runs": 1,
+    "turns": 14,
+    "stack_calls": 6
+   }
+  },
+  {
+   "leg": "claude-haiku-plugin",
+   "task": "astra-author",
+   "trial": "astra-author__zHQfph9",
+   "model": "claude-haiku-4-5",
+   "passed": false,
+   "reward": 0.0,
+   "failed_checks": [
+    "spec_valid",
+    "declares_pipeline"
+   ],
+   "exception": null,
+   "turns": 3,
+   "stack_calls": 0,
+   "max_repeat": 0,
+   "cost_usd": 0.0190373,
+   "agent_s": 17.518393,
+   "anchor": "claude-haiku-plugin-astra-author-zHQfph9",
+   "label": "Haiku 4.5 + plugin",
+   "checks": [
+    {
+     "name": "spec_valid",
+     "ok": false,
+     "output": "Validating astra.yaml...\n\nSchema validation errors:\n  \u2022 version: Input should be a valid string\n  \u2022 analysis: Extra inputs are not permitted\n\n1/1 file(s) failed validation: astra.yaml\nexit code: 1",
+     "desc": "`astra validate` accepts the project",
+     "first_error": "version: Input should be a valid string"
+    },
+    {
+     "name": "declares_pipeline",
+     "ok": false,
+     "output": "resolved outputs: {}\nFAIL output clean_data is declared\nFAIL output fit_result is declared",
+     "desc": "astra's resolver finds raw_data \u2192 clean_data \u2192 fit_result, each with its script as recipe",
+     "first_error": "FAIL output clean_data is declared"
+    }
+   ],
+   "stdout": "Validating astra.yaml...\n\nSchema validation errors:\n  \u2022 version: Input should be a valid string\n  \u2022 analysis: Extra inputs are not permitted\n\n1/1 file(s) failed validation: astra.yaml\nexit code: 1\nresolved outputs: {}\nFAIL output clean_data is declared\nFAIL output fit_result is declared\n{\"reward\": 0.0, \"spec_valid\": 0, \"declares_pipeline\": 0}",
+   "exception_text": "",
+   "deliverable": {
+    "name": "astra.yaml",
+    "body": "version: 1\n\nanalysis:\n  name: Line Fit Analysis\n  description: Clean raw data and fit a polynomial model\n\n  inputs:\n    - id: raw_data\n      source: data/raw.csv\n      description: Raw input data with potential missing or invalid values\n\n  outputs:\n    - id: clean_data\n      description: Cleaned data with missing and invalid (-999) values removed\n      depends_on:\n        - raw_data\n      recipe:\n        command: python scripts/clean.py data/raw.csv results/clean.csv\n\n    - id: fit_result\n      description: Polynomial fit results in JSON format\n      depends_on:\n        - clean_data\n      recipe:\n        command: python scripts/fit.py --clean results/clean.csv --out results/fit.json\n",
+    "diff": "--- reference\n+++ agent\n@@ -1,23 +1,25 @@\n-version: \"0.0.14\"\n-name: Line fit\n-description: Clean a small x-y table, then fit a polynomial to it.\n-inputs:\n-  - id: raw_data\n-    type: data\n-    source: data/raw.csv\n-    description: Raw x-y measurements; some y values are missing or -999.\n-outputs:\n-  - id: clean_data\n-    type: data\n-    format: csv\n-    description: Rows of raw_data with a valid y value.\n-    inputs: [raw_data]\n-    recipe:\n-      command: python scripts/clean.py {inputs.raw_data} {output}\n-  - id: fit_result\n-    type: metric\n-    format: json\n-    description: Best-fit polynomial coefficients.\n-    inputs: [clean_data]\n-    recipe:\n-      command: python scripts/fit.py --clean {inputs.clean_data} --out {output}\n+version: 1\n+\n+analysis:\n+  name: Line Fit Analysis\n+  description: Clean raw data and fit a polynomial model\n+\n+  inputs:\n+    - id: raw_data\n+      source: data/raw.csv\n+      description: Raw input data with potential missing or invalid values\n+\n+  outputs:\n+    - id: clean_data\n+      description: Cleaned data with missing and invalid (-999) values removed\n+      depends_on:\n+        - raw_data\n+      recipe:\n+        command: python scripts/clean.py data/raw.csv results/clean.csv\n+\n+    - id: fit_result\n+      description: Polynomial fit results in JSON format\n+      depends_on:\n+        - clean_data\n+      recipe:\n+        command: python scripts/fit.py --clean results/clean.csv --out results/fit.json\n",
+    "changed_lines": 48,
+    "has_reference": true,
+    "error_lines": [
+     {
+      "line": 1,
+      "path": "version",
+      "error": "Input should be a valid string"
+     },
+     {
+      "line": 3,
+      "path": "analysis",
+      "error": "Extra inputs are not permitted"
+     }
+    ]
+   },
+   "timeline": [
+    {
+     "kind": "hook",
+     "hook": "SessionStart",
+     "name": "SessionStart hook",
+     "text": "Lightcone CLI ready: lc 0.5.0rc5 (Lightcone plugin active; this directory holds no astra.yaml yet).",
+     "claim": null
+    },
+    {
+     "kind": "call",
+     "turn": 1,
+     "step": 2,
+     "tool": "Skill",
+     "what": "lightcone:astra",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "I'll create the ASTRA configuration for this analysis. Let me start by loading the ASTRA skill to ensure I follow the correct format."
+    },
+    {
+     "kind": "call",
+     "turn": 2,
+     "step": 4,
+     "tool": "Write",
+     "what": "/root/line-fit/astra.yaml",
+     "exit": null,
+     "error": false,
+     "output": "",
+     "note": "Now I'll create the `astra.yaml` file with the analysis specification:"
+    },
+    {
+     "kind": "hook",
+     "hook": "PostToolUse:Write",
+     "name": "validate-on-save hook",
+     "text": "ASTRA validation passed for the project (astra.yaml + universes)",
+     "claim": "pass",
+     "step": 4,
+     "contradicted": "contradicted: the verifier's `astra validate` rejects this file"
+    },
+    {
+     "kind": "final",
+     "text": "Done! I've created `/root/line-fit/astra.yaml` that describes the two-step analysis:\n\n- **Input** `raw_data`: reads from `data/raw.csv`\n- **Output** `clean_data`: runs `scripts/clean.py` on the raw data, depends on `raw_data`\n- **Output** `fit_result`: runs `scripts/fit.py` on the cleaned data, depends on `clean_data`\n\nThe ASTRA validation passed automatically, confirming the file is well-formed."
+    }
+   ],
+   "last_message": "Done! I've created `/root/line-fit/astra.yaml` that describes the two-step analysis:\n\n- **Input** `raw_data`: reads from `data/raw.csv`\n- **Output** `clean_data`: runs `scripts/clean.py` on the raw data, depends on `raw_data`\n- **Output** `fit_result`: runs `scripts/fit.py` on the cleaned data, depends on `clean_data`\n\nThe ASTRA validation passed automatically, confirming the file is well-formed.",
+   "contradiction": "validate-on-save hook said pass \u00b7 contradicted",
+   "judge": {
+    "items": [
+     {
+      "badge": "hook_friction",
+      "point": "The save hook reported 'ASTRA validation passed' for an astra.yaml that astra validate rejects (version must be a string, 'analysis' key not permitted), so the agent stopped without running validate itself.",
+      "evidence": "step 4 hook",
+      "step": 4
+     }
+    ],
+    "badges": [
+     "hook_friction"
+    ],
+    "checks": {
+     "doc_gap": {
+      "explanation": "Agent loaded the skill and wrote the file directly without searching; it never ran guide/spec (a cause of its wrong shape, but not a search).",
+      "outcome": "pass"
+     },
+     "tool_error": {
+      "explanation": "The agent ran no astra commands; the only tool output was the hook's false pass.",
+      "outcome": "pass"
+     },
+     "hook_friction": {
+      "explanation": "PostToolUse:Write hook said 'ASTRA validation passed for the project' at step 4, but verifier's astra validate gave 'version: Input should be a valid string' and 'analysis: Extra inputs are not permitted'. The agent trusted it and finished.",
+      "outcome": "fail"
+     },
+     "redundant_calls": {
+      "explanation": "Only 2 tool calls, no repeats.",
+      "outcome": "pass"
+     },
+     "env_broken": {
+      "explanation": "No environment errors seen.",
+      "outcome": "pass"
+     },
+     "task_underspecified": {
+      "explanation": "The instruction names the ids and the validate requirement; the schema is available via the CLI.",
+      "outcome": "pass"
+     },
+     "verifier_wrong": {
+      "explanation": "Reward 0 matches the invalid spec (version: 1 and top-level analysis key rejected).",
+      "outcome": "pass"
+     }
+    },
+    "cost_usd": 0.0628534
+   },
+   "outlier": false,
+   "base": {
+    "k": 1,
+    "n": 1,
+    "rate": 1.0,
+    "runs": 1,
+    "turns": 14,
+    "stack_calls": 6
+   }
+  },
+  {
+   "leg": "oracle",
+   "task": "astra-author",
+   "trial": "astra-author__4uGD6A3",
+   "model": null,
+   "passed": true,
+   "reward": 1.0,
+   "failed_checks": [],
+   "exception": null,
+   "turns": null,
+   "stack_calls": 0,
+   "max_repeat": 0,
+   "cost_usd": null,
+   "agent_s": 3.981299,
+   "anchor": "oracle-astra-author-4uGD6A3",
+   "label": "reference solution",
+   "checks": [
+    {
+     "name": "spec_valid",
+     "ok": true,
+     "output": "Validating astra.yaml...\n\u2713 Schema validation passed\n\u2713 Semantic validation passed\n\nValidation successful!\n\nAll 1 file(s) passed validation.\nexit code: 0",
+     "desc": "`astra validate` accepts the project",
+     "first_error": ""
+    },
+    {
+     "name": "declares_pipeline",
+     "ok": true,
+     "output": "resolved outputs: {'clean_data': [('raw_data', None, 'data/raw.csv')], 'fit_result': [('clean_data', 'clean_data', None)]}\nok   output clean_data is declared\nok   clean_data declares input raw_data\nok   raw_data resolves to source data/raw.csv (got 'data/raw.csv')\nok   clean_data recipe command runs scripts/clean.py (got 'python scripts/clean.py {inputs.raw_data} {output}')\nok   output fit_result is declared\nok   fit_result declares input clean_data\nok   clean_data is produced by output clean_data (got 'clean_data')\nok   fit_result recipe command runs scripts/fit.py (got 'python scripts/fit.py --clean {inputs.clean_data} --out {output}')",
+     "desc": "astra's resolver finds raw_data \u2192 clean_data \u2192 fit_result, each with its script as recipe",
+     "first_error": ""
+    }
+   ],
+   "stdout": "Validating astra.yaml...\n\u2713 Schema validation passed\n\u2713 Semantic validation passed\n\nValidation successful!\n\nAll 1 file(s) passed validation.\nexit code: 0\nresolved outputs: {'clean_data': [('raw_data', None, 'data/raw.csv')], 'fit_result': [('clean_data', 'clean_data', None)]}\nok   output clean_data is declared\nok   clean_data declares input raw_data\nok   raw_data resolves to source data/raw.csv (got 'data/raw.csv')\nok   clean_data recipe command runs scripts/clean.py (got 'python scripts/clean.py {inputs.raw_data} {output}')\nok   output fit_result is declared\nok   fit_result declares input clean_data\nok   clean_data is produced by output clean_data (got 'clean_data')\nok   fit_result recipe command runs scripts/fit.py (got 'python scripts/fit.py --clean {inputs.clean_data} --out {output}')\n{\"",
+   "exception_text": "",
+   "deliverable": {
+    "name": "astra.yaml",
+    "body": "version: \"0.0.14\"\nname: Line fit\ndescription: Clean a small x-y table, then fit a polynomial to it.\ninputs:\n  - id: raw_data\n    type: data\n    source: data/raw.csv\n    description: Raw x-y measurements; some y values are missing or -999.\noutputs:\n  - id: clean_data\n    type: data\n    format: csv\n    description: Rows of raw_data with a valid y value.\n    inputs: [raw_data]\n    recipe:\n      command: python scripts/clean.py {inputs.raw_data} {output}\n  - id: fit_result\n    type: metric\n    format: json\n    description: Best-fit polynomial coefficients.\n    inputs: [clean_data]\n    recipe:\n      command: python scripts/fit.py --clean {inputs.clean_data} --out {output}\n",
+    "diff": "",
+    "changed_lines": 0,
+    "has_reference": true,
+    "error_lines": []
+   },
+   "timeline": [],
+   "last_message": "",
+   "contradiction": "",
+   "judge": null,
+   "outlier": false,
+   "base": null
+  }
+ ],
+ "legs": [
+  {
+   "leg": "claude-haiku-plugin",
+   "state": "measured",
+   "reason": "",
+   "measured": 6,
+   "infra": 0,
+   "missing": 0,
+   "label": "Haiku 4.5 + plugin"
+  }
+ ],
+ "judge": {
+  "ran": true,
+  "reason": "",
+  "judged": 6,
+  "cost_usd": 0.5035194000000001,
+  "badges": [
+   "doc_gap",
+   "hook_friction",
+   "tool_error"
+  ],
+  "pain_points": 10
+ },
+ "stack": {
+  "astra_tools": "0.2.18",
+  "lightcone_cli": "0.5.0rc5",
+  "lightcone_cli_requires_astra_tools": "==0.2.18",
+  "plugin_astra_tools_pin": "0.2.18"
+ },
+ "run": {
+  "id": "12345",
+  "url": "https://github.com/LightconeResearch/agent-skills/actions/runs/1",
+  "report_url": "https://lightconeresearch.github.io/agent-skills/smoke/1/",
+  "pr": "51",
+  "sha": "",
+  "base_label": "main@local",
+  "baseline_runs": 1,
+  "has_baseline": true,
+  "k": 2
+ },
+ "cost_usd": {
+  "agents": 0.3801359,
+  "judge": 0.5035194000000001
+ },
+ "gate": "pass"
+}
