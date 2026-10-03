@@ -59,3 +59,22 @@ def test_every_task_has_a_plain_language_summary_for_each_check():
         tests = "".join(p.read_text() for p in (task_dir.parent / "tests").glob("*.*") if p.suffix in (".sh", ".py"))
         for check in meta["checks"]:
             assert check in tests, (task_dir.parent.name, check)
+
+
+def test_schema_error_paths_map_to_yaml_lines():
+    body = ('version: "0.0.14"\nname: x\noutputs:\n  - id: a\n    recipe:\n      command: c\n'
+            '  - id: b\n    recipe:\n      run: python f\n')
+    paths = trialview.yaml_paths(body)
+    assert paths["outputs.1.recipe.run"] == 9 and paths["outputs.0.id"] == 4 and paths["version"] == 1
+    out = "Schema validation errors:\n  • outputs.1.recipe.run: Extra inputs are not permitted\n  • name: Input should be x"
+    marks = trialview.error_lines(body, [{"ok": False, "output": out}])
+    assert [(m["line"], m["path"]) for m in marks] == [(2, "name"), (9, "outputs.1.recipe.run")]
+
+
+def test_semantic_error_paths_fall_back_to_the_nearest_key():
+    body = "inputs:\n  - id: raw\n"
+    out = "Semantic validation errors:\n  • [MISSING_ROOT_FIELD] version: Root analysis is missing required field"
+    assert trialview.error_lines(body, [{"ok": False, "output": out}]) == []  # no such line: nothing to mark
+    body2 = "version: 1\n"
+    assert trialview.error_lines(body2, [{"ok": False, "output": "• version: Input should be a valid string"}]) \
+        == [{"line": 1, "path": "version", "error": "Input should be a valid string"}]

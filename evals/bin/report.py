@@ -511,7 +511,7 @@ def trial_view(t: dict, jobs: Path, judged: dict, bases: dict) -> dict:
         "checks": checks,
         "stdout": trialview.trim(trialview.verifier_stdout(tdir), 60),
         "exception_text": trialview.trim(trialview.exception_text(tdir), 40),
-        "deliverable": trialview.deliverable(tdir, t["task"]),
+        "deliverable": trialview.deliverable(tdir, t["task"], checks),
         "timeline": rows,
         "last_message": trialview.last_message(tdir),
         "contradiction": contradiction(rows),

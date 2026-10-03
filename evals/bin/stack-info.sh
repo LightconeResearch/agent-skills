@@ -2,8 +2,10 @@
 # What the built lightcone-smoke-stack holds, as one JSON object on stdout, and
 # two checks against the astra-tools requirement lightcone-cli declares:
 #   skew      the plugin's astra-tools pin does not satisfy it;
-#   override  the installed astra-tools does not (the latest leg installs
-#             astra-tools main over lc's pin on purpose; this makes that loud).
+#   override  the installed astra-tools, when it is not the pin, does not (the
+#             latest leg installs astra-tools main over lc's pin on purpose;
+#             this makes that loud). When the pin itself is installed, skew
+#             already says it.
 # Each one found is named in the JSON and on stderr, and the script exits 1.
 # Either way a plugin user would run one astra through the skill's uvx and
 # another under lc.
@@ -34,7 +36,7 @@ spec = SpecifierSet(required) if required else None
 if spec is not None and not spec.contains(pin, prereleases=True):
     info["skew"] = (f"lightcone-cli {info['lightcone_cli']} requires astra-tools {required}, "
                     f"the plugin pins astra-tools {pin}")
-if spec is not None and not spec.contains(info["astra_tools"], prereleases=True):
+if spec is not None and info["astra_tools"] != pin and not spec.contains(info["astra_tools"], prereleases=True):
     info["override"] = (f"lightcone-cli {info['lightcone_cli']} requires astra-tools {required}, "
                         f"testing astra-tools {info['astra_tools']}")
 print(json.dumps(info))

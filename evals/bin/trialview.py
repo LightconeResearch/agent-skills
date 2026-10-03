@@ -230,8 +230,73 @@ def last_message(tdir: Path) -> str:
     return final_message(_load(tdir / "agent" / "trajectory.json") or {})
 
 
-def deliverable(tdir: Path, task: str) -> dict | None:
-    """The agent's final file, and a diff against the reference where one exists."""
+ERROR_PATH = re.compile(r"^\s*[•*-]?\s*(?:\[[A-Z_]+\]\s*)?([A-Za-z_][\w.]*)\s*:\s*(.+)$")
+
+
+def yaml_paths(body: str) -> dict[str, int]:
+    """Dotted key path -> 1-based line, for block-style YAML (list items count from 0).
+
+    Enough for the specs the agent writes: mappings, block lists ("- key: v"),
+    flow values left as values. Not a YAML parser; unknown shapes just map less.
+    """
+    paths: dict[str, int] = {}
+    stack: list[tuple[int, str, bool]] = []  # (indent, name, is_list_item)
+    counters: dict[str, int] = {}
+    for n, raw in enumerate(body.splitlines(), 1):
+        line = raw.split(" #", 1)[0].rstrip()
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        text = line.strip()
+        if text.startswith("- "):
+            while stack and (stack[-1][0] > indent or (stack[-1][0] == indent and stack[-1][2])):
+                stack.pop()
+            parent = ".".join(x[1] for x in stack)
+            idx = counters.get(parent, 0)
+            counters[parent] = idx + 1
+            stack.append((indent, str(idx), True))
+            paths[".".join(x[1] for x in stack)] = n
+            text, indent = text[2:].strip(), indent + 2
+            if ":" not in text:
+                continue
+        while stack and stack[-1][0] >= indent and not (stack[-1][2] and stack[-1][0] < indent):
+            stack.pop()
+        m = re.match(r"([^:\s][^:]*?)\s*:(\s|$)", text)
+        if m:
+            stack.append((indent, m.group(1).strip("'\""), False))
+            key = ".".join(x[1] for x in stack)
+            paths.setdefault(key, n)
+            counters.pop(key, None)
+    return paths
+
+
+def error_lines(body: str, checks: list[dict]) -> list[dict]:
+    """The deliverable's lines that the verifier's errors point at: [{line, path, error}]."""
+    paths = yaml_paths(body)
+    out, seen = [], set()
+    for c in checks:
+        if c["ok"]:
+            continue
+        for ln in c["output"].splitlines():
+            m = ERROR_PATH.match(ln)
+            if not m or not re.search(r"[A-Z]|not|invalid|required|missing|extra", m.group(2), re.I):
+                continue
+            path = m.group(1)
+            parts = path.split(".")
+            while parts and ".".join(parts) not in paths:
+                parts.pop()
+            if not parts:
+                continue
+            line = paths[".".join(parts)]
+            if (line, m.group(2)) in seen:
+                continue
+            seen.add((line, m.group(2)))
+            out.append({"line": line, "path": path, "error": m.group(2).strip()})
+    return sorted(out, key=lambda x: x["line"])
+
+
+def deliverable(tdir: Path, task: str, checks: list[dict] | None = None) -> dict | None:
+    """The agent's final file, the lines the verifier's errors point at, and a diff against the reference."""
     for name in DELIVERABLES:
         path = tdir / "artifacts" / name
         if not path.is_file():
@@ -251,7 +316,11 @@ def deliverable(tdir: Path, task: str) -> dict | None:
                 body_cmp = body
             diff = "".join(difflib.unified_diff(ref.splitlines(True), body_cmp.splitlines(True),
                                                 "reference", "agent", n=2))
-        return {"name": name, "body": body, "diff": diff, "has_reference": ref_path.is_file()}
+        changed = sum(1 for ln in diff.splitlines()
+                      if ln[:1] in "+-" and not ln.startswith(("+++", "---")))
+        marks = error_lines(body, checks or []) if name.endswith((".yaml", ".yml")) else []
+        return {"name": name, "body": body, "diff": diff, "changed_lines": changed,
+                "has_reference": ref_path.is_file(), "error_lines": marks}
     return None
 
 

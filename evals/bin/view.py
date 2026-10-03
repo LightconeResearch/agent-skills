@@ -288,6 +288,8 @@ h2{font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .stats{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mute);padding:10px 16px;border-top:1px solid var(--line)}
 .stats b{color:var(--ink);font-weight:600}
 details.more>summary{cursor:pointer;color:var(--mute);font-size:13px;margin:6px 0}
+.file{padding:8px 0;white-space:pre;overflow-x:auto;word-break:normal}.file .ln{display:block;padding:0 10px}.file .no{display:inline-block;width:2.4em;color:var(--mute);user-select:none}
+.file .ln.hl{background:var(--bad-bg)}.file .gerr{display:block;margin-left:2.4em;color:var(--bad);font-weight:600}
 .diff .del{color:var(--bad)}.diff .add{color:var(--ok)}
 .note{font-size:13px;color:var(--mute)}
 """
@@ -312,6 +314,33 @@ def diff_html(diff: str) -> str:
             "del" if line.startswith("-") and not line.startswith("---") else "")
         out.append(f'<span class="{cls}">{e(line)}</span>')
     return '<pre class="diff">' + "\n".join(out) + "</pre>"
+
+
+SMALL_DIFF = 12  # changed lines up to which the diff against the reference shows inline
+
+
+def deliverable_html(d: dict, open_: bool) -> str:
+    """The file as written, the lines the verifier's errors point at marked; the diff only when small."""
+    marks: dict[int, list[str]] = {}
+    for m in d.get("error_lines") or []:
+        marks.setdefault(m["line"], []).append(f"{m['path']}: {m['error']}")
+    rows = []
+    for n, line in enumerate(d["body"].rstrip("\n").splitlines(), 1):
+        note = "".join(f'<span class="gerr">{e(x)}</span>' for x in marks.get(n, []))
+        rows.append(f'<span class="ln{" hl" if n in marks else ""}"><span class="no">{n}</span>'
+                    f'<span class="src">{e(line) or " "}</span>{note}</span>')
+    file_html = f'<pre class="file">{"".join(rows)}</pre>'
+    changed = d.get("changed_lines", 0)
+    diff = ""
+    if d["diff"] and changed <= SMALL_DIFF:
+        diff = f"<h3>Diff vs reference ({changed} lines)</h3>{diff_html(d['diff'])}"
+    elif d["diff"]:
+        diff = (f"<details class='more'><summary>diff vs reference ({changed} changed lines)</summary>"
+                f"{diff_html(d['diff'])}</details>")
+    head = f"<h3>The deliverable: {e(d['name'])}" + (f" · {len(marks)} line{'s' * (len(marks) != 1)} flagged" if marks else "") + "</h3>"
+    if open_ or marks:
+        return head + file_html + diff
+    return f"<details class='more'><summary>{e(d['name'])} as written</summary>{file_html}</details>" + diff
 
 
 def check_html(c: dict, open_: bool) -> str:
@@ -398,12 +427,7 @@ def card_html(t: dict, s: dict, folded: bool = False) -> str:
         left.append(f"<pre>{e(t['stdout'])}</pre>")
     d = t.get("deliverable")
     if d:
-        if d["diff"]:
-            left.append(f"<h3>The deliverable vs the reference</h3>{diff_html(d['diff'])}"
-                        f"<details class='more'><summary>{e(d['name'])} as written</summary><pre>{e(d['body'])}</pre></details>")
-        else:
-            left.append(f"<h3>The deliverable</h3><details class='more'><summary>{e(d['name'])}</summary>"
-                        f"<pre>{e(d['body'])}</pre></details>")
+        left.append(deliverable_html(d, open_=not t["passed"]))
     if task.get("instruction"):
         left.append(f"<details class='more'><summary>The task prompt</summary><pre>{e(task['instruction'])}</pre></details>")
     if t["leg"] == "oracle":
