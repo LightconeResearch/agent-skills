@@ -1,17 +1,24 @@
-# Plugin smoke suite (evals/): can a cheap model, given the lightcone plugin,
-# still get through five core tasks? See evals/README.md.
+# Plugin smoke suite (evals/): can a model, given the lightcone plugin, still
+# get through five core tasks, and what got in its way? See evals/README.md.
+#
+# Every PR (and the nightly latest leg) runs ONE leg: Claude Code with
+# claude-sonnet-5-5 and the whole plugin, K=1, all five tasks (DEFAULT_LEGS).
+# The ablation legs (haiku plugin / skill, codex luna skill; ALL_LEGS) are for
+# workflow_dispatch with `legs: all` or names.
 #
 #   oracle  reference solutions against the stack under test, no LLM, no secrets
-#           (runs on fork PRs too), plus the astra-tools version-skew check
-#   legs    claude-code haiku plugin | claude-code haiku skill | codex luna skill
-#   report  per (leg, task) k/n against the baseline (pooled over recent pushes
-#           to main, see below), judge failures and outliers, job summary, one sticky PR comment
+#           (runs on fork PRs too), plus the astra-tools skew/override check
+#   legs    the planned legs, one runner each
+#   report  per (leg, task) against the baseline; the judge reads every trial of
+#           the default leg (failures and outliers only on bigger runs); one
+#           sticky PR comment that says why each failure failed (verifier output,
+#           judge summary, last message), and a full HTML report per run
 #
 # Gate (evals/bin/report.py): the oracle fails; a cell passing >= 80% on main
 # (pooled over the last 5 pushes) goes 0/K; or a leg's passes are improbably
-# low against its cells' pooled rates (Poisson-binomial tail < 0.01). Other failures in solid
-# cells warn; with no baseline yet, any 0/K cell blocks. Runs on main record
-# the baseline and gate only on the oracle.
+# low against its cells' pooled rates (Poisson-binomial tail < 0.01). Other
+# failures in solid cells warn; with no baseline yet, any 0/K cell blocks.
+# Runs on main record the baseline and gate only on the oracle.
 #
 # Secrets: ANTHROPIC_API_KEY (claude-code legs and the judge), OPENAI_API_KEY
 # (codex leg). API keys only; never a subscription OAuth token. A missing key
@@ -22,11 +29,13 @@
 #   uses: LightconeResearch/agent-skills/.github/workflows/smoke.yml@main
 #   with: { lightcone_ref: "${{ github.event.pull_request.head.sha }}" }
 #   secrets: inherit
-# (the caller grants contents: read, pull-requests: write).
+# (the caller grants contents: read, pull-requests: write). Their runs get the
+# comment and the artifact; the hosted report is for this repo's own runs.
 #
-# Baseline: .github/workflows/smoke-baseline.yml publishes each passing push
-# run's summary to the orphan branch smoke-baseline as baseline.json; every
-# run reads it from raw.githubusercontent.com, no token needed.
+# Publishing: .github/workflows/smoke-publish.yml, after each run here, puts
+# report.html on gh-pages at smoke/<run id>/ and, for passing pushes to main,
+# summary.json on the orphan branch smoke-baseline as baseline.json, which
+# every run reads from raw.githubusercontent.com with no token.
 name: smoke
 
 on:
@@ -60,10 +69,10 @@ on:
         default: ""
       k:
         description: "Attempts per task"
-        default: "2"
+        default: "1"
       legs:
-        description: "Space-separated legs, or all (claude-haiku-plugin claude-haiku-skill codex-luna-skill)"
-        default: all
+        description: "default (Sonnet 5.5 + plugin), all, or leg names (claude-sonnet-plugin claude-haiku-plugin claude-haiku-skill codex-luna-skill)"
+        default: default
   workflow_call:
     inputs:
       lightcone_ref:
@@ -81,7 +90,7 @@ on:
       k:
         description: "Attempts per task"
         type: number
-        default: 2
+        default: 1
     secrets:
       ANTHROPIC_API_KEY:
         required: false
@@ -97,10 +106,15 @@ concurrency:
 
 env:
   HARBOR_VERSION: 0.22.0
-  HAIKU: claude-haiku-4-5
-  LUNA: gpt-6-luna
-  JUDGE_MODEL: claude-sonnet-5
-  K: ${{ inputs.k || 2 }}
+  # The leg set: what every PR runs, and everything a dispatch can ask for.
+  DEFAULT_LEGS: claude-code:claude-sonnet-5-5:plugin
+  ALL_LEGS: >-
+    claude-code:claude-sonnet-5-5:plugin
+    claude-code:claude-haiku-4-5:plugin
+    claude-code:claude-haiku-4-5:skill
+    codex:gpt-6-luna:skill
+  JUDGE_MODEL: claude-sonnet-5-5
+  K: ${{ inputs.k || 1 }}
   TASKS: ${{ inputs.tasks || '*' }}
   # On a workflow_call the caller's repo is github.repository; the suite always
   # comes from agent-skills (at the run's own commit when it runs here). The
@@ -137,12 +151,13 @@ jobs:
       - name: Plan the legs
         id: plan
         env:
-          LEGS: ${{ inputs.legs || 'all' }}
+          LEGS: ${{ inputs.legs || 'default' }}
         run: |
           legs=()
-          for spec in "claude-code:$HAIKU:plugin" "claude-code:$HAIKU:skill" "codex:$LUNA:skill"; do
+          for spec in $ALL_LEGS; do
             name="$(evals/bin/smoke.sh --name "$spec")"
-            [ "$LEGS" = all ] || [[ " $LEGS " == *" $name "* ]] || continue
+            if [ "$LEGS" = default ]; then [[ " $DEFAULT_LEGS " == *" $spec "* ]] || continue
+            elif [ "$LEGS" != all ]; then [[ " $LEGS " == *" $name "* ]] || continue; fi
             key=ANTHROPIC_API_KEY; [ "${spec%%:*}" = codex ] && key=OPENAI_API_KEY
             legs+=("{\"name\":\"$name\",\"spec\":\"$spec\",\"key\":\"$key\"}")
           done
@@ -288,7 +303,7 @@ jobs:
           pattern: smoke-leg-*
           path: evals/jobs
           merge-multiple: true
-      - name: Fetch the baseline (published by smoke-baseline.yml from main)
+      - name: Fetch the baseline (published by smoke-publish.yml from main)
         id: baseline
         run: |
           # Public and unauthenticated, so lightcone-cli callers read the same baseline.
@@ -309,20 +324,38 @@ jobs:
           esac
       - uses: astral-sh/setup-uv@v5
       - run: uv tool install "harbor==${HARBOR_VERSION}"
-      - name: Judge failures and outliers
+      - uses: docker/setup-buildx-action@v3
+        id: buildx
+        with:
+          use: false
+      - name: Load lightcone-eval-base for the judge (from the oracle's cache)
+        # judge.sh runs the judge on it, so Harbor does not apt-get + npm install Claude Code per trial.
+        uses: docker/bake-action@v6
+        with:
+          source: .
+          workdir: evals/images
+          files: docker-bake.hcl
+          targets: eval-base
+          builder: ${{ steps.buildx.outputs.name }}
+          load: true
+          set: eval-base.cache-from=type=gha,scope=eval-base
+      - name: Judge the trials
         id: judge
         continue-on-error: true
         timeout-minutes: 12   # the report, comment and gate below still run
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BASELINE: ${{ steps.baseline.outputs.path }}
+          ALL: ${{ (inputs.legs || 'default') == 'default' && '--all' || '' }}
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "::notice::judge skipped: no ANTHROPIC_API_KEY"
             echo "skipped=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          python3 evals/bin/report.py select evals/jobs ${BASELINE:+--baseline "$BASELINE"} > judge-these.txt
+          # The default leg is five trials: judge them all. Bigger dispatch runs judge failures and outliers.
+          # shellcheck disable=SC2086  # ALL is a flag or empty
+          python3 evals/bin/report.py select evals/jobs ${BASELINE:+--baseline "$BASELINE"} $ALL > judge-these.txt
           cat judge-these.txt
           [ -s judge-these.txt ] || { echo "nothing to judge"; exit 0; }
           evals/bin/judge.sh < judge-these.txt
@@ -349,6 +382,11 @@ jobs:
           ORACLE_RESULT: ${{ needs.oracle.result }}
           LEGS_RESULT: ${{ needs.legs.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # smoke-publish.yml puts report.html here after the run (this repo's own, non-fork runs only).
+          REPORT_URL: >-
+            ${{ github.repository == 'LightconeResearch/agent-skills'
+            && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+            && format('https://lightconeresearch.github.io/agent-skills/smoke/{0}/', github.run_id) || '' }}
         run: |
           set +e
           note=""
@@ -358,7 +396,7 @@ jobs:
           fi
           # shellcheck disable=SC2086  # RECORD is a flag or empty
           python3 evals/bin/report.py render evals/jobs ${BASELINE:+--baseline "$BASELINE"} \
-            --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" \
+            --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" --report-url "$REPORT_URL" \
             --base-label "$BASE_LABEL" --judge-note "$note" --expect-legs "$EXPECT_LEGS" \
             --not-run-reason "$NOT_RUN_REASON" --job "oracle=$ORACLE_RESULT" --job "legs=$LEGS_RESULT" \
             --expect-tasks "$EXPECT_TASKS" --k "$K" --baseline-error "$BASELINE_ERROR" \

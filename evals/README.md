@@ -46,9 +46,10 @@ desktop-linux` on Docker Desktop) and `uv tool install harbor==0.22.0`.
 evals/bin/build-images.sh                      # or LIGHTCONE_REF=main evals/bin/build-images.sh
 evals/bin/stack-info.sh                        # versions in the stack; exits 1 on astra-tools skew or override
 K=1 evals/bin/smoke.sh oracle                  # reference solutions: every reward must be 1.0
-K=1 evals/bin/smoke.sh claude-code:claude-haiku-4-5:plugin
-evals/bin/report.py select evals/jobs | evals/bin/judge.sh   # judge the failures
+K=1 evals/bin/smoke.sh claude-code:claude-sonnet-5-5:plugin   # what every PR runs
+evals/bin/report.py select evals/jobs --all | evals/bin/judge.sh   # judge every trial
 evals/bin/report.py render evals/jobs --judge evals/jobs/judge --out evals/jobs/report
+open evals/jobs/report/report.html             # comment.md beside it is the PR comment
 ```
 
 A leg is `<agent>:<model>:<config>`: `plugin` loads the whole plugin through
@@ -71,17 +72,31 @@ that lightcone-cli PRs call with their head sha.
 
 1. **oracle** builds the images (GitHub Actions cache), checks astra-tools
    skew, and runs the reference solutions. No secrets, so it runs on fork PRs.
-2. **legs**: claude-code haiku `plugin`, claude-code haiku `skill`, codex luna
-   `skill`, K=2 each. `plugin` vs `skill` on one model asks whether the hooks
-   earn their place. A missing API key fails its leg.
-3. **report** compares each (leg, task) cell with the baseline, judges failed
-   and outlier trials (turns or astra/lc calls at least twice the baseline
-   median and 5 above it) with `harbor analyze` and `rubrics/pain-points.toml`,
-   writes the job summary and an HTML artifact, and keeps one comment on the
-   PR up to date.
+2. **legs**: one per PR, Claude Code with `claude-sonnet-5-5` and the whole
+   plugin, K=1, all five tasks (`DEFAULT_LEGS`). The ablation legs (haiku
+   `plugin` and `skill`, codex luna `skill`; `ALL_LEGS`) run on
+   `workflow_dispatch` with `legs: all` or leg names. A missing API key fails
+   its leg.
+3. **report** judges every trial of the default leg (`harbor analyze`,
+   `rubrics/pain-points.toml`, `claude-sonnet-5-5`; failures and outliers only
+   on bigger dispatch runs), compares each (leg, task) cell with the baseline,
+   and keeps one comment on the PR up to date. The comment leads with the
+   verdict in words; each failed task gets the verifier's own output for its
+   failing checks, the judge's account of what got in the agent's way, and the
+   agent's last message; passes take a line each.
+4. **smoke-publish.yml** (after the run) puts the full report on GitHub Pages
+   at `https://lightconeresearch.github.io/agent-skills/smoke/<run id>/`: one
+   card per task with the prompt, every verifier check, the judge's summary, a
+   turn-by-turn timeline with hook messages inline, the deliverable diffed
+   against the reference, and the task's history on main. Trial artifacts are
+   redacted of API keys before any of this is uploaded or published.
+
+Measured locally on 2026-10-03 for the default leg: Sonnet 5.5 passed all five
+tasks in 3–6 turns; the agent cost $0.38 and the judge $0.32, so about $0.70
+per PR, in about two minutes of agent time.
 
 The baseline pools the last five pushes to main, published by
-`.github/workflows/smoke-baseline.yml` as `baseline.json` on the orphan branch
+`.github/workflows/smoke-publish.yml` as `baseline.json` on the orphan branch
 `smoke-baseline` and read without a token from raw.githubusercontent.com (so
 lightcone-cli runs see the same one): each run's `summary.json`
 carries the per-cell pass counts and turn samples of the previous pool plus

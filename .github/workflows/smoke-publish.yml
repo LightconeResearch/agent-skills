@@ -1,0 +1,98 @@
+# Publish what a smoke run produced, after it finishes (workflow_run, so the
+# smoke workflow itself never needs contents: write and lightcone-cli can call
+# it without granting that):
+#
+#   report    report.html -> gh-pages at smoke/<run id>/index.html, served at
+#             https://lightconeresearch.github.io/agent-skills/smoke/<run id>/
+#             (the link the PR comment already carries). Runs of this repo's
+#             own branches only: a fork's artifact is its own code's output.
+#             gh-pages is shared with the docs (mike's version dirs) and the PR
+#             previews (pr-preview/); this only ever writes under smoke/.
+#   baseline  for a push to main whose report gate passed, summary.json (which
+#             carries the rolling pool, see evals/bin/report.py) -> baseline.json
+#             on the orphan branch smoke-baseline, readable without a token at
+#             raw.githubusercontent.com/LightconeResearch/agent-skills/smoke-baseline/baseline.json.
+name: smoke-publish
+
+on:
+  workflow_run:
+    workflows: [smoke]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: smoke-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.repository.full_name == github.repository &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      EVENT: ${{ github.event.workflow_run.event }}
+      BRANCH: ${{ github.event.workflow_run.head_branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: suite
+      - name: Download the run's summary
+        id: summary
+        run: |
+          if ! gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n smoke-summary -D summary; then
+            echo "::notice::run $RUN_ID has no smoke-summary artifact; nothing to publish"
+            echo "none=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 suite/evals/bin/redact.py summary
+      - name: Configure git
+        if: steps.summary.outputs.none != 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Publish the report to gh-pages
+        if: steps.summary.outputs.none != 'true'
+        run: |
+          [ -f summary/report.html ] || { echo "::notice::no report.html in run $RUN_ID"; exit 0; }
+          git clone -q --depth 1 --branch gh-pages \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pages
+          cd pages
+          mkdir -p "smoke/$RUN_ID"
+          cp ../summary/report.html "smoke/$RUN_ID/index.html"
+          git add "smoke/$RUN_ID/index.html"
+          git commit -qm "smoke report for run $RUN_ID (${SHA:0:7})"
+          # The docs and PR-preview workflows push here too: rebase onto theirs and retry.
+          for attempt in 1 2 3 4 5; do
+            git push -q origin gh-pages && exit 0
+            sleep $((attempt * 5))
+            git pull -q --rebase origin gh-pages
+          done
+          echo "::error::could not push the report to gh-pages"; exit 1
+      - name: Publish the baseline to smoke-baseline
+        if: steps.summary.outputs.none != 'true' && env.EVENT == 'push' && env.BRANCH == 'main'
+        run: |
+          if [ "$(jq -r .gate summary/summary.json)" != pass ]; then
+            echo "::notice::run $RUN_ID did not pass its gate; the baseline stays as it was"
+            exit 0
+          fi
+          jq --arg sha "$SHA" --arg run "$RUN_ID" '. + {commit: $sha, run: $run}' summary/summary.json > baseline.json
+          git init -q pub && cd pub
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin smoke-baseline; then
+            git checkout -q -b smoke-baseline FETCH_HEAD
+          else
+            git checkout -q --orphan smoke-baseline
+          fi
+          cp ../baseline.json baseline.json
+          git add baseline.json
+          git commit -qm "smoke baseline from main@${SHA:0:7} (run $RUN_ID)"
+          git push -q origin smoke-baseline
