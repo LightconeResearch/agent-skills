@@ -162,13 +162,31 @@ def timeline(tdir: Path, checks: list[dict] | None = None) -> list[dict]:
     return rows
 
 
-def mark_contradictions(rows: list[dict], checks: list[dict]) -> None:
-    """Flag validation claims that the next `validate` run, or the verifier, contradicts.
+ASTRA_VALIDATE = re.compile(r"(^|[\s;&|(])(astra|astra-tools(@\S+)?)\s+validate(\s+(\./)?astra\.ya?ml)?\s*($|[;&|)]|2>|>|--)")
+SHELLS = {"bash", "shell", "exec", "exec_command", "local_shell"}
 
-    A claim is checked against the first `astra validate` the agent ran after it,
-    unless the agent edited a file first; a claim with no later edit or validate
-    is checked against the verifier's spec_valid. A FAILED claim whose own text
-    reports that every file passed contradicts itself.
+
+def is_astra_validate(row: dict) -> bool:
+    """A project-wide `astra validate` (no file, or astra.yaml): the same target the save hook checks."""
+    return row["kind"] == "call" and row["tool"].lower() in SHELLS and bool(ASTRA_VALIDATE.search(row["what"]))
+
+
+def may_change_files(row: dict) -> bool:
+    """A write, or any shell command other than astra validate: what it touched is unknown."""
+    if row["kind"] != "call":
+        return False
+    tool = row["tool"].lower()
+    return tool in WRITES or (tool in SHELLS and not is_astra_validate(row))
+
+
+def mark_contradictions(rows: list[dict], checks: list[dict]) -> None:
+    """Flag ASTRA validation claims that astra itself contradicts, on the same files.
+
+    A claim is compared with the next project-wide `astra validate` when nothing
+    that could change files ran in between, and with the verifier's spec_valid
+    only when nothing that could change files ran after it at all. A FAILED
+    claim whose own text reports that every file passed contradicts itself.
+    Anything less certain gets no chip.
     """
     verdict = next((c["ok"] for c in checks if c["name"] == "spec_valid"), None)
     for i, row in enumerate(rows):
@@ -181,15 +199,13 @@ def mark_contradictions(rows: list[dict], checks: list[dict]) -> None:
         later = rows[i + 1:]
         actual, by = None, ""
         for r in later:
-            if r["kind"] != "call":
-                continue
-            if r["tool"].lower() in WRITES:
+            if may_change_files(r):
                 break
-            if "validate" in r["what"] and r["exit"] is not None:
+            if is_astra_validate(r) and r["exit"] is not None:
                 actual, by = r["exit"] == 0, f"`{r['what']}` at turn {r['turn']} exits {r['exit']}"
                 break
         else:
-            if verdict is not None and not any(r["kind"] == "call" and r["tool"].lower() in WRITES for r in later):
+            if verdict is not None:
                 actual, by = verdict, ("the verifier's spec_valid passes on this file" if verdict
                                        else "the verifier's `astra validate` rejects this file")
         if actual is not None and actual != claim_ok:

@@ -78,3 +78,31 @@ def test_semantic_error_paths_fall_back_to_the_nearest_key():
     body2 = "version: 1\n"
     assert trialview.error_lines(body2, [{"ok": False, "output": "• version: Input should be a valid string"}]) \
         == [{"line": 1, "path": "version", "error": "Input should be a valid string"}]
+
+
+def rows_for(*calls, hook_after=0, claim="pass", text="ASTRA validation passed for the project"):
+    rows = []
+    for i, (tool, what, code) in enumerate(calls):
+        rows.append({"kind": "call", "turn": i + 1, "tool": tool, "what": what, "exit": code})
+        if i == hook_after:
+            rows.append({"kind": "hook", "name": "validate-on-save hook", "claim": claim, "text": text})
+    return rows
+
+
+def test_no_chip_when_a_later_bash_may_have_changed_the_file():
+    rows = rows_for(("Write", "/root/x/astra.yaml", None), ("Bash", "sed -i s/a/b/ astra.yaml", 0),
+                    ("Bash", "astra validate", 1))
+    trialview.mark_contradictions(rows, [{"name": "spec_valid", "ok": False}])
+    assert not any(r.get("contradicted") for r in rows)
+
+
+def test_an_unrelated_validate_command_is_not_astra_validate():
+    rows = rows_for(("Write", "/root/x/astra.yaml", None), ("Bash", "python validate_catalog.py", 1))
+    trialview.mark_contradictions(rows, [])
+    assert not any(r.get("contradicted") for r in rows)
+
+
+def test_chip_when_astra_validate_right_after_disagrees():
+    rows = rows_for(("Write", "/root/x/astra.yaml", None), ("Bash", "uvx astra-tools@0.2.18 validate", 1))
+    trialview.mark_contradictions(rows, [])
+    assert rows[1]["contradicted"] == "contradicted: `uvx astra-tools@0.2.18 validate` at turn 2 exits 1"
