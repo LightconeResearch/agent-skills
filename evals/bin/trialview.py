@@ -182,28 +182,43 @@ def timeline(tdir: Path, checks: list[dict] | None = None) -> list[dict]:
     return rows
 
 
-ASTRA_VALIDATE = re.compile(r"(^|[\s;&|(])(astra|astra-tools(@\S+)?)\s+validate(\s+(\./)?astra\.ya?ml)?\s*($|[;&|)]|2>|>|--)")
+# Only an isolated, project-wide `astra validate` is evidence about the file the save
+# hook checked: optionally through uvx, optionally naming astra.yaml, optionally with
+# flags and a trailing 2>&1. Anything compound (; && || | subshells) or any change of
+# directory makes what it validated uncertain.
+ASTRA_VALIDATE = re.compile(
+    r"(uvx\s+)?(astra|astra-tools(@[\w.+-]+)?)\s+validate(\s+(\./)?astra\.ya?ml)?(\s+--[\w-]+)*(\s+2>&1)?")
+COMPOUND = re.compile(r"[;&|()`$<>\n]|\bcd\b|\bpushd\b|\bpopd\b")
 SHELLS = {"bash", "shell", "exec", "exec_command", "local_shell"}
 
 
 def is_astra_validate(row: dict) -> bool:
-    """A project-wide `astra validate` (no file, or astra.yaml): the same target the save hook checks."""
-    return row["kind"] == "call" and row["tool"].lower() in SHELLS and bool(ASTRA_VALIDATE.search(row["what"]))
+    """An isolated `astra validate` (no file, or astra.yaml): the same target the save hook checks."""
+    if row["kind"] != "call" or row["tool"].lower() not in SHELLS:
+        return False
+    cmd = row["what"].strip()
+    return bool(ASTRA_VALIDATE.fullmatch(cmd)) and not COMPOUND.search(cmd.replace("2>&1", ""))
 
 
 def may_change_files(row: dict) -> bool:
-    """A write, or any shell command other than astra validate: what it touched is unknown."""
+    """A write, or any shell command other than an isolated astra validate: what it touched is unknown."""
     if row["kind"] != "call":
         return False
     tool = row["tool"].lower()
     return tool in WRITES or (tool in SHELLS and not is_astra_validate(row))
 
 
+def changed_directory(rows: list[dict]) -> bool:
+    return any(r["kind"] == "call" and r["tool"].lower() in SHELLS and re.search(r"\b(cd|pushd|popd)\b", r["what"])
+               for r in rows)
+
+
 def mark_contradictions(rows: list[dict], checks: list[dict]) -> None:
     """Flag ASTRA validation claims that astra itself contradicts, on the same files.
 
-    A claim is compared with the next project-wide `astra validate` when nothing
-    that could change files ran in between, and with the verifier's spec_valid
+    A claim is compared with the next isolated `astra validate` (no compound
+    command, no directory change earlier in the trial) when nothing that could
+    change files ran in between, and with the verifier's spec_valid
     only when nothing that could change files ran after it at all. A FAILED
     claim whose own text reports that every file passed contradicts itself.
     Anything less certain gets no chip.
@@ -218,14 +233,16 @@ def mark_contradictions(rows: list[dict], checks: list[dict]) -> None:
             continue
         later = rows[i + 1:]
         actual, by = None, ""
-        for r in later:
+        for j, r in enumerate(later):
             if may_change_files(r):
                 break
             if is_astra_validate(r) and r["exit"] is not None:
+                if changed_directory(rows[: i + 1 + j]):  # a cd anywhere earlier: its cwd is unknown
+                    break
                 actual, by = r["exit"] == 0, f"`{r['what']}` at turn {r['turn']} exits {r['exit']}"
                 break
         else:
-            if verdict is not None:
+            if verdict is not None and not changed_directory(rows[:i]):
                 actual, by = verdict, ("the verifier's spec_valid passes on this file" if verdict
                                        else "the verifier's `astra validate` rejects this file")
         if actual is not None and actual != claim_ok:

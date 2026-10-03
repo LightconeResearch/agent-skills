@@ -125,3 +125,20 @@ def test_malformed_hook_records_are_skipped_not_fatal(tmp_path):
     rows = trialview.timeline(tmp_path)
     texts = [r["text"] for r in rows]
     assert "Lightcone CLI ready" in texts[0] and any("ASTRA validation passed" in t for t in texts)
+
+
+def test_compound_or_relocated_validate_is_not_evidence():
+    for cmd in ("sed -i s/a/b/ astra.yaml; astra validate", "cd other && astra validate",
+                "astra validate | tail -3", "(astra validate)", "astra validate other.yaml"):
+        rows = rows_for(("Write", "/root/x/astra.yaml", None), ("Bash", cmd, 1))
+        trialview.mark_contradictions(rows, [])
+        assert not any(r.get("contradicted") for r in rows), cmd
+    rows = [{"kind": "call", "turn": 1, "tool": "Bash", "what": "cd /tmp", "exit": 0}] + rows_for(
+        ("Write", "/root/x/astra.yaml", None), ("Bash", "astra validate", 1))
+    trialview.mark_contradictions(rows, [])
+    assert not any(r.get("contradicted") for r in rows)
+
+
+def test_isolated_validate_forms_count():
+    for cmd in ("astra validate", "uvx astra-tools@0.2.18 validate astra.yaml", "astra validate --strict 2>&1"):
+        assert trialview.is_astra_validate({"kind": "call", "tool": "Bash", "what": cmd}), cmd
