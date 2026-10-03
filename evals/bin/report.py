@@ -465,7 +465,8 @@ def comment_md(m: dict) -> str:
 
     passing = [t for t in trials if t["passed"] and t["leg"] != "oracle"]
     if passing:
-        lines.append("**Passed:** " if failed else "")
+        if failed:
+            lines.append("**Passed:**")
         for t in sorted(passing, key=lambda t: (t["leg"], t["task"])):
             b = t["base"]
             delta = f" (main {fmt(b['turns'])})" if b and b.get("turns") is not None else ""

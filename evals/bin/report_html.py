@@ -79,7 +79,7 @@ def history(records: list[dict] | None, now: dict | None) -> str:
         cls = "ok" if now["k"] == now["n"] else "bad" if now["k"] == 0 else "warn"
         boxes.append(f'<span class="{cls} now" title="this run">{now["k"]}/{now["n"]}</span>')
     if not records:
-        boxes.insert(0, '<em class="mute">no runs on main yet</em>')
+        boxes.insert(0, '<em class="mute" style="margin-right:6px">no runs on main yet</em>')
     return f'<div class="history">{"".join(boxes)}</div>'
 
 
@@ -118,9 +118,10 @@ def card(t: dict, m: dict) -> str:
     parts = [f'<section class="card {status}" id="{e(t["anchor"])}"><header>'
              f'<h2>{mark} {e(t["task"])}</h2><span class="mute">{e(leg)}</span>'
              f'<span class="pill {"ok" if t["passed"] else "bad"}">{e(outcome(t))}</span>'
-             f'<span class="nums">{fmt(t["turns"])} turns · {t["stack_calls"]} astra/lc calls · '
-             f'{fmt(t["cost_usd"], "${:.3f}")} · {fmt(t["agent_s"] and t["agent_s"] / 60, "{:.1f}")} min</span>'
-             f'</header>']
+             + (f'<span class="nums">{fmt(t["turns"])} turns · {t["stack_calls"]} astra/lc calls · '
+                f'{fmt(t["cost_usd"], "${:.3f}")} · {fmt(t["agent_s"] and t["agent_s"] / 60, "{:.1f}")} min</span>'
+                if t["leg"] != "oracle" else "")
+             + '</header>']
     if t["leg"] != "oracle":
         parts.append("<h3>History on main</h3>" + history((m["pool"] or {}).get(f"{t['leg']}/{t['task']}"), cell))
     j = t.get("judge")
