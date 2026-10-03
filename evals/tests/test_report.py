@@ -91,7 +91,7 @@ def test_mutation_one_shape_warns_without_blocking(tmp_path):
     rc, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in TASKS}))
     assert rc == 0
     assert verdicts(summary)["astra-author"] == "warning"
-    assert not summary["legs"][0]["blocking"]
+    assert not summary["leg_tests"][0]["blocking"]
 
 
 def test_same_shape_in_three_cells_blocks_via_the_leg(tmp_path):
@@ -100,7 +100,7 @@ def test_same_shape_in_three_cells_blocks_via_the_leg(tmp_path):
     rc, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in TASKS}))
     assert rc == 1
     assert set(verdicts(summary).values()) == {"warning"}
-    leg = summary["legs"][0]
+    leg = summary["leg_tests"][0]
     assert leg["blocking"] and leg["x"] == 3 and leg["n"] == 6 and leg["tail"] < 0.01
 
 
@@ -171,8 +171,8 @@ def test_expected_leg_without_trials_shows_as_not_run(tmp_path):
     assert plugin == {"leg": "claude-haiku-plugin", "state": "not run",
                       "reason": "ANTHROPIC_API_KEY not set", "measured": 0, "infra": 0, "missing": 0}
     comment = (tmp_path / "out" / "comment.md").read_text()
-    assert "**not run** · claude-haiku-plugin: ANTHROPIC_API_KEY not set" in comment
-    assert comment.splitlines()[1].startswith("## Plugin smoke · 2 legs · ❌ claude-haiku-plugin not run")
+    assert "## ❌ Plugin smoke · The agent did not run: ANTHROPIC_API_KEY is not set" in comment
+    assert "**Fix:** Add the ANTHROPIC_API_KEY repository secret" in comment
 
 
 def effort(summary: dict, metric: str = "turns") -> dict:
@@ -188,7 +188,7 @@ def test_effort_warns_when_most_trials_run_long(tmp_path):
     rc, summary = render(tmp_path, baseline(tmp_path, {t: (10, 10) for t in tasks}))
     e = effort(summary)
     assert rc == 0 and e["flag"] and e["above"] == 10 and round(e["ratio"], 2) == 1.5
-    assert "+50% turns vs main across 5/5 cells" in (tmp_path / "out" / "comment.md").read_text()
+    assert "took +50% turns against main across 5/5 tasks" in (tmp_path / "out" / "comment.md").read_text()
 
 
 def test_effort_stays_quiet_on_mixed_or_small_shifts(tmp_path):
@@ -206,18 +206,19 @@ def test_version_skew_blocks_and_leads_the_comment(tmp_path):
     for task in TASKS:
         trial(jobs, "oracle", task, 0, 1.0)
     skew = "lightcone-cli 0.5.0rc5 requires astra-tools ==0.2.18, the plugin pins astra-tools 0.2.17"
-    (jobs / "stack.json").write_text(json.dumps({"astra_tools": "0.2.17", "skew": skew}))
+    (jobs / "stack.json").write_text(json.dumps({
+        "astra_tools": "0.2.18", "lightcone_cli": "0.5.0rc5", "lightcone_cli_requires_astra_tools": "==0.2.18",
+        "plugin_astra_tools_pin": "0.2.17", "skew": skew, "override": None}))
     rc, summary = render(tmp_path, None, "--stack", str(jobs / "stack.json"),
                          "--expect-legs", f"{LEG} codex-luna-skill", "--not-run-reason", "oracle failed",
                          "--job", "oracle=failure", "--job", "legs=skipped")
     assert rc == 1 and summary["gate"] == "fail"
     comment = (tmp_path / "out" / "comment.md").read_text()
-    lines = [line for line in comment.splitlines() if line.startswith("- ")]
-    assert lines[0] == f"- **blocking** · version skew: {skew}"
-    assert f"- **not run** · {LEG}: oracle failed" in lines
-    assert "passing" not in comment.splitlines()[1]
-    assert f"- **not run** · codex-luna-skill: oracle failed" in lines
-    assert "❌ blocked: version skew" in comment.splitlines()[1]
+    assert comment.splitlines()[1] == "## ❌ Plugin smoke · The plugin pins an astra-tools that its own lightcone-cli rejects"
+    assert '**Fix:** Set `"astra-tools": "0.2.18"` in `skills.config.json`' in comment
+    agent = next(c for c in summary["chain"] if c["key"] == "agent")
+    assert agent["state"] == "skip" and agent["sub"] == "blocked by the version check"
+    assert [r["class"] for r in summary["reasons"]][0] == "skew"
 
 
 def test_failed_upstream_job_with_no_legs_never_passes(tmp_path):
@@ -226,8 +227,8 @@ def test_failed_upstream_job_with_no_legs_never_passes(tmp_path):
     rc, summary = render(tmp_path, None, "--job", "oracle=failure", "--job", "legs=skipped")
     assert rc == 1 and summary["gate"] == "fail"
     comment = (tmp_path / "out" / "comment.md").read_text()
-    assert "- **blocking** · the oracle job ended in failure; see the run log" in comment
-    assert "No agent leg was planned or run." in comment
+    assert "## ❌ Plugin smoke · The oracle job ended in failure" in comment
+    assert "agent ⏭ not run" in comment
     assert "| task |  |" not in comment and "### " not in comment
 
 
@@ -245,7 +246,7 @@ def test_every_planned_task_needs_an_oracle_run(tmp_path):
     trial(jobs, "oracle", "astra-author", 0, 1.0)
     rc, _ = render(tmp_path, None, "--expect-tasks", "astra-author astra-query")
     assert rc == 1
-    assert "oracle: no reference run for astra-query" in (tmp_path / "out" / "comment.md").read_text()
+    assert "No reference run for `astra-query`" in (tmp_path / "out" / "comment.md").read_text()
 
 
 def test_a_leg_short_of_k_trials_is_partly_measured(tmp_path):
@@ -272,10 +273,13 @@ def test_astra_override_blocks_with_a_labelled_line(tmp_path):
     jobs = tmp_path / "jobs"
     trial(jobs, "oracle", "astra-author", 0, 1.0)
     override = "lightcone-cli 0.5.1.dev3 requires astra-tools ==0.2.18, testing astra-tools 0.2.19.dev7"
-    (jobs / "stack.json").write_text(json.dumps({"skew": None, "override": override}))
+    (jobs / "stack.json").write_text(json.dumps({
+        "astra_tools": "0.2.19.dev7", "lightcone_cli": "0.5.1.dev3", "lightcone_cli_requires_astra_tools": "==0.2.18",
+        "plugin_astra_tools_pin": "0.2.18", "skew": None, "override": override}))
     rc, _ = render(tmp_path, None, "--stack", str(jobs / "stack.json"))
     assert rc == 1
-    assert f"- **blocking** · override: {override}" in (tmp_path / "out" / "comment.md").read_text()
+    comment = (tmp_path / "out" / "comment.md").read_text()
+    assert "## ❌ Plugin smoke · lightcone-cli 0.5.1.dev3 requires astra-tools ==0.2.18, but this run tests astra-tools 0.2.19.dev7" in comment
 
 
 def test_leg_test_judges_cells_by_their_own_rates(tmp_path):
@@ -292,7 +296,7 @@ def test_leg_test_judges_cells_by_their_own_rates(tmp_path):
     base = tmp_path / "base.json"
     base.write_text(json.dumps({"pool": pool}))
     rc, summary = render(tmp_path, base)
-    leg = summary["legs"][0]
+    leg = summary["leg_tests"][0]
     assert (leg["x"], leg["n"], leg["base_k"], leg["base_n"]) == (2, 10, 15, 23)
     assert leg["tail"] > 0.1 and not leg["blocking"]
     assert rc == 0
@@ -309,7 +313,7 @@ def test_k1_strong_cell_failing_blocks_and_the_leg_test_stays_quiet(tmp_path):
     rc, summary = render(tmp_path, base, "--k", "1", "--expect-legs", LEG, "--expect-tasks", " ".join(tasks))
     assert rc == 1
     assert verdicts(summary)["task-0"] == "blocking"
-    assert not summary["legs"][0]["blocking"]  # 4/5 against ~6/7 per cell is ordinary
+    assert not summary["leg_tests"][0]["blocking"]  # 4/5 against ~6/7 per cell is ordinary
     assert next(g for g in summary["leg_status"] if g["leg"] == LEG)["state"] == "measured"
 
 

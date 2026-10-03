@@ -389,6 +389,8 @@ jobs:
           ORACLE_RESULT: ${{ needs.oracle.result }}
           LEGS_RESULT: ${{ needs.legs.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           # smoke-publish.yml puts report.html here after the run (this repo's own, non-fork runs only).
           REPORT_URL: >-
             ${{ github.repository == 'LightconeResearch/agent-skills'
@@ -396,15 +398,15 @@ jobs:
             && format('https://lightconeresearch.github.io/agent-skills/smoke/{0}/', github.run_id) || '' }}
         run: |
           set +e
-          note=""
-          if [ "$JUDGE_SKIPPED" = true ]; then note="Judge skipped: no ANTHROPIC_API_KEY."
-          elif [ "$JUDGE_OUTCOME" = failure ]; then
-            note="**The judge did not run to completion**; failures above carry no judge notes. See the run log."
+          judge_not_run=""
+          if [ "$JUDGE_SKIPPED" = true ]; then judge_not_run="no ANTHROPIC_API_KEY"
+          elif [ "$JUDGE_OUTCOME" = failure ]; then judge_not_run="the judge step failed (see the run log)"
           fi
           # shellcheck disable=SC2086  # RECORD is a flag or empty
           python3 evals/bin/report.py render evals/jobs ${BASELINE:+--baseline "$BASELINE"} \
             --judge evals/jobs/judge --stack evals/jobs/stack.json --run-url "$RUN_URL" --report-url "$REPORT_URL" \
-            --base-label "$BASE_LABEL" --judge-note "$note" --expect-legs "$EXPECT_LEGS" \
+            --base-label "$BASE_LABEL" --judge-not-run "$judge_not_run" --expect-legs "$EXPECT_LEGS" \
+            --run-id "$GITHUB_RUN_ID" --pr "$PR" --sha "$HEAD_SHA" \
             --not-run-reason "$NOT_RUN_REASON" --job "oracle=$ORACLE_RESULT" --job "legs=$LEGS_RESULT" \
             --expect-tasks "$EXPECT_TASKS" --k "$K" --baseline-error "$BASELINE_ERROR" \
             --out smoke-report $RECORD
