@@ -34,8 +34,8 @@
 #
 # Publishing: .github/workflows/smoke-publish.yml, after each run here, puts
 # report.html on gh-pages at smoke/<run id>/ and, for passing pushes to main,
-# summary.json on the orphan branch smoke-baseline as baseline.json, which
-# every run reads from raw.githubusercontent.com with no token.
+# appends the run's record to the orphan branch smoke-baseline, which every run
+# reads from raw.githubusercontent.com with no token (evals/bin/baseline.py).
 name: smoke
 
 on:

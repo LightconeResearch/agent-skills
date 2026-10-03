@@ -106,12 +106,12 @@ Measured locally on 2026-10-03 for the default leg: Sonnet 5.5 passed all five
 tasks in 3–6 turns; the agent cost $0.38 and the judge $0.32, so about $0.70
 per PR, in about two minutes of agent time.
 
-The baseline pools the last five pushes to main, published by
-`.github/workflows/smoke-publish.yml` as `baseline.json` on the orphan branch
-`smoke-baseline` and read without a token from raw.githubusercontent.com (so
-lightcone-cli runs see the same one): each run's `summary.json`
-carries the per-cell pass counts and turn samples of the previous pool plus
-its own, oldest dropped. The check blocks when the oracle fails, when a cell
+The baseline is an append-only log on the orphan branch `smoke-baseline`:
+`.github/workflows/smoke-publish.yml` adds each passing push to main as
+`runs/<run number>-<sha>.json` (that run's per-cell pass counts and turn
+samples) and regenerates `index.json`; `evals/bin/baseline.py fetch` reads it
+without a token from raw.githubusercontent.com (so lightcone-cli runs see the
+same one) and pools the last five runs, keeping ten for the history strip. The check blocks when the oracle fails, when a cell
 that passes at least 80% on main goes 0/K, or when a leg passes improbably few
 trials against its cells' pooled rates (Poisson-binomial lower tail below
 0.01, each cell's rate smoothed to (s + 1) / (t + 2)). Any other failure in a cell that is solid on
