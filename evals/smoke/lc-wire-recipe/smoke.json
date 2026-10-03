@@ -1,0 +1,11 @@
+{
+  "proves": "a newly wired recipe validates and `lc` materializes it",
+  "had_to": "wire a missing recipe, then materialize",
+  "checks": {
+    "spec_valid": "`astra validate` accepts the project",
+    "output_value": "results/baseline/summary.txt holds the expected value",
+    "status_current": "`lc status --json` records baseline/summary as current",
+    "check_passes": "`lc materialize --check --json` finds nothing to do",
+    "manifest": "the run manifest hashes summary.txt and its recipe runs src/report.py"
+  }
+}

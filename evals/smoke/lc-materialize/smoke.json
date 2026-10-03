@@ -1,0 +1,10 @@
+{
+  "proves": "`lc` builds an output, records it current, and writes its manifest",
+  "had_to": "materialize an output with `lc`",
+  "checks": {
+    "output_value": "results/baseline/summary.txt holds the expected value",
+    "status_current": "`lc status --json` records baseline/summary as current",
+    "check_passes": "`lc materialize --check --json` finds nothing to do",
+    "manifest": "the run manifest names the output and hashes summary.txt"
+  }
+}

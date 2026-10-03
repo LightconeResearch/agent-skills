@@ -88,7 +88,19 @@ def _call_label(call: dict) -> tuple[str, str]:
     return name, ""
 
 
-def _hooks(tdir: Path) -> tuple[list[str], dict[str, list[str]]]:
+VALIDATE_CLAIM = re.compile(r"ASTRA validation (passed|FAILED)")
+WRITES = {"write", "edit", "multiedit", "apply_patch", "notebookedit"}
+
+
+def hook_name(hook: str, text: str) -> str:
+    if VALIDATE_CLAIM.search(text):
+        return "validate-on-save hook"
+    if hook.startswith("SessionStart"):
+        return "SessionStart hook"
+    return f"{hook.split(':', 1)[0]} hook"
+
+
+def _hooks(tdir: Path) -> tuple[list[dict], dict[str, list[dict]]]:
     """Hook messages from the Claude Code session log: (session start, by tool call id)."""
     start, by_call = [], {}
     for log in sorted((tdir / "agent" / "sessions" / "projects").glob("*/*.jsonl")):
@@ -101,24 +113,29 @@ def _hooks(tdir: Path) -> tuple[list[str], dict[str, list[str]]]:
             if not isinstance(att, dict) or att.get("type") != "hook_additional_context":
                 continue
             content = att.get("content")
-            text = "\n".join(content) if isinstance(content, list) else str(content or "")
-            label = f"{att.get('hookName', 'hook')}: {text.strip()}"
+            text = ("\n".join(content) if isinstance(content, list) else str(content or "")).strip()
+            claim = VALIDATE_CLAIM.search(text)
+            row = {"kind": "hook", "hook": att.get("hookName", "hook"),
+                   "name": hook_name(att.get("hookName", ""), text), "text": text,
+                   "claim": ("pass" if claim.group(1) == "passed" else "fail") if claim else None}
             call = att.get("toolUseID") or ""
             if call.startswith("toolu_") or call.startswith("call_"):
-                by_call.setdefault(call, []).append(label)
+                by_call.setdefault(call, []).append(row)
             else:
-                start.append(label)
+                start.append(row)
     return start, by_call
 
 
-def timeline(tdir: Path) -> list[dict]:
-    """One row per tool call (and hook message), in order, ending with the agent's last message.
+def timeline(tdir: Path, checks: list[dict] | None = None) -> list[dict]:
+    """One row per tool call and hook message, in order, ending with the agent's last message.
 
-    Row kinds: "hook", "call" (with exit code and error flag) and "final".
+    Row kinds: "hook" (with the hook's validation claim, if any), "call" (with
+    exit code and error flag) and "final". A validation claim that disagrees
+    with what happened next carries "contradicted": the text saying by what.
     """
     traj = _load(tdir / "agent" / "trajectory.json") or {}
     start, by_call = _hooks(tdir)
-    rows = [{"kind": "hook", "text": h} for h in start]
+    rows = list(start)
     turn = 0
     for step in traj.get("steps", []):
         if step.get("source") != "agent":
@@ -136,11 +153,69 @@ def timeline(tdir: Path) -> list[dict]:
             rows.append({"kind": "call", "turn": turn, "tool": tool, "what": what, "exit": code,
                          "error": error, "output": trim(output, 6) if error else "",
                          "note": (step.get("message") or "").strip()})
-            rows += [{"kind": "hook", "text": h} for h in by_call.get(call.get("tool_call_id"), [])]
+            rows += by_call.get(call.get("tool_call_id"), [])
     final = final_message(traj)
     if final:
         rows.append({"kind": "final", "text": final})
+    mark_contradictions(rows, checks or [])
     return rows
+
+
+def mark_contradictions(rows: list[dict], checks: list[dict]) -> None:
+    """Flag validation claims that the next `validate` run, or the verifier, contradicts.
+
+    A claim is checked against the first `astra validate` the agent ran after it,
+    unless the agent edited a file first; a claim with no later edit or validate
+    is checked against the verifier's spec_valid. A FAILED claim whose own text
+    reports that every file passed contradicts itself.
+    """
+    verdict = next((c["ok"] for c in checks if c["name"] == "spec_valid"), None)
+    for i, row in enumerate(rows):
+        if row["kind"] != "hook" or not row.get("claim"):
+            continue
+        claim_ok = row["claim"] == "pass"
+        if not claim_ok and re.search(r"passed validation|Validation successful", row["text"]):
+            row["contradicted"] = "contradicts itself: it says FAILED, and its own output says every file passed"
+            continue
+        later = rows[i + 1:]
+        actual, by = None, ""
+        for r in later:
+            if r["kind"] != "call":
+                continue
+            if r["tool"].lower() in WRITES:
+                break
+            if "validate" in r["what"] and r["exit"] is not None:
+                actual, by = r["exit"] == 0, f"`{r['what']}` at turn {r['turn']} exits {r['exit']}"
+                break
+        else:
+            if verdict is not None and not any(r["kind"] == "call" and r["tool"].lower() in WRITES for r in later):
+                actual, by = verdict, ("the verifier's spec_valid passes on this file" if verdict
+                                       else "the verifier's `astra validate` rejects this file")
+        if actual is not None and actual != claim_ok:
+            row["contradicted"] = f"contradicted: {by}"
+
+
+def first_error_line(output: str) -> str:
+    """The first line of a check's output that says what is wrong."""
+    lines = [ln.strip() for ln in output.splitlines()]
+    for i, ln in enumerate(lines):
+        if re.search(r"errors?:\s*$", ln, re.I):
+            for nxt in lines[i + 1:]:
+                if nxt:
+                    return nxt.lstrip("•*- ").strip()
+    for ln in lines:
+        if ln.startswith(("FAIL", "DRIFT", "Error", "error:")):
+            return ln
+    for ln in lines:
+        if ln and not ln.startswith(("ok ", "exit code", "Validating", "⚠", "✓")):
+            return ln
+    return ""
+
+
+def task_meta(task: str) -> dict:
+    """The task's plain-language summary (smoke.json): proves, had_to, and a line per check."""
+    meta = _load(TASKS_DIR / task / "smoke.json") or {}
+    return {"proves": meta.get("proves", ""), "had_to": meta.get("had_to", ""), "checks": meta.get("checks", {})}
 
 
 def final_message(traj: dict) -> str:

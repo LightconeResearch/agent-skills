@@ -1,0 +1,11 @@
+{
+  "proves": "astra's resolver answers five questions about conditional decisions",
+  "had_to": "answer five questions about a spec",
+  "checks": {
+    "robust_clip_threshold": "the option universe robust picks for clip_threshold",
+    "baseline_clip_threshold": "what baseline picks for clip_threshold (null: inactive)",
+    "clip_threshold_affected_outputs": "the outputs clip_threshold can change, directly or downstream",
+    "baseline_outputs": "the outputs universe baseline produces",
+    "sigma_clip_uncertainty_options": "the uncertainty options valid with outlier_cut: sigma_clip"
+  }
+}

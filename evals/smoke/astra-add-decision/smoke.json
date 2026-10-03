@@ -1,0 +1,9 @@
+{
+  "proves": "a new decision and universe validate, and the universe reaches the recipe",
+  "had_to": "add a decision and a universe",
+  "checks": {
+    "spec_valid": "`astra validate` accepts the spec and every universe",
+    "decision_declared": "fit_model has options linear and quadratic, default linear",
+    "universe_resolves": "universes/quadratic.yaml checks, and fit_result's recipe takes {decisions.fit_model}"
+  }
+}

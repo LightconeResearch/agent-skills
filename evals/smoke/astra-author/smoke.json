@@ -1,0 +1,8 @@
+{
+  "proves": "a hand-written spec for a two-step pipeline validates and resolves",
+  "had_to": "write a spec for a two-step pipeline",
+  "checks": {
+    "spec_valid": "`astra validate` accepts the project",
+    "declares_pipeline": "astra's resolver finds raw_data → clean_data → fit_result, each with its script as recipe"
+  }
+}
