@@ -134,7 +134,7 @@ def comment_md(s: dict) -> str:
     links = []
     for c in s["chain"]:
         text = f"{c['title'].lower()} {ICON[c['state']]}"
-        if c["key"] in ("oracle", "agent") or c["state"] != "ok":
+        if c["key"] in ("oracle", "agent", "judge") or c["state"] != "ok":
             text += f" {c['value']}"
         links.append(f"**{text}**" if c["state"] == "bad" else text)
     chain = " → ".join(links)
@@ -225,6 +225,8 @@ pre{font:12.5px/1.45 var(--mono);background:var(--code);border-radius:8px;paddin
 .link.bad{border-top:4px solid var(--bad);background:var(--bad-bg)}.link.bad .v{color:var(--bad)}
 .link.skip{border-top:4px dashed var(--skip);background:var(--skip-bg)}.link.skip .v{color:var(--skip)}
 .link.warn{border-top:4px solid var(--warn)}.link.warn .v{color:var(--warn)}
+@media (max-width:600px){.chain{flex-direction:column}.link{min-width:0}.arrow{flex:0 0 16px;transform:rotate(90deg)}
+.grid td.what,.grid th:nth-child(2){display:none}}
 h2{font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:26px 0 8px;font-weight:600}
 .wrap{overflow-x:auto}
 .grid{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
