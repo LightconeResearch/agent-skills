@@ -8,10 +8,16 @@
 #             own branches only: a fork's artifact is its own code's output.
 #             gh-pages is shared with the docs (mike's version dirs) and the PR
 #             previews (pr-preview/); this only ever writes under smoke/.
-#   baseline  for a push to main whose report gate passed, summary.json (which
-#             carries the rolling pool, see evals/bin/report.py) -> baseline.json
-#             on the orphan branch smoke-baseline, readable without a token at
-#             raw.githubusercontent.com/LightconeResearch/agent-skills/smoke-baseline/baseline.json.
+#   baseline  for a push to main whose report gate passed, that run's own record
+#             (summary.json's per-cell counts) -> runs/<run number>-<sha>.json on the
+#             orphan branch smoke-baseline, plus index.json regenerated from the
+#             directory. Append-only: publishers never touch each other's files,
+#             so concurrent or out-of-order publications lose nothing, and readers
+#             (evals/bin/baseline.py fetch) order runs by run number.
+#
+# No concurrency group, on purpose: GitHub keeps one pending run per group and
+# cancels the rest, which would drop records. Both writes retry from the branch
+# tip instead.
 name: smoke-publish
 
 on:
@@ -23,10 +29,6 @@ permissions:
   contents: write
   actions: read
 
-concurrency:
-  group: smoke-publish
-  cancel-in-progress: false
-
 jobs:
   publish:
     if: >-
@@ -37,6 +39,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
       SHA: ${{ github.event.workflow_run.head_sha }}
       EVENT: ${{ github.event.workflow_run.event }}
       BRANCH: ${{ github.event.workflow_run.head_branch }}
@@ -60,7 +63,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Publish the report to gh-pages
-        if: steps.summary.outputs.none != 'true'
+        if: steps.summary.outcome == 'success' && steps.summary.outputs.none != 'true'
         run: |
           [ -f summary/report.html ] || { echo "::notice::no report.html in run $RUN_ID"; exit 0; }
           git clone -q --depth 1 --branch gh-pages \
@@ -77,22 +80,34 @@ jobs:
             git pull -q --rebase origin gh-pages
           done
           echo "::error::could not push the report to gh-pages"; exit 1
-      - name: Publish the baseline to smoke-baseline
-        if: steps.summary.outputs.none != 'true' && env.EVENT == 'push' && env.BRANCH == 'main'
+      - name: Append this run to the smoke-baseline log
+        # Runs even if the Pages push failed; never without a successful, redacted download.
+        if: >-
+          always() && steps.summary.outcome == 'success' && steps.summary.outputs.none != 'true' &&
+          env.EVENT == 'push' && env.BRANCH == 'main'
         run: |
           if [ "$(jq -r .gate summary/summary.json)" != pass ]; then
             echo "::notice::run $RUN_ID did not pass its gate; the baseline stays as it was"
             exit 0
           fi
-          jq --arg sha "$SHA" --arg run "$RUN_ID" '. + {commit: $sha, run: $run}' summary/summary.json > baseline.json
+          file="runs/${RUN_NUMBER}-${SHA}.json"
+          jq --argjson n "$RUN_NUMBER" --arg run "$RUN_ID" --arg sha "$SHA" \
+            '{run_number: $n, run_id: $run, sha: $sha, record: .record}' summary/summary.json > record.json
           git init -q pub && cd pub
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if git fetch -q --depth 1 origin smoke-baseline; then
-            git checkout -q -b smoke-baseline FETCH_HEAD
-          else
-            git checkout -q --orphan smoke-baseline
-          fi
-          cp ../baseline.json baseline.json
-          git add baseline.json
-          git commit -qm "smoke baseline from main@${SHA:0:7} (run $RUN_ID)"
-          git push -q origin smoke-baseline
+          # Rebuild the commit from the branch tip on every attempt: the run file is
+          # unique to this run and the index is regenerated, so there is never a conflict.
+          for attempt in 1 2 3 4 5; do
+            if git fetch -q --depth 1 origin smoke-baseline; then
+              git checkout -q -B smoke-baseline FETCH_HEAD
+            else
+              git checkout -q --orphan smoke-baseline
+            fi
+            mkdir -p runs && cp ../record.json "$file"
+            python3 ../suite/evals/bin/baseline.py index .
+            git add "$file" index.json
+            git commit -qm "smoke baseline: main@${SHA:0:7} (run $RUN_NUMBER)"
+            git push -q origin smoke-baseline && exit 0
+            sleep $((attempt * 5))
+          done
+          echo "::error::could not append run $RUN_NUMBER to smoke-baseline"; exit 1

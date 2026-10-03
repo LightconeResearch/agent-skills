@@ -307,25 +307,26 @@ jobs:
           pattern: smoke-leg-*
           path: evals/jobs
           merge-multiple: true
-      - name: Fetch the baseline (published by smoke-publish.yml from main)
+      - name: Fetch the baseline (the recorded main runs smoke-publish.yml appends)
         id: baseline
         run: |
           # Public and unauthenticated, so lightcone-cli callers read the same baseline.
           mkdir -p baseline
-          url="https://raw.githubusercontent.com/$SKILLS_REPO/smoke-baseline/baseline.json"
-          code="$(curl -sS -L -o baseline/baseline.json -w '%{http_code}' "$url" || echo 000)"
-          case "$code" in
-            200)
+          python3 evals/bin/baseline.py fetch --repo "$SKILLS_REPO" --out baseline/baseline.json
+          rc=$?
+          case "$rc" in
+            0)
               echo "path=baseline/baseline.json" >> "$GITHUB_OUTPUT"
               sha="$(jq -r '.commit // ""' baseline/baseline.json)"
               echo "label=main@${sha:0:7}" >> "$GITHUB_OUTPUT"
               echo "run=$(jq -r '.run // ""' baseline/baseline.json)" >> "$GITHUB_OUTPUT" ;;
-            404)
+            2)
               echo "::notice::no baseline yet: every 0/K cell blocks" ;;
             *)
-              echo "::warning::could not fetch the baseline ($url: HTTP $code); gating as if there were none"
-              echo "error=Baseline fetch failed (HTTP $code), so this run gates as if there were no baseline." >> "$GITHUB_OUTPUT" ;;
+              echo "::warning::could not fetch the baseline from the smoke-baseline branch; gating as if there were none"
+              echo "error=Baseline fetch failed, so this run gates as if there were no baseline." >> "$GITHUB_OUTPUT" ;;
           esac
+        shell: bash {0}
       - uses: astral-sh/setup-uv@v5
       - run: uv tool install "harbor==${HARBOR_VERSION}"
       - uses: docker/setup-buildx-action@v3

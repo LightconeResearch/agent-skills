@@ -11,9 +11,9 @@ claude-haiku-plugin, ...). A cell is one (leg, task): k of n trials passed,
 turns (agent steps) and astra/lc calls (shell commands invoking astra,
 astra-tools or lc).
 
-The baseline is a pool: per cell, the records of the last POOL_RUNS recording
-runs (pushes to main). Each summary.json carries the next pool, the baseline's
-records plus this run's, oldest dropped, so one artifact is the whole history.
+The baseline (--baseline, written by baseline.py fetch) is a pool: per cell,
+the records of the last few recorded main runs. Each summary.json carries this
+run's own per-cell record, which smoke-publish.yml appends to that log.
 
 `select` prints the trial dirs worth judging, one per line: every failed trial,
 and every trial whose turns or astra/lc calls are outliers against the pooled
@@ -70,7 +70,6 @@ from trialview import leg_label, money, outcome  # noqa: E402
 
 MARKER = "<!-- lightcone-smoke-report -->"
 OUTLIER_GAP = 5
-POOL_RUNS = 5
 # Harbor exception types that mean the harness or the provider failed, not the agent.
 INFRA = {
     "ApiUsageLimitError": "provider quota",
@@ -229,18 +228,16 @@ def pooled(records: list[dict] | None) -> dict | None:
             "stack_calls": median(v for r in records for v in r.get("stack_calls", []))}
 
 
-def next_pool(pool: dict | None, trials: list[dict]) -> dict:
-    out = {key: list(records) for key, records in (pool or {}).items()}
+def run_record(trials: list[dict]) -> dict:
+    """This run's per-cell {k, n, turns, stack_calls}: what a recorded main run adds to the baseline."""
     by_cell: dict[str, list[dict]] = {}
     for t in trials:
         if t["leg"] != "oracle":
             by_cell.setdefault(f"{t['leg']}/{t['task']}", []).append(t)
-    for key, ts in by_cell.items():
-        record = {"k": sum(t["passed"] for t in ts), "n": len(ts),
+    return {key: {"k": sum(t["passed"] for t in ts), "n": len(ts),
                   "turns": [t["turns"] for t in ts if t["turns"] is not None],
                   "stack_calls": [t["stack_calls"] for t in ts]}
-        out[key] = (out.get(key, []) + [record])[-POOL_RUNS:]
-    return dict(sorted(out.items()))
+            for key, ts in sorted(by_cell.items())}
 
 
 def binom_cdf(x: int, n: int, p: float) -> float:
@@ -558,7 +555,7 @@ def render(args) -> int:
         "legs": leg_gate,
         "leg_status": status,
         "effort": effort,
-        "pool": next_pool(pool, trials),
+        "record": run_record(trials),
         "trials": trials,
         "cost_usd": {"agents": agent_cost, "judge": judge_cost},
         "stack": stack,

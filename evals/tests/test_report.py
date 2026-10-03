@@ -113,12 +113,11 @@ def test_record_gates_only_on_the_oracle(tmp_path):
     assert rc == 1
 
 
-def test_pool_rolls_over_the_last_five_runs(tmp_path):
+def test_summary_carries_this_runs_record(tmp_path):
     run_cell(tmp_path / "jobs", "astra-author", 1)
     _, summary = render(tmp_path, baseline(tmp_path, {"astra-author": (10, 10)}))
-    records = summary["pool"][f"{LEG}/astra-author"]
-    assert len(records) == 5 and records[-1]["k"] == 1 and records[-1]["n"] == 2
-    assert sum(r["n"] for r in records) == 10  # oldest (2 trials) dropped, this run's 2 added
+    assert summary["record"] == {f"{LEG}/astra-author": {"k": 1, "n": 2, "turns": [10, 10],
+                                                          "stack_calls": [10, 10]}}
 
 
 def test_select_failures_and_outliers(tmp_path):
@@ -151,7 +150,7 @@ def test_infra_errors_are_not_failures_but_block_as_unmeasured(tmp_path):
     rc, summary = render(tmp_path, base)
     assert rc == 1
     assert not any(c["leg"] == "codex-luna-skill" for c in summary["cells"].values())
-    assert not any(k.startswith("codex-luna-skill/") for k in summary["pool"])
+    assert not any(k.startswith("codex-luna-skill/") for k in summary["record"])
     luna = next(g for g in summary["leg_status"] if g["leg"] == "codex-luna-skill")
     assert luna["state"] == "not measured"
     assert luna["reason"] == "6/6 trials hit ApiUsageLimitError (provider quota)"
