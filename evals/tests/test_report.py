@@ -392,3 +392,13 @@ def test_a_planned_leg_that_never_ran_blocks_even_when_upstream_says_success(tmp
     assert rc == 1 and summary["gate"] == "fail"
     assert summary["reasons"][0]["class"] == "not_run"
     assert summary["verdict"]["headline"] == "not run · Haiku + skill · no trials (see the leg's job log)"
+
+
+def test_agent_link_counts_planned_tasks_and_is_green_only_when_complete(tmp_path):
+    jobs = tmp_path / "jobs"
+    for task in TASKS:
+        trial(jobs, "oracle", task, 0, 1.0)
+    run_cell(jobs, "astra-author", 1, n=1)  # one of three planned tasks ran, and passed
+    _, summary = render(tmp_path, None, "--expect-legs", LEG, "--expect-tasks", " ".join(TASKS), "--k", "1")
+    agent = next(c for c in summary["chain"] if c["key"] == "agent")
+    assert agent["value"] == "1 / 3 tasks" and agent["state"] == "bad"

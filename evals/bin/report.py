@@ -524,7 +524,7 @@ def trial_view(t: dict, jobs: Path, judged: dict, bases: dict) -> dict:
     return view
 
 
-def chain(stack, reasons_, oracle_trials, agent_trials, status, judge_info, legs) -> list[dict]:
+def chain(stack, reasons_, oracle_trials, agent_trials, status, judge_info, legs, planned=()) -> list[dict]:
     classes = {r["class"] for r in reasons_ if r["blocking"]}
     links = []
     if stack:
@@ -560,9 +560,12 @@ def chain(stack, reasons_, oracle_trials, agent_trials, status, judge_info, legs
                else "the reference solutions" if links[2]["state"] == "bad" else "")
     measured = [g for g in status if g["state"] in ("measured", "partly measured")]
     if agent_trials:
-        tasks = sorted({t["task"] for t in agent_trials})
-        passed = [task for task in tasks if all(t["passed"] for t in agent_trials if t["task"] == task)]
-        state = "ok" if len(passed) == len(tasks) and len(measured) == len(status) else "bad"
+        # The planned tasks are the denominator: a task with no trial is not a pass.
+        tasks = sorted(set(planned) or {t["task"] for t in agent_trials})
+        passed = [task for task in tasks if any(t["task"] == task for t in agent_trials)
+                  and all(t["passed"] for t in agent_trials if t["task"] == task)]
+        complete = all(g["state"] == "measured" for g in status)
+        state = "ok" if len(passed) == len(tasks) and complete else "bad"
         links.append({"key": "agent", "title": "Agent", "state": state,
                       "value": f"{len(passed)} / {len(tasks)} tasks",
                       "sub": ", ".join(leg_label(g["leg"], agent_trials) for g in status) if status else ""})
@@ -744,7 +747,7 @@ def build_summary(args) -> dict:
         "schema": 1,
         "verdict": verdict_,
         "reasons": rs,
-        "chain": chain(stack, rs, oracle_views, agent_views, status, judge_info, default_leg),
+        "chain": chain(stack, rs, oracle_views, agent_views, status, judge_info, default_leg, expect_tasks),
         "tasks": tasks,
         "trials": views,
         "legs": [{**g, "label": leg_label(g["leg"], trials)} for g in status],
