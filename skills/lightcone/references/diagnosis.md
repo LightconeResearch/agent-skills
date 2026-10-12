@@ -23,7 +23,7 @@ in place.
 | Outcome | What it means | Remedy |
 |---|---|---|
 | Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==x.y.z` |
-| A version below the floor | The rebuild changed the verbs and the status vocabulary, so the skill's instructions will produce errors rather than results | `uv tool install lightcone-cli==x.y.z` — **not** `uv tool upgrade`, which will not move onto a pre-release |
+| A version below the floor | Its commands or behavior may differ from the release this skill expects | `uv tool install lightcone-cli==x.y.z` |
 | A version above the floor | Nothing. Newer is fine | — |
 | `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==x.y.z` |
 | `lc` not found right after installing | uv put it in `~/.local/bin`, which is not on PATH | `uv tool update-shell`, or check for a shell alias with `type lc` |
@@ -33,6 +33,9 @@ none can. Never install or upgrade unasked — it is the user's machine, and
 they may be running other projects against the version they have. If
 permissions refuse the command in a headless run, report that the CLI is
 missing and name what to allow rather than working around it.
+
+When upgrading from a pre-release, stop running clusters with the old CLI
+first: old cluster IDs and compute catalogs may no longer be accepted.
 
 ## Refusals before a run starts
 

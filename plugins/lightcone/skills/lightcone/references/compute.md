@@ -24,8 +24,10 @@ lc compute launch --cpus 32+ --memory 128GB+ --num-nodes 2 --time 2h --name fit-
   shortcut, which never selects a remote offer. The reverse can happen: a
   request nothing earlier in the list fits lands on the local offer. The
   plan's `offer` says which.
-- `--gpus A100:4` is exactly four A100s; `--gpus GPU:4` any model; the
-  default `0` selects CPU-only offers. No `+` on GPU counts.
+- `--gpus A100:4` is exactly four A100s; `--gpus GPU:4` any model. With
+  `--cpus`/`--memory`, omitting `--gpus` selects CPU-only offers. The local
+  shortcut instead takes its offer's GPUs too; `--gpus 0` excludes them.
+  No `+` on GPU counts.
 - `--startup fast` filters to fast-start offers; it promises no queue time.
 - Name an explicit request after the work (`--name fit-sweep`); otherwise
   it gets `lc-<12 hex>`, which you will have to type again.
@@ -37,7 +39,9 @@ in parallel, never room for one.
 ## GPUs
 
 GPUs exist only where `lc compute resources` lists them; `lc` probes no
-hardware. A local GPU offer also needs the device mask at launch:
+hardware. On Linux the built-in local offer counts the devices exposed by
+`CUDA_VISIBLE_DEVICES`; without a mask it is CPU-only. An explicit local
+GPU offer needs a mask exposing at least as many devices as it declares:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 lc compute launch --cpus 4 --memory 8GB --gpus GPU:1 --wait
@@ -94,6 +98,10 @@ recipe:
 - A launch that failed or timed out may still hold an allocation: its
   error carries the `id` or a `submission_token`. Check
   `lc compute status --json` before retrying, never launch a second one.
-- `lc compute status` cannot tell you the time left. Note when you
-  launched and the plan's `--time`; a run that will not fit goes on a
-  fresh, longer allocation.
+- The built-in local offer has no hard walltime and a 30-minute idle
+  timeout. Running or queued tasks keep it alive; status polling and an
+  attached client do not. An explicit `--time` is a hard walltime and can
+  kill active work; when both limits apply, the first one reached wins.
+- For an allocation with a hard walltime, `lc compute status` cannot tell
+  you the time left. Note when you launched and the plan's `time_seconds`;
+  a run that will not fit goes on a fresh, longer allocation.
