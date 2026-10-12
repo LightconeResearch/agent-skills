@@ -41,11 +41,11 @@ The user installs the CLI once, on their machine, and that is the whole
 setup — it puts `lc` on their PATH:
 
 ```bash
-uv tool install lightcone-cli==0.5.0rc5
+uv tool install lightcone-cli==0.5.0
 ```
 
-Name that version. While the line is a pre-release, a bare
-`uv tool install lightcone-cli` resolves to an older stable release.
+Name that version so the install selects the release this skill was
+written against; an already-installed newer version is fine.
 
 Before doing anything else, evaluate whether the `lc` CLI is present through this
 checklist:
@@ -53,7 +53,7 @@ checklist:
   check, already run by the session-start hook. Don't repeat it. You are all good.
 - **Seen the hook report a problem?** It names the remedy and who runs it.
 - **Seen neither?** Run `lc --version` yourself — this skill assumes
-  `lightcone-cli==0.5.0rc5` or newer. Silence is not an all-clear: the skill
+  `lightcone-cli==0.5.0` or newer. Silence is not an all-clear: the skill
   also ships without that hook, and a subagent never sees session start.
   Remedies are in `references/diagnosis.md`.
 
@@ -77,12 +77,14 @@ machines and schedulers lie behind it, and it is the only view to use:
    `lc compute status <name> --wait` returns once its workers are
    connected.
 2. **Launch.** On a workstation, `lc compute launch --wait` takes the
-   built-in local offer — every usable CPU and all RAM, one node, 30
-   minutes — names it `local`, and prints that name once it is ready. Only
-   one local cluster runs per user per machine; a second launch is refused
-   and names the live one: reuse it. Size the lifetime to the work
-   (`--time 1h30m`, two hours at most locally); at walltime the allocation
-   is killed, mid-write if a recipe is still running.
+   built-in local offer — every usable CPU and all RAM, one node, plus
+   the GPUs exposed by `CUDA_VISIBLE_DEVICES` on Linux — names it `local`,
+   and prints that name once it is ready. Only one local cluster runs per
+   user per machine; a second launch is refused and names the live one:
+   reuse it. The built-in offer has no hard walltime and stops after 30
+   minutes idle; active tasks keep it alive. Add `--time 1h30m` only when
+   a hard limit is wanted: it kills the allocation at that age, even
+   mid-write if a recipe is still running.
 3. **Pass the name.** `lc run local -- python src/fit.py …`,
    `lc materialize local fit`. Shell variables do not survive between your
    tool calls, so carry the name itself, not `$CLUSTER`.
