@@ -7,6 +7,13 @@ from a single canonical source. Two plugins: `astra` (spec reference) and
 `lightcone` (project companion, which bundles `astra`). Plugin skills are
 namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 
+**OpenCode** is a documented-only target: it reads the Agent Skills format
+directly, so users install the packaged `plugins/<name>/skills/` copies with
+`npx skills add <repo-url>/tree/main/plugins/<name> -a opencode` (see the README).
+Nothing is generated for it, and the `hooks.json` hooks do not run there —
+OpenCode plugins are JS modules with their own hook API, so hook support would
+need a wrapper plugin. Skills only, for now.
+
 ## Where things live
 
 - `skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per

@@ -56,6 +56,22 @@ first use.
     `LightconeResearch/agent-skills` marketplace, search for `astra`, and
     install it. Then call `/astra:astra`.
 
+=== "OpenCode"
+
+    OpenCode reads Agent Skills directly, so there is no marketplace step.
+    Install the packaged skills with the
+    [`skills` CLI](https://github.com/vercel-labs/skills):
+
+    ```bash
+    npx skills add https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra -a opencode -g
+    ```
+
+    This installs into `~/.agents/skills/`, one of the directories OpenCode
+    scans; drop `-g` to install into the current project (`./.agents/skills/`)
+    instead. The agent loads the skill when the task matches its description,
+    or when you ask it to "use the astra skill".
+    Skills only: the hooks do not run on OpenCode yet.
+
 ## Try it
 
 The best introduction is the
