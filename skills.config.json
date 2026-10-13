@@ -5,6 +5,7 @@
     "displayName": "Lightcone Research Skills",
     "description": "Agent skills for Lightcone Research — ASTRA authoring and validation.",
     "repo": "LightconeResearch/agent-skills",
+    "npmScope": "@lightcone-research",
     "owner": {
       "name": "Lightcone Research",
       "email": "info@lightconeresearch.org"

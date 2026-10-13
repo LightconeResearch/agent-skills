@@ -33,7 +33,8 @@
       "dependencies": [],
       "requires": [],
       "hasHooks": true,
-      "hasAgents": false
+      "hasAgents": false,
+      "npmPackage": "@lightcone-research/astra-plugin"
     },
     {
       "name": "lightcone",
@@ -48,7 +49,8 @@
       ],
       "requires": [],
       "hasHooks": true,
-      "hasAgents": false
+      "hasAgents": false,
+      "npmPackage": "@lightcone-research/lightcone-plugin"
     }
   ]
 }

@@ -13,6 +13,8 @@ nav = [
   { "Documentation" = [
       { "Home" = "index.md" },
       { "ASTRA" = "astra.md" },
+      { "OpenCode" = "opencode.md" },
+      { "Pi" = "pi.md" },
   ] },
   { "Tutorials" = [
       { "Getting started with ASTRA" = "getting-started.md" },
