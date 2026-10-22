@@ -1,0 +1,35 @@
+# Agentic eval: lightcone-cli's Harbor eval with this repository's skills as
+# the side under test. Each leg installs the skills into its own harness
+# through Harbor's --skill and must load one; reward, errors and agent steps
+# against main's history gate the check. Plugin installs and hooks are
+# e2e-hooks' to test.
+#
+# Secrets: CLAUDE_CODE_OAUTH_TOKEN (claude-code leg and the trace analysis),
+# OPENAI_API_KEY (codex), ANTHROPIC_API_KEY (opencode), and REPO_READ_TOKEN
+# to read LightconeResearch/lightcone-evals. A leg without its secret is
+# skipped.
+name: Eval
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+jobs:
+  eval:
+    # TODO: switch to @main once LightconeResearch/lightcone-cli#255 merges.
+    uses: LightconeResearch/lightcone-cli/.github/workflows/eval.yml@eval-harbor
+    secrets: inherit
+    with:
+      require_skills: true
+      legs: >-
+        [{"name": "claude-code", "agent": "claude-code", "model": "claude-sonnet-5-5", "secret": "CLAUDE_CODE_OAUTH_TOKEN"},
+         {"name": "codex", "agent": "codex", "model": "gpt-5.1-codex", "secret": "OPENAI_API_KEY"},
+         {"name": "opencode", "agent": "opencode", "model": "anthropic/claude-sonnet-5-5", "secret": "ANTHROPIC_API_KEY"}]
