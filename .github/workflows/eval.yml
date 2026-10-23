@@ -1,8 +1,8 @@
-# Agentic eval: lightcone-cli's Harbor eval with this repository's skills as
-# the side under test. Each leg installs the skills into its own harness
-# through Harbor's --skill and must load one; reward, errors and agent steps
-# against main's history gate the check. Plugin installs and hooks are
-# e2e-hooks' to test.
+# Agentic eval, hosted in LightconeResearch/lightcone-evals beside the task
+# it runs, with this repository's skills as the side under test: --skill
+# points at this commit's built plugins/lightcone/skills, each leg must load
+# one, and reward, errors and agent steps against this repository's main
+# history gate the check. Plugin installs and hooks are e2e-hooks' to test.
 #
 # Secrets: CLAUDE_CODE_OAUTH_TOKEN (claude-code leg and the trace analysis),
 # OPENAI_API_KEY (codex) and ANTHROPIC_API_KEY (opencode). A leg without
@@ -23,10 +23,12 @@ permissions:
 
 jobs:
   eval:
-    # TODO: switch to @main once LightconeResearch/lightcone-cli#255 merges.
-    uses: LightconeResearch/lightcone-cli/.github/workflows/eval.yml@eval-harbor
+    # TODO: switch to @main once LightconeResearch/lightcone-evals#5 merges.
+    uses: LightconeResearch/lightcone-evals/.github/workflows/eval.yml@hosted-eval
     secrets: inherit
     with:
+      tasks_ref: hosted-eval
+      skills: https://github.com/LightconeResearch/agent-skills/tree/${{ github.event.pull_request.head.sha || github.sha }}/plugins/lightcone/skills
       require_skills: true
       legs: >-
         [{"name": "claude-code", "agent": "claude-code", "model": "claude-sonnet-5-5", "secret": "CLAUDE_CODE_OAUTH_TOKEN"},
