@@ -5,9 +5,8 @@
 # e2e-hooks' to test.
 #
 # Secrets: CLAUDE_CODE_OAUTH_TOKEN (claude-code leg and the trace analysis),
-# OPENAI_API_KEY (codex), ANTHROPIC_API_KEY (opencode), and REPO_READ_TOKEN
-# to read LightconeResearch/lightcone-evals. A leg without its secret is
-# skipped.
+# OPENAI_API_KEY (codex) and ANTHROPIC_API_KEY (opencode). A leg without
+# its secret is skipped.
 name: Eval
 
 on:
