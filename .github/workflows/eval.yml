@@ -1,8 +1,8 @@
 # Agentic eval, hosted in LightconeResearch/lightcone-evals beside the task
 # it runs, with this repository's skills as the side under test: --skill
 # points at this commit's built plugins/lightcone/skills, each leg must load
-# one, and reward, errors and agent steps against this repository's main
-# history gate the check. Plugin installs and hooks are e2e-hooks' to test.
+# one, and reward and errors gate the check. Plugin installs and hooks are
+# e2e-hooks' to test.
 #
 # Secrets: CLAUDE_CODE_OAUTH_TOKEN (claude-code leg and the trace analysis),
 # OPENAI_API_KEY (codex) and ANTHROPIC_API_KEY (opencode). A leg without
@@ -19,7 +19,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  actions: read
 
 jobs:
   eval:
