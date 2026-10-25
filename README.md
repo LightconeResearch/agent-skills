@@ -117,6 +117,30 @@ Open **Plugins** from the arrow beside **Create**, then search for and install
 
 </details>
 
+## 🧰 Skills-only install (any agent)
+
+The skills alone also install into [many more agents](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)
+— OpenCode, Cursor, Gemini CLI, GitHub Copilot and dozens more — with the
+[`skills` CLI](https://github.com/vercel-labs/skills) (needs Node.js 22.20+).
+You get the skills but **not the plugin hooks**: no automatic validation on save
+and no session-start checks. The skills still work without them; the agent runs
+those checks itself.
+
+```bash
+# Choose skills and agents interactively; installs into the current project
+npx skills add LightconeResearch/agent-skills
+
+# Or in one go: both skills, for all your projects (-g), into chosen agents
+npx skills add LightconeResearch/agent-skills --skill astra --skill lightcone -g -a opencode -a gemini-cli -y
+
+# Later, pick up new versions
+npx skills update
+```
+
+Install `astra` together with `lightcone`: the `lightcone` plugin bundles it,
+but a skills-only install doesn't. Skills installed this way aren't namespaced
+by plugin (for example `/astra` rather than `/astra:astra` in Claude Code).
+
 ## ✨ Skills
 
 | Skill | What it does |
