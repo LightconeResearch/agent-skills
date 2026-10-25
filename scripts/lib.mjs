@@ -1,6 +1,6 @@
 // Shared build logic for the multi-target skills repo.
 //
-// One source of truth: skills.config.json + the canonical skills/ directory.
+// One source of truth: skills.config.json + the canonical templates under src/.
 // buildArtifacts() returns the exact generated files/copies each target needs, so the
 // generator (build.mjs) and the drift check (validate.mjs) agree by construction.
 
@@ -29,15 +29,16 @@ function filesUnder(relDir) {
 
 // --- Tool pins -------------------------------------------------------------
 // Each plugin may declare `tools: { <name>: <version> }` — the CLI tools its
-// skills and hooks invoke via `uvx <name>@<version>`. Canonical skills/ and
-// hooks/ never carry a concrete version: they write the literal `@x.y.z`
-// placeholder, and the build substitutes each bundling plugin's EFFECTIVE
-// pins — merged over its dependency closure, own entries win — when the
-// plugins/ tree is generated. So different plugins can ship the same skill
-// pinned to different tool versions, and nothing in the canonical sources
-// ever looks like a number a contributor should wonder about updating.
+// skills and hooks invoke via `uvx <name>@<version>`. Canonical src/skills/
+// and src/hooks/ never carry a concrete version: they write the literal
+// `@x.y.z` placeholder, and the build substitutes each bundling plugin's
+// EFFECTIVE pins — merged over its dependency closure, own entries win — when
+// the skills/ and plugins/ trees are generated. So different plugins can ship
+// the same skill pinned to different tool versions, and nothing in the
+// canonical sources ever looks like a number a contributor should wonder about
+// updating.
 
-const PIN_SCAN_DIRS = ["skills", "hooks"];
+const PIN_SCAN_DIRS = ["src/skills", "src/hooks"];
 export const PIN_SCAN_EXTS = /\.(md|sh|json|ya?ml)$/;
 export const PIN_PLACEHOLDER = "x.y.z";
 
@@ -130,7 +131,7 @@ export function parseFrontmatter(text) {
 /** Read skills.config.json + every skill's frontmatter. */
 export function loadModel() {
   const config = JSON.parse(readFileSync(join(ROOT, "skills.config.json"), "utf8"));
-  const skillsDir = join(ROOT, "skills");
+  const skillsDir = join(ROOT, "src", "skills");
   const skills = {};
   for (const name of readdirSync(skillsDir)) {
     const skillMd = join(skillsDir, name, "SKILL.md");
@@ -241,6 +242,28 @@ export function buildArtifacts(model) {
     })),
   });
 
+  // --- Flat skills/ (what `npx skills add <repo>` installs) -----------------
+  // The `npx skills` CLI reads a top-level skills/ before any manifest, and
+  // its `update` re-fetches from the folder it installed from, so this tree is
+  // generated rather than authored: every template from src/skills/, stamped
+  // with the tool pins of the plugin that owns it (the first plugin listing it
+  // in its own `skills`). A skill another plugin bundles (astra inside
+  // lightcone) still installs here with its owner's pins. Real files, not
+  // symlinks: the CLI skips symlinked dirs, and its update check needs a git
+  // tree, not a link blob, at the recorded path.
+  dirs.push("skills");
+  for (const s of Object.keys(skills).sort()) {
+    const owner = config.plugins.find((p) => (p.skills || []).includes(s));
+    const pins = owner ? pluginTools(owner.name, byName) : {};
+    const sourceRoot = `src/skills/${s}`;
+    for (const source of filesUnder(sourceRoot)) copies.push({
+      kind: "skill",
+      pins,
+      source,
+      dest: `skills/${s}/${source.slice(sourceRoot.length + 1)}`,
+    });
+  }
+
   // --- Self-contained per-plugin dirs (plugins/<name>/) --------------------
   // Each dir carries the whole closure and ships both harnesses' plugin
   // manifests. Skills/agents/hooks are generated copies of the canonical trees;
@@ -302,11 +325,12 @@ export function buildArtifacts(model) {
     };
     files[`plugins/${p.name}/.codex-plugin/plugin.json`] = jsonl(codexManifest);
 
-    // skills/ — materialize the full closure from canonical skills/. This keeps
-    // generated plugins self-contained while skills/ remains the authoring source.
+    // skills/ — materialize the full closure from canonical src/skills/. This
+    // keeps generated plugins self-contained while src/skills/ remains the
+    // authoring source.
     dirs.push(`plugins/${p.name}/skills`);
     for (const s of closureSkills) {
-      const sourceRoot = `skills/${s}`;
+      const sourceRoot = `src/skills/${s}`;
       for (const source of filesUnder(sourceRoot)) copies.push({
         kind: "skill",
         pins,
@@ -318,7 +342,7 @@ export function buildArtifacts(model) {
     // agents/ — materialize the full closure file-by-file.
     if (closAgents.length) dirs.push(`plugins/${p.name}/agents`);
     for (const a of closAgents) {
-      const file = a.replace(/^agents\//, "");
+      const file = a.replace(/^src\/agents\//, "");
       copies.push({
         kind: "agent",
         pins,
@@ -329,7 +353,7 @@ export function buildArtifacts(model) {
 
     // hooks/ — flatten every canonical hooks tree in the closure under one
     // plugins/<name>/hooks/ dir. Scripts (and any non-manifest files) copy
-    // byte-for-byte from hooks/<plugin>/scripts/* into hooks/scripts/*, which is
+    // byte-for-byte from src/hooks/<plugin>/scripts/* into hooks/scripts/*, which is
     // where each hooks.json command resolves them (${CLAUDE_PLUGIN_ROOT}/hooks/
     // scripts/…). The manifest itself is a single byte-copy when the closure has
     // one source, or a generated merge when it inherits more (a plugin bundling
@@ -338,7 +362,7 @@ export function buildArtifacts(model) {
       dirs.push(`plugins/${p.name}/hooks`);
       const seenDest = new Map();
       for (const hp of closHooks) {
-        const srcDir = dirname(hp); // e.g. "hooks/astra"
+        const srcDir = dirname(hp); // e.g. "src/hooks/astra"
         for (const source of filesUnder(srcDir)) {
           const rel = source.slice(srcDir.length + 1); // "hooks.json" | "scripts/x.sh"
           if (rel === "hooks.json") continue; // manifest handled below
@@ -372,9 +396,9 @@ export function buildArtifacts(model) {
         const inPlugins = (skillToPlugins[s] || []).sort();
         return {
           name: skills[s].name,
-          // Point at a packaged copy when one exists: canonical skills/ carries
-          // the @x.y.z tool-pin placeholder, packaged copies carry real pins.
-          path: inPlugins.length ? `plugins/${inPlugins[0]}/skills/${s}` : `skills/${s}`,
+          // The flat packaged copy: src/skills/ carries the @x.y.z tool-pin
+          // placeholder, skills/ carries the owning plugin's real pins.
+          path: `skills/${s}`,
           description: skills[s].description,
           plugins: inPlugins,
         };

@@ -22,7 +22,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
-const SCRIPTS = join(ROOT, "hooks/astra/scripts");
+const SCRIPTS = join(ROOT, "src/hooks/astra/scripts");
 const scratch = mkdtempSync(join(tmpdir(), "astra-hook-"));
 const project = join(scratch, "project");
 const bin = join(scratch, "bin");
@@ -233,7 +233,7 @@ try {
   // cases below pin a floor of their own (an rc floor orders differently from
   // a release one) instead of being hostage to whatever the repo pins today.
   const lcSource = readFileSync(
-    join(ROOT, "hooks/lightcone/scripts/lightcone-session-start.sh"),
+    join(ROOT, "src/hooks/lightcone/scripts/lightcone-session-start.sh"),
     "utf8",
   );
   const floor = JSON.parse(readFileSync(join(ROOT, "skills.config.json"), "utf8")).plugins.find(

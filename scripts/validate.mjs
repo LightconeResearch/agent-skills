@@ -25,11 +25,11 @@ const { config, skills } = model;
 
 // 1. Per-skill frontmatter conforms to the Agent Skills standard.
 for (const [dir, s] of Object.entries(skills)) {
-  if (!s.name) errors.push(`skills/${dir}: missing 'name' in frontmatter`);
-  else if (!NAME_RE.test(s.name)) errors.push(`skills/${dir}: name "${s.name}" must be lowercase-hyphen`);
-  else if (s.name !== dir) errors.push(`skills/${dir}: name "${s.name}" must match its directory`);
-  if (!s.description) errors.push(`skills/${dir}: missing 'description'`);
-  else if (s.description.length > 1024) errors.push(`skills/${dir}: description exceeds 1024 chars (${s.description.length})`);
+  if (!s.name) errors.push(`src/skills/${dir}: missing 'name' in frontmatter`);
+  else if (!NAME_RE.test(s.name)) errors.push(`src/skills/${dir}: name "${s.name}" must be lowercase-hyphen`);
+  else if (s.name !== dir) errors.push(`src/skills/${dir}: name "${s.name}" must match its directory`);
+  if (!s.description) errors.push(`src/skills/${dir}: missing 'description'`);
+  else if (s.description.length > 1024) errors.push(`src/skills/${dir}: description exceeds 1024 chars (${s.description.length})`);
   // Only the six fields the Agent Skills spec defines. Claude Code accepts
   // roughly twenty more (`paths`, `argument-hint`, `context`, `model`, …),
   // but two of this repo's three targets — the `npx skills` CLI and the
@@ -39,7 +39,7 @@ for (const [dir, s] of Object.entries(skills)) {
   for (const key of Object.keys(s.frontmatter || {}))
     if (!SPEC_FIELDS.has(key))
       errors.push(
-        `skills/${dir}: frontmatter key "${key}" is outside the Agent Skills spec ` +
+        `src/skills/${dir}: frontmatter key "${key}" is outside the Agent Skills spec ` +
           `(${[...SPEC_FIELDS].join(", ")}) — it would fail packaging for the non-Claude targets`,
       );
 }
@@ -50,25 +50,25 @@ for (const [dir, s] of Object.entries(skills)) {
 //     silent hole rather than an error, and a reference reachable only from
 //     another reference tends to be previewed with `head` instead of read.
 for (const [dir] of Object.entries(skills)) {
-  const refDir = join(ROOT, "skills", dir, "references");
+  const refDir = join(ROOT, "src", "skills", dir, "references");
   if (!existsSync(refDir)) continue;
   const onDisk = readdirSync(refDir).filter((f) => f.endsWith(".md"));
-  const body = readFileSync(join(ROOT, "skills", dir, "SKILL.md"), "utf8");
+  const body = readFileSync(join(ROOT, "src", "skills", dir, "SKILL.md"), "utf8");
   const pointed = new Set([...body.matchAll(/references\/([\w.-]+\.md)/g)].map((m) => m[1]));
   for (const name of pointed)
     if (!onDisk.includes(name))
-      errors.push(`skills/${dir}/SKILL.md: points at references/${name}, which does not exist`);
+      errors.push(`src/skills/${dir}/SKILL.md: points at references/${name}, which does not exist`);
   for (const name of onDisk)
     if (!pointed.has(name))
       errors.push(
-        `skills/${dir}/references/${name}: nothing in SKILL.md points at it — an unreferenced file never loads`,
+        `src/skills/${dir}/references/${name}: nothing in SKILL.md points at it — an unreferenced file never loads`,
       );
   for (const name of onDisk) {
     const text = readFileSync(join(refDir, name), "utf8");
     for (const [, target] of text.matchAll(/references\/([\w.-]+\.md)/g)) {
       if (target === name) continue;
       if (!onDisk.includes(target))
-        errors.push(`skills/${dir}/references/${name}: points at references/${target}, which does not exist`);
+        errors.push(`src/skills/${dir}/references/${name}: points at references/${target}, which does not exist`);
     }
   }
 }
@@ -89,10 +89,10 @@ for (const p of config.plugins) {
   if (p.hooks && !existsSync(join(ROOT, p.hooks))) errors.push(`plugin "${p.name}": missing hooks file ${p.hooks}`);
 }
 
-// 3. Tool pins: canonical skills/ and hooks/ never carry a concrete tool
-//    version — they write the literal `@x.y.z` placeholder, and the build
+// 3. Tool pins: canonical src/skills/ and src/hooks/ never carry a concrete
+//    tool version — they write the literal `@x.y.z` placeholder, and the build
 //    substitutes each bundling plugin's pin (its `tools` map in
-//    skills.config.json) into the generated plugins/ copies. astra-spec is
+//    skills.config.json) into the generated skills/ and plugins/ copies. astra-spec is
 //    deliberately unpinned (the astra-tools release resolves it), so any spec
 //    pin in canonical text is stale by definition.
 {
@@ -130,10 +130,9 @@ for (const { source, dest, pins } of copies) {
     errors.push(`generated packaged file missing: ${dest} (run npm run build)`);
     continue;
   }
-  const stamped = pins && Object.keys(pins).length && PIN_SCAN_EXTS.test(source);
   let upToDate;
-  if (stamped) {
-    const expected = applyPins(readFileSync(src, "utf8"), pins);
+  if (PIN_SCAN_EXTS.test(source)) {
+    const expected = applyPins(readFileSync(src, "utf8"), pins || {});
     const leak = expected.match(UNPINNED_RE);
     if (leak)
       errors.push(`${dest}: "${leak[0]}" left unpinned — declare the tool in a plugin's "tools" map`);
@@ -147,6 +146,32 @@ for (const { source, dest, pins } of copies) {
   if ((statSync(src).mode & 0o111) !== (statSync(dst).mode & 0o111)) {
     errors.push(`generated packaged file mode differs: ${dest} (run npm run build)`);
   }
+}
+
+// 6. skills/ and plugins/ hold only generated files, and no other SKILL.md
+//    exists outside src/skills/. `npx skills add <repo>` installs the first
+//    copy of each skill name it finds — skills/ first, then .agents/skills/,
+//    .claude/skills/ and dozens of other agent dirs — so a hand-added or
+//    leftover SKILL.md (a template recreated under skills/, or the
+//    .agents/skills/ that running the CLI inside this repo leaves behind)
+//    would shadow the pinned copy.
+{
+  const generated = new Set([...Object.keys(files), ...copies.map((c) => c.dest)]);
+  const SKIP = new Set([".git", "node_modules", "site", ".venv", ".cache", ".pytest_cache"]);
+  const walk = (rel) => {
+    for (const entry of readdirSync(join(ROOT, rel), { withFileTypes: true })) {
+      const child = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (!SKIP.has(entry.name)) walk(child);
+      } else if (/^(skills|plugins)\//.test(child)) {
+        if (!generated.has(child))
+          errors.push(`${child}: not produced by the build — author under src/, then run npm run build`);
+      } else if (entry.name === "SKILL.md" && !child.startsWith("src/skills/")) {
+        errors.push(`${child}: a SKILL.md outside src/skills/ shadows the pinned copy for \`npx skills\``);
+      }
+    }
+  };
+  walk("");
 }
 
 if (errors.length) {
