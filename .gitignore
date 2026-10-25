@@ -6,6 +6,3 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
-
-# Zensical documentation build
-site/

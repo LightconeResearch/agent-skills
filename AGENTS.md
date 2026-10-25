@@ -23,6 +23,16 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
   against real headless Claude Code and Codex sessions. To cover a new
   plugin, add a spec here — no runner changes needed.
 
+## Documentation lives in another repo
+
+User-facing documentation is not kept here. It lives in
+[LightconeResearch/docs](https://github.com/LightconeResearch/docs) (the
+agent-skills pages are under `content/docs/agent-skills/`) and is published at
+<https://docs.lightconeresearch.org>. When a change here adds a skill or plugin,
+or changes anything else users should know about (install steps, skill
+behavior, prerequisites, tool pins that change what users run), open a matching
+PR in that repo.
+
 ## Generated — do not hand-edit
 
 `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, the entire
