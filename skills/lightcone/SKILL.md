@@ -127,7 +127,10 @@ session.
    and commits each output as it lands. No target takes every output in
    every universe; `fit` takes that output across universes; `robust/fit`
    takes one universe's. Re-running is idempotent. You are done when
-   `lc materialize --check` passes — that, not `lc status`, is the gate.
+   `lc materialize --check` passes **and** `lc status` lists no output as
+   `no recipe`. The check gates only outputs that have a recipe: one
+   declared without one is skipped by `lc materialize`, so it can never
+   fail the check, and only `lc status` shows it.
 
 Outputs land at `results/<universe>/<output_id>.<format>` — `lc` composes
 that path, no recipe chooses it, so the whole contents of `results/` are a
@@ -184,6 +187,7 @@ because it runs *outside* the boundary, and nothing inside one ever can.
 | `current` | Matches the spec, made under this environment | Nothing |
 | `behind` | Still matches the spec; the environment moved | Nothing, unless the user wants it remade: `--refresh` |
 | `stale` | Contradicts the spec, or its bytes were last touched by something other than its own run record | The next `lc materialize` remakes it |
+| `no recipe` | Declared in the spec with no recipe, so `lc materialize` skips it | Write its recipe (step 2), then materialize |
 
 Everything going `behind` after a `uv add` is normal, not damage. An `lc`
 upgrade invalidates nothing.
@@ -196,10 +200,11 @@ nothing to scrape out of a table. Read JSON; show the user the plain output
 when they want to look at something themselves.
 
 ```bash
-lc status --json               # {mode, image, sandbox, crate, counts{current,behind,stale},
+lc status --json               # {mode, image, sandbox, crate,
+                               #  counts{current,behind,stale,"no recipe"},
                                #  outputs[{output, status, why, git_sha, data_version, foreign_write}],
                                #  warnings}
-lc materialize --check --json  # {ok, up_to_date, planned{target: why}, made, current, behind,
+lc materialize --check --json  # {up_to_date, planned{target: why}, made, current, behind,
                                #  failed, blocked, warnings, notes}
 lc init --json                 # {converged, created, repaired, unchanged, blocked, warnings}
 lc build --json                # the build's result
@@ -211,7 +216,9 @@ lc compute launch --wait --json  # {plan, id, name, accepted, ready}
 `why` and `planned` carry the engine's own reason a thing is stale or is
 about to run — quote it rather than inferring one. `lc status` always exits
 0, so its JSON is the whole answer; `lc materialize --check` exits nonzero
-when anything is out of date, which is the gate. `lc compute status` exits
+when anything is out of date, which is the gate. The materialize report has
+no overall success key: a check passed when `up_to_date` is true, and a run
+succeeded when `failed` and `blocked` are empty. `lc compute status` exits
 nonzero when part of its query failed (`errors`), even though the
 allocations it did find are listed. A compute failure under `--json` still
 prints one object, `{error, id, submission_token}`: keep that `id`.

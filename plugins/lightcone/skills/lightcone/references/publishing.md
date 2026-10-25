@@ -13,4 +13,5 @@ no bundle directory. Declaring a license turns on the publication view:
    from repository state) and commits it. `lc status`'s `crate:` line says
    whether the view is current.
 3. Gate: the astra skill's validation passes, `lc materialize --check`
-   passes, and `ro-crate-metadata.json` exists.
+   passes, `lc status` lists no output as `no recipe`, and
+   `ro-crate-metadata.json` exists.
