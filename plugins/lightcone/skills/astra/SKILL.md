@@ -50,9 +50,7 @@ The CLI serves everything this skill deliberately does not repeat:
   entire reference (long).
 
 Re-validate after every change: `uvx astra-tools@0.2.18 validate` with no
-argument checks every spec and universe file under the current directory
-(this plugin's hook also validates automatically when an ASTRA file is
-saved).
+argument checks every spec and universe file under the current directory.
 
 ## Citations, quotes, and supporting evidence
 
