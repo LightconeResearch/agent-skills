@@ -7,19 +7,20 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 
 | Path | Role | Edit? |
 |---|---|---|
-| `skills/<name>/SKILL.md` (+ `references/`, `scripts/`, `assets/`, `templates/`) | Canonical skills | ✅ |
-| `agents/*.md` | Claude subagents | ✅ |
-| `hooks/<plugin>/hooks.json`, `hooks/<plugin>/scripts/*.sh` | Per-plugin hooks | ✅ |
+| `src/skills/<name>/SKILL.md` (+ `references/`, `scripts/`, `assets/`, `templates/`) | Canonical skills | ✅ |
+| `src/agents/*.md` | Claude subagents | ✅ |
+| `src/hooks/<plugin>/hooks.json`, `src/hooks/<plugin>/scripts/*.sh` | Per-plugin hooks | ✅ |
 | `skills.config.json` | How skills compose into plugins | ✅ |
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |
 | `.agents/plugins/marketplace.json` | Codex marketplace manifest | ⚙️ generated |
+| `skills/**` | Flat skill copies for `npx skills` — owning plugin's tool pins substituted | ⚙️ generated |
 | `plugins/**` | Per-plugin dirs — self-contained copies, tool pins substituted | ⚙️ generated |
 | `manifest.json` | Skill/plugin registry | ⚙️ generated |
 
 ## Add a skill
 
-1. Create `skills/<name>/SKILL.md` with frontmatter:
+1. Create `src/skills/<name>/SKILL.md` with frontmatter:
    ```yaml
    ---
    name: <name>            # lowercase-hyphen, must equal the directory name
@@ -27,11 +28,11 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
      ...
    ---
    ```
-   Keep the body under ~500 lines; offload detail to `skills/<name>/references/`.
+   Keep the body under ~500 lines; offload detail to `src/skills/<name>/references/`.
 2. If it shells out to a CLI tool (e.g. `astra`), invoke it through the pinned
    `uvx` form with the **literal version placeholder** — `uvx astra-tools@x.y.z
    <command>` — and add the **Prerequisites** preflight block (copy the pattern
-   from `skills/astra/SKILL.md`): check the pinned CLI resolves, point to
+   from `src/skills/astra/SKILL.md`): check the pinned CLI resolves, point to
    the uv install docs if `uvx` is missing, and use `--help` to discover
    syntax. See [Tool pins](#tool-pins) for how `x.y.z` becomes a real version.
 3. Add the skill to the relevant plugin(s) in `skills.config.json` (`plugins[].skills`).
@@ -56,7 +57,7 @@ Edit `skills.config.json`:
 - `requires` — other plugins this one **depends on but does not bundle**. Documented
   only: the user installs the required plugin separately (surfaced in the README and the
   plugin description). Nothing is added to the closure.
-- `hooks` — path to this plugin's own `hooks/<plugin>/hooks.json` (a plugin owns at
+- `hooks` — path to this plugin's own `src/hooks/<plugin>/hooks.json` (a plugin owns at
   most one). Hook commands reference the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
   `CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines (the `$PLUGIN_ROOT`
   fallback covers older harness versions) — and always spell script paths `hooks/scripts/<name>.sh`
@@ -75,7 +76,7 @@ run, and the version is **templated**, never written by hand:
 
 - **Canonical sources use the literal placeholder** `x.y.z` — e.g.
   `uvx astra-tools@x.y.z validate astra.yaml`. A concrete version in
-  `skills/` or `hooks/` is a CI error, so nothing in the sources ever looks
+  `src/skills/` or `src/hooks/` fails `npm test`, so nothing in the sources ever looks
   like a number a contributor should wonder about updating.
 - **Pins are declared per plugin** in `skills.config.json`, in each plugin's
   `tools` map (e.g. `"tools": { "astra-tools": "0.2.13" }`). A plugin's
@@ -84,7 +85,8 @@ run, and the version is **templated**, never written by hand:
   declares its own, and two plugins can ship the same skill pinned to
   different versions.
 - **`npm run build` substitutes the pins** into the generated `plugins/<name>/`
-  copies (canonical files are never rewritten). The drift check compares each
+  copies, and the owning plugin's pins (the first plugin listing the skill in
+  its own `skills`) into the flat `skills/` copies (canonical files are never rewritten). The drift check compares each
   packaged file against the pin-substituted source, so generator and checker
   agree by construction.
 - **Unpinned placeholders fail the build.** If a skill invokes
@@ -104,12 +106,17 @@ astra-spec is deliberately unpinned; the astra-tools release resolves it).
 - every skill's `name` is lowercase-hyphen and matches its directory;
 - `description` is present and ≤ 1024 chars;
 - plugins reference only skills/agents/hooks/deps that exist;
-- canonical `skills/` and `hooks/` use the `@x.y.z` tool-pin placeholder (no
+- canonical `src/skills/` and `src/hooks/` use the `@x.y.z` tool-pin placeholder (no
   concrete versions, no astra-spec pin), and no placeholder is left unpinned
   by the plugins that bundle it;
-- the generated manifests and `plugins/` copies match what the current source
+- the generated manifests and `skills/` + `plugins/` copies match what the current source
   would produce — packaged copies compared with the bundling plugin's tool
-  pins applied (drift check).
+  pins applied (drift check);
+- `skills/` and `plugins/` hold nothing the build didn't produce, and no
+  `SKILL.md` exists outside `src/skills/` and those trees — `npx skills`
+  installs the first copy of each skill name it finds, so a stray one (say, an
+  `.agents/skills/` left by running the CLI inside this repo) would shadow the
+  pinned copy.
 
 For the real thing — installing each plugin into a throwaway environment and
 confirming it loads — run the smoke suite (needs `claude`, `codex`, and `tmux`
@@ -131,6 +138,6 @@ claude plugin install astra@lightcone-research
 claude plugin validate .
 claude plugin validate ./plugins/astra   # (Codex plugin.json layout)
 
-# npx skills, from the repo:
+# npx skills, from the repo (lists the generated skills/ copies — build first):
 npx skills add ./ --list
 ```

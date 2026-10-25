@@ -22,10 +22,10 @@ in place.
 
 | Outcome | What it means | Remedy |
 |---|---|---|
-| Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==x.y.z` |
-| A version below the floor | Its commands or behavior may differ from the release this skill expects | `uv tool install lightcone-cli==x.y.z` |
+| Nothing on PATH | The CLI was never installed | `uv tool install lightcone-cli==0.5.0` |
+| A version below the floor | Its commands or behavior may differ from the release this skill expects | `uv tool install lightcone-cli==0.5.0` |
 | A version above the floor | Nothing. Newer is fine | — |
-| `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==x.y.z` |
+| `lc` runs but reports no version | A broken install, or some other `lc` shadowing it — check `type lc` | `uv tool install --force lightcone-cli==0.5.0` |
 | `lc` not found right after installing | uv put it in `~/.local/bin`, which is not on PATH | `uv tool update-shell`, or check for a shell alias with `type lc` |
 
 Who runs it: offer and wait where a person can answer, act and report where
@@ -132,7 +132,7 @@ does the right thing, and there is no annex command to run to make it happen.
 - **A `git add` that fails on a filter** — the project's file storage is
   not set up in this working tree. In a fresh clone, `lc init` is the
   answer; if it persists, the install is broken and the user repairs it
-  with `uv tool install --force lightcone-cli==x.y.z`. Do not commit past
+  with `uv tool install --force lightcone-cli==0.5.0`. Do not commit past
   such an error: the file would go into history in the wrong form.
 - **`the content is not in this clone`** — the pointer is here but the bytes
   were never fetched. `lc materialize` fetches what a recipe declares; use

@@ -1,5 +1,5 @@
 {
-  "$comment": "How skills compose into plugins — the single source of truth for the build. Edit this, then `npm run build` (regenerates plugins/ and all manifests; `npm test` fails on drift). Per plugin: `version` drives harness update/caching, so bump it for every plugin whose generated plugins/<name>/ dir changes in a PR (including via a bundled dependency); `dependencies` are bundled into the plugin's self-contained dir; `requires` is documented-only (user installs it separately); `tools` pins the CLI tools its skills/hooks invoke — canonical sources write `<name>@x.y.z` and the build substitutes the pin.",
+  "$comment": "How skills compose into plugins — the single source of truth for the build. Edit this, then `npm run build` (regenerates skills/, plugins/ and all manifests; `npm test` fails on drift). Per plugin: `version` drives harness update/caching, so bump it for every plugin whose generated plugins/<name>/ dir changes in a PR (including via a bundled dependency); `dependencies` are bundled into the plugin's self-contained dir; `requires` is documented-only (user installs it separately); `tools` pins the CLI tools its skills/hooks invoke — canonical sources write `<name>@x.y.z` and the build substitutes the pin.",
   "marketplace": {
     "name": "lightcone-research",
     "displayName": "Lightcone Research Skills",
@@ -18,9 +18,9 @@
       "skills": [
         "astra"
       ],
-      "hooks": "hooks/astra/hooks.json",
+      "hooks": "src/hooks/astra/hooks.json",
       "tools": {
-        "$comment": "Pins for the CLI tools this plugin's skills and hooks invoke via `uvx <name>@<version>`. Canonical skills/ and hooks/ write the literal `@x.y.z` placeholder — never a concrete version — and `npm run build` substitutes each bundling plugin's pin into the generated plugins/<name>/ copies.",
+        "$comment": "Pins for the CLI tools this plugin's skills and hooks invoke via `uvx <name>@<version>`. Canonical src/skills/ and src/hooks/ write the literal `@x.y.z` placeholder — never a concrete version — and `npm run build` substitutes each bundling plugin's pin into the generated plugins/<name>/ copies (and, for the skills this plugin owns, into the flat skills/ copies).",
         "astra-tools": "0.2.18"
       },
       "dependencies": []
@@ -32,7 +32,7 @@
       "skills": [
         "lightcone"
       ],
-      "hooks": "hooks/lightcone/hooks.json",
+      "hooks": "src/hooks/lightcone/hooks.json",
       "tools": {
         "$comment": "Unlike astra-tools, lightcone-cli is NOT run through uvx: the user installs it once with `uv tool install lightcone-cli==<pin>`, which also puts git-annex on PATH for their own git commands in a project. The pin does double duty — it is the version the install commands name, AND the MINIMUM the SessionStart hook and the skill accept from `lc --version` (newer is fine, so nobody is downgraded). Keep the `==` form in the install commands so they select the version this plugin was written against. Bump this on each release the skill is rewritten against.",
         "lightcone-cli": "0.5.0"

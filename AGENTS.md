@@ -9,9 +9,9 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 
 ## Where things live
 
-- `skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per
+- `src/skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per
   skill; the directory name must equal the `name:` in the frontmatter.
-- `hooks/<plugin>/` — per-plugin `hooks.json` + bash scripts (`astra/` validates
+- `src/hooks/<plugin>/` — per-plugin `hooks.json` + bash scripts (`astra/` validates
   on save and reminds the agent to load the skill).
 - `skills.config.json` — declares how skills compose into the plugins.
   A plugin composes with others two ways:
@@ -26,26 +26,29 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 ## Generated — do not hand-edit
 
 `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, the entire
-`plugins/` tree, and `manifest.json` are **generated** from `skills.config.json` +
-`skills/`. After changing any skill or the config:
+`skills/` and `plugins/` trees, and `manifest.json` are **generated** from
+`skills.config.json` + `src/`. After changing any skill or the config:
 
 ```bash
 npm run build     # regenerate all target files
 npm test          # validate frontmatter + assert nothing drifted
 ```
 
-Commit the regenerated files alongside your source change. CI runs `npm test` and
-fails if the generated files are out of sync. The generator is zero-dependency
+Commit the regenerated files alongside your source change. `npm test`
+fails if the generated files are out of sync, if `skills/` or `plugins/` holds a
+file the build didn't produce, or if a `SKILL.md` exists anywhere outside
+`src/skills/` and those two trees. The generator is zero-dependency
 (Node ≥ 18 built-ins only) — no `npm install` is required.
 
 ## Tool pins
 
 Tool pins have one source of truth — each plugin's `tools` map
 in `skills.config.json` (astra-spec is deliberately unpinned and resolves from
-the astra-tools release). Canonical `skills/` and `hooks/` never carry a
+the astra-tools release). Canonical `src/skills/` and `src/hooks/` never carry a
 concrete tool version: they write the literal `@x.y.z` placeholder, and
 `npm run build` substitutes each bundling plugin's pin into the generated
-`plugins/<name>/` copies. A plugin's effective pins merge over its dependency
+`plugins/<name>/` copies, and the owning plugin's pin (the first plugin listing
+the skill in its own `skills`) into the flat `skills/` copy. A plugin's effective pins merge over its dependency
 closure (own entries win), so a bundling plugin inherits its dependencies'
 pins unless it overrides them. `npm test` fails if canonical text carries a concrete version,
 if a placeholder is left unpinned, or if canonical text pins astra-spec at
@@ -58,19 +61,21 @@ If you arrived expecting a plain skills folder and found a generator, here's why
 exists and the shape it takes, so nothing surprises you.
 
 **Why a generator at all (not hand-maintained JSON).** The three targets disagree on
-layout. `npx skills` and the Claude marketplace both read the flat canonical `skills/`
-tree (Claude uses one `marketplace.json` with `source: "./"` + `skills: [...]` arrays,
-no per-plugin dirs). **Codex** (OpenAI Codex CLI) wants the opposite:
-`.agents/plugins/marketplace.json` plus a `plugins/<name>/.codex-plugin/plugin.json`
+layout. `npx skills` reads a flat top-level `skills/` tree — before any manifest —
+and its `update` re-fetches from the folder it installed from. The Claude and
+**Codex** (OpenAI Codex CLI) marketplaces instead point every plugin at a
+self-contained `plugins/<name>/` — `.claude-plugin/marketplace.json` and
+`.agents/plugins/marketplace.json`, plus a `plugins/<name>/.codex-plugin/plugin.json`
 *with its own `skills/` directory* per plugin — and, for a plugin that ships hooks,
 its own `hooks/` directory too (every harness reads the same `hooks.json`
 protocol; hook commands locate the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
 `CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines, the fallback covers
 older versions — so the generator declares the same `hooks` file and packages the canonical
-`hooks/` tree under the plugin root).
-Maintaining both against one set of skills by hand is exactly what drifts
-silently. So `skills.config.json` + `skills/` is the single source, and everything
-per-target is generated and drift-checked. **Do not edit a generated file to fix a
+`src/hooks/` tree under the plugin root). And every installed copy needs real tool
+pins, which the canonical text deliberately lacks.
+Maintaining all of that against one set of skills by hand is exactly what drifts
+silently. So `skills.config.json` + `src/` is the single source, and everything
+per-target — `skills/` included — is generated and drift-checked. **Do not edit a generated file to fix a
 target — change the source and rebuild.** If a manifest looks wrong, the bug is in
 `skills.config.json` or `scripts/lib.mjs`, not in the output.
 
@@ -94,10 +99,12 @@ so the generator and the checker agree by construction.
   to weigh.
 - **Generated plugin contents are real files, not symlinks.** A plugin installer
   archives the plugin directory and does not follow symlinks that point back
-  to canonical `skills/`, `agents/`, or `hooks/` — this holds for every harness,
+  to canonical `src/skills/`, `src/agents/`, or `src/hooks/` — this holds for every harness,
   not just one. The generator therefore copies
   the complete closure into `plugins/<name>/`, while canonical files remain the
-  only authoring source. `validate.mjs` compares every packaged file byte-for-byte
+  only authoring source. The flat `skills/` tree is real files too: the
+  `npx skills` CLI skips symlinked skill dirs, and its update check needs a git
+  tree, not a link blob, at the installed path. `validate.mjs` compares every packaged file byte-for-byte
   with that source and checks executable permissions, so generated copies cannot
   drift silently.
 
