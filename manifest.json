@@ -24,7 +24,7 @@
     {
       "name": "lightcone-feedback",
       "path": "skills/lightcone-feedback",
-      "description": "File feedback on the Lightcone Research stack (a bug report, a feature request, a docs problem) as a GitHub issue in the right Lightcone repository: lc / lightcone-cli, Lightcone Lab, the ASTRA spec and tools, MySTRA, the docs, or these agent skills. Gathers and sanitizes evidence from the session, routes the report, checks for duplicates, and files only after the user approves the exact draft. Use when the user asks to report a bug, file or open an issue, send feedback, or suggest a feature for a Lightcone tool: \"report this\", \"file a bug\", \"open an issue on lc\", \"tell the Lightcone team\", \"send this as feedback\". Not for bugs in the user's own analysis code, and never file without being asked.",
+      "description": "File feedback on the Lightcone Research stack as a GitHub issue in the right Lightcone repository, with evidence gathered and sanitized from the session. Use when the user asks to report a bug, file or open an issue, send feedback, or suggest a feature for a tool in the Lightcone Research stack. Not for bugs in the user's own analysis code, and never file anything without the user's approval.",
       "plugins": [
         "lightcone",
         "lightcone-feedback"
@@ -64,7 +64,7 @@
     {
       "name": "lightcone-feedback",
       "version": "0.3.0",
-      "description": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing needs the GitHub CLI (`gh`) signed in; without it you get a ready-to-paste draft and link.",
+      "description": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing uses the GitHub CLI (`gh`); the agent walks you through setting it up if it's missing.",
       "skills": [
         "lightcone-feedback"
       ],

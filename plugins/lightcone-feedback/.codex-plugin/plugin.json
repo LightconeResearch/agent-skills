@@ -1,7 +1,7 @@
 {
   "name": "lightcone-feedback",
   "version": "0.3.0",
-  "description": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing needs the GitHub CLI (`gh`) signed in; without it you get a ready-to-paste draft and link.",
+  "description": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing uses the GitHub CLI (`gh`); the agent walks you through setting it up if it's missing.",
   "author": {
     "name": "Lightcone Research",
     "email": "info@lightconeresearch.org"
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "Lightcone Feedback",
     "shortDescription": "Use Lightcone Feedback in Codex.",
-    "longDescription": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing needs the GitHub CLI (`gh`) signed in; without it you get a ready-to-paste draft and link.",
+    "longDescription": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing uses the GitHub CLI (`gh`); the agent walks you through setting it up if it's missing.",
     "developerName": "Lightcone Research",
     "category": "Development",
     "capabilities": [],
