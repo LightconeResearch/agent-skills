@@ -27,8 +27,8 @@
     },
     {
       "name": "lightcone",
-      "version": "0.0.8",
-      "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (allocate a cluster with `lc compute`, probe with `lc run`, integrate recipes, commit, `lc materialize`), recipe resources and GPUs, status interpretation (current/behind/stale/no recipe) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
+      "version": "0.0.9",
+      "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (allocate a cluster with `lc compute`, probe with `lc run`, integrate recipes, commit, `lc materialize`), recipe resources and GPUs, status interpretation (current/behind/stale/no recipe) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) and the `lightcone-feedback` plugin (bug reports and feedback as GitHub issues) — install `lightcone` alone to get the full stack.",
       "skills": [
         "lightcone"
       ],
@@ -38,8 +38,18 @@
         "lightcone-cli": "0.5.0"
       },
       "dependencies": [
-        "astra"
+        "astra",
+        "lightcone-feedback"
       ]
+    },
+    {
+      "name": "lightcone-feedback",
+      "version": "0.3.0",
+      "description": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing needs the GitHub CLI (`gh`) signed in; without it you get a ready-to-paste draft and link.",
+      "skills": [
+        "lightcone-feedback"
+      ],
+      "dependencies": []
     }
   ]
 }

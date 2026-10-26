@@ -1,0 +1,24 @@
+{
+  "name": "lightcone-feedback",
+  "version": "0.3.0",
+  "description": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing needs the GitHub CLI (`gh`) signed in; without it you get a ready-to-paste draft and link.",
+  "author": {
+    "name": "Lightcone Research",
+    "email": "info@lightconeresearch.org"
+  },
+  "homepage": "https://github.com/LightconeResearch/agent-skills",
+  "repository": "https://github.com/LightconeResearch/agent-skills",
+  "license": "BSD-3-Clause",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Lightcone Feedback",
+    "shortDescription": "Use Lightcone Feedback in Codex.",
+    "longDescription": "Report a bug, request a feature or send other feedback on the Lightcone Research stack from an agent session. The agent drafts a sanitized GitHub issue from the session's evidence, routes it to the right Lightcone repository, checks for duplicates, and files it only after you approve the exact text. Filing needs the GitHub CLI (`gh`) signed in; without it you get a ready-to-paste draft and link.",
+    "developerName": "Lightcone Research",
+    "category": "Development",
+    "capabilities": [],
+    "defaultPrompt": [
+      "Help me use Lightcone Feedback."
+    ]
+  }
+}

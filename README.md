@@ -10,8 +10,8 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
-[![Skills](https://img.shields.io/badge/skills-2-7c3aed?style=flat-square)](#-skills)
-[![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
+[![Skills](https://img.shields.io/badge/skills-3-7c3aed?style=flat-square)](#-skills)
+[![Plugins](https://img.shields.io/badge/plugins-3-7c3aed?style=flat-square)](#-plugins)
 
 </div>
 
@@ -71,7 +71,8 @@ Open **Plugins** from the arrow beside **Create** and add the
 | Plugin | Skills | Adds |
 |---|---|---|
 | **`astra`** | `astra` | authoring guidance for [ASTRA](#-skills) analysis specs (`astra.yaml`); validate-on-save & session-start hooks |
-| **`lightcone`** | `lightcone`, `astra` | end-to-end guidance for working on a Lightcone project with the `lc` CLI — scoping, implementation, materialization, publishing. Bundles the `astra` plugin (skill + hooks), so installing `lightcone` alone gets the full stack — don't install `astra` alongside it |
+| **`lightcone`** | `lightcone`, `astra`, `lightcone-feedback` | end-to-end guidance for working on a Lightcone project with the `lc` CLI — scoping, implementation, materialization, publishing. Bundles the `astra` and `lightcone-feedback` plugins, so installing `lightcone` alone gets the full stack — don't install either alongside it |
+| **`lightcone-feedback`** | `lightcone-feedback` | report bugs, feature requests and docs problems as GitHub issues in the right Lightcone repository, after you approve the draft; filing needs a signed-in [`gh`](https://cli.github.com/) |
 
 ## 🚀 Install a plugin
 
@@ -130,22 +131,24 @@ those checks itself.
 # Choose skills and agents interactively; installs into the current project
 npx skills add LightconeResearch/agent-skills
 
-# Or in one go: both skills, for all your projects (-g), into chosen agents
-npx skills add LightconeResearch/agent-skills --skill astra --skill lightcone -g -a opencode -a gemini-cli -y
+# Or in one go: all three skills, for all your projects (-g), into chosen agents
+npx skills add LightconeResearch/agent-skills --skill astra --skill lightcone --skill lightcone-feedback -g -a opencode -a gemini-cli -y
 
 # Later, pick up new versions
 npx skills update
 ```
 
-Install `astra` together with `lightcone`: the `lightcone` plugin bundles it,
-but a skills-only install doesn't. Skills installed this way aren't namespaced
-by plugin (for example `/astra` rather than `/astra:astra` in Claude Code).
+Install `astra` and `lightcone-feedback` together with `lightcone`: the
+`lightcone` plugin bundles them, but a skills-only install doesn't. Skills
+installed this way aren't namespaced by plugin (for example `/astra` rather
+than `/astra:astra` in Claude Code).
 
 ## ✨ Skills
 
 | Skill | What it does |
 |---|---|
 | [`astra`](skills/astra) | Teaches the agent to author and revise an `astra.yaml`: the judgment a schema can't carry — what deserves to be a decision, when to split a sub-analysis, how to back claims with verifiable evidence. |
+| [`lightcone-feedback`](skills/lightcone-feedback) | Teaches the agent to turn a Lightcone bug, feature request or docs problem into a sanitized GitHub issue: gather evidence from the session, route it to the right repository, check for duplicates, and file only the draft you approved. |
 | [`lightcone`](skills/lightcone) | Teaches the agent to work on a Lightcone project at any phase: interview the user to scope a new analysis, orient and summarize when resuming one, and drive the `lc` workflow — integrate recipes, materialize outputs, interpret status, diagnose failures, publish. |
 
 ## 📄 License
