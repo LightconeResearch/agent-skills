@@ -1,8 +1,9 @@
 ---
 name: feedback
 description: >
-  File feedback on the Lightcone Research stack as a GitHub issue in the right
-  Lightcone repository, with evidence gathered and sanitized from the session.
+  File feedback on the Lightcone Research stack as a GitHub issue in the
+  LightconeResearch/feedback repository, with evidence gathered and sanitized
+  from the session.
   Use when the user asks to report a bug, file or open an issue, send
   feedback, or suggest a feature for a tool in the Lightcone Research stack.
   Not for bugs in the user's own analysis code, and never file anything
@@ -49,14 +50,11 @@ dump full transcripts, environments or datasets. If the report is useless
 without private material, don't proceed. Never report a security
 vulnerability in a public issue.**
 
-## 2. Pick the right repository
+## 2. Check for duplicates
 
-File it in the right repository from [the repository map](references/repositories.md),
-chosen by the product the user was using, not the suspected cause (put that in
-the body). The user doesn't need to name a destination, but one they name wins.
-
-Check for duplicates: search the repository's open and closed issues
-(`gh issue list --repo LightconeResearch/<repo> --state all --search '<symptom>'`)
+Every report goes to [LightconeResearch/feedback](https://github.com/LightconeResearch/feedback).
+Search its open and closed issues
+(`gh issue list --repo LightconeResearch/feedback --state all --search '<symptom>'`)
 and read the plausible matches. If one looks like the same problem, show it to
 the user and ask whether it covers what they're reporting, and whether to file
 a new issue anyway, add a comment to the existing one, or do nothing. If they
@@ -65,19 +63,19 @@ as an issue.
 
 ## 3. Draft and get approval
 
-Body: summary and impact, steps and result, environment; drop empty sections.
-Long sanitized logs go in a collapsed `<details>` block. End with
-`<sub>Filed with the Lightcone feedback skill.</sub>` so maintainers can find
-these reports.
+Start the body by naming the product the user was using (`lc`, Lightcone Lab,
+ASTRA, MySTRA, the docs, the agent skills), so maintainers can triage, and give
+any suspected cause as evidence. Then: summary and impact, steps and result,
+environment; drop empty sections. Long sanitized logs go in a collapsed
+`<details>` block.
 
-Show the destination with its visibility and a one-line reason, the title, and
-the complete body, collapsed parts included. File only after the user approves
-that exact content; material changes need approval again. For a draft-only
-request, stop here.
+Show the user the title and the complete body, collapsed parts included. File
+only after the user approves that exact content; material changes need approval
+again. For a draft-only request, stop here.
 
 ## 4. File it once
 
-Before filing or retrying, search the destination for an issue this session
+Before filing or retrying, search the repository for an issue this session
 already created. If you can't tell whether an earlier attempt landed, stop and
 show the user what you found.
 
@@ -86,10 +84,10 @@ a temp file with your file tool, never through shell code, and quote the title
 as one argument:
 
 ```bash
-gh issue create --repo LightconeResearch/<repo> --title '<title>' --body-file <tmp>
+gh issue create --repo LightconeResearch/feedback --title '<title>' --body-file <tmp>
 ```
 
 Comments work the same way
-(`gh issue comment <n> --repo LightconeResearch/<repo> --body-file <tmp>`). On
+(`gh issue comment <n> --repo LightconeResearch/feedback --body-file <tmp>`). On
 failure, show the draft; on success, give the issue URL and delete the temp
 file.

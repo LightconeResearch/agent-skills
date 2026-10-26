@@ -146,7 +146,7 @@ by plugin (for example `/astra` rather than `/astra:astra` in Claude Code).
 | Skill | What it does |
 |---|---|
 | [`astra`](skills/astra) | Teaches the agent to author and revise an `astra.yaml`: the judgment a schema can't carry — what deserves to be a decision, when to split a sub-analysis, how to back claims with verifiable evidence. |
-| [`feedback`](skills/feedback) | Teaches the agent to turn a bug, feature request or docs problem with the Lightcone stack into a sanitized GitHub issue: gather evidence from the session, route it to the right repository, check for duplicates, and file only the draft you approved. |
+| [`feedback`](skills/feedback) | Teaches the agent to turn a bug, feature request or docs problem with the Lightcone stack into a sanitized GitHub issue in [LightconeResearch/feedback](https://github.com/LightconeResearch/feedback): gather evidence from the session, check for duplicates, and file only the draft you approved. |
 | [`lightcone`](skills/lightcone) | Teaches the agent to work on a Lightcone project at any phase: interview the user to scope a new analysis, orient and summarize when resuming one, and drive the `lc` workflow — integrate recipes, materialize outputs, interpret status, diagnose failures, publish. |
 
 ## 📄 License

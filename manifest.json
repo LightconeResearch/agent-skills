@@ -16,7 +16,7 @@
     {
       "name": "feedback",
       "path": "skills/feedback",
-      "description": "File feedback on the Lightcone Research stack as a GitHub issue in the right Lightcone repository, with evidence gathered and sanitized from the session. Use when the user asks to report a bug, file or open an issue, send feedback, or suggest a feature for a tool in the Lightcone Research stack. Not for bugs in the user's own analysis code, and never file anything without the user's approval.",
+      "description": "File feedback on the Lightcone Research stack as a GitHub issue in the LightconeResearch/feedback repository, with evidence gathered and sanitized from the session. Use when the user asks to report a bug, file or open an issue, send feedback, or suggest a feature for a tool in the Lightcone Research stack. Not for bugs in the user's own analysis code, and never file anything without the user's approval.",
       "plugins": [
         "lightcone"
       ]
