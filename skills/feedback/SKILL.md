@@ -1,5 +1,5 @@
 ---
-name: lightcone-feedback
+name: feedback
 description: >
   File feedback on the Lightcone Research stack as a GitHub issue in the right
   Lightcone repository, with evidence gathered and sanitized from the session.
