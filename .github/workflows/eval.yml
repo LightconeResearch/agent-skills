@@ -1,0 +1,33 @@
+# Agentic eval, hosted in LightconeResearch/lightcone-evals beside the task
+# it runs, with this repository's skills as the side under test: --skill
+# points at this commit's built plugins/lightcone/skills, each leg must load
+# one, and reward and errors gate the check. Plugin installs and hooks are
+# e2e-hooks' to test.
+#
+# Secrets: CLAUDE_CODE_OAUTH_TOKEN (claude-code leg and the trace analysis),
+# OPENAI_API_KEY (codex) and ANTHROPIC_API_KEY (opencode). A leg without
+# its secret is skipped.
+name: Eval
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  eval:
+    uses: LightconeResearch/lightcone-evals/.github/workflows/eval.yml@main
+    secrets: inherit
+    with:
+      skills: https://github.com/LightconeResearch/agent-skills/tree/${{ github.event.pull_request.head.sha || github.sha }}/plugins/lightcone/skills
+      require_skills: true
+      legs: >-
+        [{"name": "claude-code", "agent": "claude-code", "model": "claude-sonnet-5-5", "secret": "CLAUDE_CODE_OAUTH_TOKEN"},
+         {"name": "codex", "agent": "codex", "model": "gpt-5.1-codex", "secret": "OPENAI_API_KEY"},
+         {"name": "opencode", "agent": "opencode", "model": "anthropic/claude-sonnet-5-5", "secret": "ANTHROPIC_API_KEY"}]
