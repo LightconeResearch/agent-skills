@@ -14,6 +14,14 @@
       ]
     },
     {
+      "name": "feedback",
+      "path": "skills/feedback",
+      "description": "File feedback on the Lightcone Research stack as a GitHub issue in the LightconeResearch/feedback repository, with evidence gathered and sanitized from the session. Use when the user asks to report a bug, file or open an issue, send feedback, or suggest a feature for a tool in the Lightcone Research stack. Not for bugs in the user's own analysis code, and never file anything without the user's approval.",
+      "plugins": [
+        "lightcone"
+      ]
+    },
+    {
       "name": "lightcone",
       "path": "skills/lightcone",
       "description": "Companion for a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Use this skill whenever the user wants to scope, resume, plan, run, debug, publish or discuss such a project: \"new analysis\", \"scope a project\", \"resume the project\", \"where were we\", \"run the pipeline\", \"lc status/materialize/run\", \"lc compute\", \"launch a cluster\", \"run on GPUs\", \"publish the analysis\". Also use it whenever the working directory holds an astra.yaml and the user asks to run, re-run, fix or interpret an analysis, even if they never say \"Lightcone\", \"ASTRA\" or \"lc\". Do NOT use it for the astra.yaml format itself — schema, decisions, universes, evidence and quotes are the astra skill's.",
@@ -37,10 +45,11 @@
     },
     {
       "name": "lightcone",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "description": "Companion for working on a Lightcone project — an ASTRA analysis (astra.yaml) executed with the `lc` CLI. Covers the project model (a uv project, direct or containerized, stored as a DataLad dataset), the development workflow (allocate a cluster with `lc compute`, probe with `lc run`, integrate recipes, commit, `lc materialize`), recipe resources and GPUs, status interpretation (current/behind/stale/no recipe) and failure diagnosis, publishing the RO-Crate view, and how to engage the user at each phase: interview to scope a brand-new project, orient and summarize when resuming an existing one. Invoke whenever the user wants to start, resume, plan, run, debug, or discuss a Lightcone/ASTRA analysis project. Bundles the `astra` plugin (spec reference, validate-on-save & session-start hooks) — install `lightcone` alone to get the full stack.",
       "skills": [
         "astra",
+        "feedback",
         "lightcone"
       ],
       "dependencies": [
