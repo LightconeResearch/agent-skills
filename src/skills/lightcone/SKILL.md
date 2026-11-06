@@ -30,7 +30,7 @@ the MyST report of the analysis is in index.md.
 | Producing an output for real | [Make an output](#make-an-output) |
 | A bigger or remote shape, GPUs, recipe `resources:` | `references/compute.md` |
 | A refusal, a failing recipe, a surprising status | `references/diagnosis.md` |
-| Papers, quotes, prior insights | `references/literature.md`, and `references/extraction-brief.md` per paper |
+| Adding prior insights from papers | `references/literature.md` — cache, one subagent per paper with `references/extraction-brief.md`, write what verified |
 | Writing or updating the report | `references/reporting.md` — MyST + `{astra}` references |
 | Sharing, archiving, citing | `references/publishing.md` |
 | Anything about `astra.yaml` itself | the `astra` skill — this one repeats none of it |
@@ -81,7 +81,8 @@ what you changed.
    Notes` section for what the spec cannot hold — constraints, avenues
    rejected, data quirks. Don't restate the spec.
 
-Prior insights from papers: `references/literature.md`.
+Prior insights from papers can be added at any point:
+`references/literature.md`.
 
 ## Get a cluster
 
