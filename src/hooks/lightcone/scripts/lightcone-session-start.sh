@@ -51,7 +51,7 @@ if [ -f astra.yaml ]; then
     in_project=1
 else
     where="Lightcone plugin active — this directory holds no astra.yaml, so there is no project here yet."
-    closing="Activate the lightcone skill to scope one, or to work on a project elsewhere."
+    closing="Activate the lightcone skill to start one, or to work on a project elsewhere."
     in_project=0
 fi
 
@@ -88,7 +88,7 @@ emit() { # $1: the engine-state paragraph
 }
 
 if ! command -v lc &>/dev/null; then
-    emit "The Lightcone CLI is not installed, so nothing can be scoped into a project, materialized, published, or diagnosed — \`lc init\`, \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. $install_remedy"
+    emit "The Lightcone CLI is not installed, so no project can be started, materialized, published, or diagnosed — \`lc init\`, \`lc status\`, \`lc materialize\` and \`lc run\` are all unavailable. $install_remedy"
     exit 0
 fi
 
