@@ -12,9 +12,10 @@ user approve, reject, and add.
 
 ## Extract
 
-Cache each approved paper with the astra skill's evidence workflow, then
-spawn **one subagent per paper**, all in a single message so they run in
-parallel. Never read a PDF in the main context — it consumes too much of it.
+Cache each approved paper — `uvx astra-tools@x.y.z paper add <doi>`
+(`--version N` to pin an arXiv revision) — then spawn **one subagent per
+paper**, all in a single message so they run in parallel. Never read a PDF
+in the main context — it consumes too much of it.
 
 Give each subagent `references/extraction-brief.md` — which carries the
 output shape, the verification loop, and the failure table — plus what only
@@ -22,7 +23,8 @@ you know:
 
 - the analysis context — what the analysis is, and which decisions this
   paper might inform;
-- the paper's DOI (and arXiv version, if any) and its cached-PDF path;
+- the paper's DOI (and arXiv version, if any) and its cached-PDF path, from
+  `uvx astra-tools@x.y.z paper path <doi>`;
 - the target decisions: each id, its label, and its options;
 - the current timestamp, ISO 8601, for `created_at`.
 
