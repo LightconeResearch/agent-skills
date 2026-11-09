@@ -1,7 +1,18 @@
 # The literature pass
 
-Read this when the user wants the analysis informed by published work. It
-runs in one order — collect, then extract.
+Read this when the user wants the analysis informed by published work.
+
+Literature enters the spec through its decisions. A paper becomes one or
+more `prior_insights` — each a claim, a DOI, and a verbatim quote — and each
+insight is linked from the option it supports (`Option.insights`). That
+chain, option → insight → evidence → DOI, is what makes a decision's default
+defensible and mechanically verifiable, so the pass runs *against the
+spec's decisions*: subagents are briefed with the target decisions and
+return, per insight, which option it supports. When a paper shows an
+alternative the spec lacks, add it as an option — or, if it is a new choice
+point, as a decision — and link the insight to it.
+
+It runs in one order — collect, then extract.
 
 ## Collect
 

@@ -72,7 +72,9 @@ what you changed.
    you declare it: `lc` writes each one to a single file,
    `results/<universe>/<id>.<format>`, so anything that wants to be two
    files is two outputs. Expect `MISSING_DECISION` on
-   `universes/baseline.yaml` from the first decision until step 3.
+   `universes/baseline.yaml` from the first decision until step 3. Where a
+   decision's options or default rest on published work, cite it as
+   `prior_insights` linked from the options: `references/literature.md`.
 3. `uvx astra-tools@0.2.18 universe generate -n baseline --force` regenerates
    the baseline from the decision defaults; then validate per the astra
    skill. Generate no other universe unless the user asks.
@@ -80,9 +82,6 @@ what you changed.
    handful of commands this project uses day to day, and a `## Project
    Notes` section for what the spec cannot hold — constraints, avenues
    rejected, data quirks. Don't restate the spec.
-
-Prior insights from papers can be added at any point:
-`references/literature.md`.
 
 ## Get a cluster
 
