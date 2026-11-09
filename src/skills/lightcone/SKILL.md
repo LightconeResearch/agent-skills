@@ -21,6 +21,11 @@ declared inputs and decisions into outputs under `results/` — one output is
 one file, named by the spec — each committed with the code that produced it,
 the MyST report of the analysis is in index.md.
 
+This skill is the tooling: how a project is built, run, checked and
+published through `lc`. The science — what to ask the user, what deserves to
+be a decision — is yours, as in any analysis; `uvx astra-tools@x.y.z guide`
+says what the format can hold.
+
 | What you are doing | Where to go |
 |---|---|
 | No spec yet | [Start a new project](#start-a-new-project) |
