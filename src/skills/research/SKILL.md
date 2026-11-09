@@ -60,7 +60,9 @@ Update `astra.yaml` with `inputs` and `outputs`.
 Stage banner: **DEEP DIVE — [SECTION NAME]**
 
 Optional per section. Offer a literature pass; skip straight to decision
-identification if declined. The procedure — collecting papers, fanning out
+identification if declined. When a pass is worth proposing, what makes a
+paper relevant, and how to identify decisions from the papers:
+`references/literature.md`. The procedure — collecting papers, fanning out
 one subagent per paper, writing the insights — is the lightcone skill's
 `references/literature.md`.
 
@@ -69,13 +71,7 @@ done — never fabricate one.
 
 ### Identify decisions
 
-From the conversation *and* the literature: what could be done differently
-and still be defensible? Where did papers disagree or compare alternatives?
-Where was the user uncertain?
-
-Probe the blind spots analysts neglect — data exclusion, variable
-operationalization, inference criteria — not just method choices.
-
+Per `references/literature.md`, from the conversation *and* the papers.
 Write candidates to `astra.yaml` as a batch for review; keep the chat output
 to a summary with ids.
 

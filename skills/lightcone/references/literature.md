@@ -1,18 +1,14 @@
 # The literature pass
 
-Read this when the user wants the analysis informed by published work. It
-runs in one order — collect, then extract, then identify decisions — because
-decisions identified before the papers are read end up being the ones the
-analyst already had in mind.
+Read this to run a literature pass. It runs in one order — collect, then
+extract, then identify decisions.
 
 ## Collect
 
 Ask for papers the user already has in mind, then search for a *limited* set
-of directly relevant ones (~2 per topic, max 10 per section). Relevant means
-bearing on a decision in the spec: a paper that compares its options,
-justifies one of them, or fixes a threshold or cut the analysis depends on.
-Present the list via `AskUserQuestion` with a one-line relevance note each,
-and let the user approve, reject, and add.
+of directly relevant ones (~2 per topic, max 10 per section). Present the
+list via `AskUserQuestion` with a one-line relevance note each, and let the
+user approve, reject, and add.
 
 ## Extract
 
@@ -53,15 +49,8 @@ failed.
 
 ## Identify decisions
 
-From the conversation *and* the literature: what could be done differently
-and still be defensible? Where did papers disagree or compare alternatives?
-Where was the user uncertain?
-
-Probe the blind spots analysts neglect — data exclusion, variable
-operationalization, inference criteria — not just method choices.
-
-Write candidates to `astra.yaml` as a batch for review; keep the chat output
-to a summary with ids.
+Write candidate decisions to `astra.yaml` as a batch for review; keep the
+chat output to a summary with ids.
 
 ## Review
 
