@@ -1,12 +1,12 @@
 ---
 name: research
 description: >
-  Scoping interview for a new scientific analysis: sharpen the research
-  question, walk the analysis structure, offer a literature deep dive,
-  then finalize. Parked here while the lightcone skill is trimmed to
-  mechanics; not yet part of any plugin. Use only when the user explicitly
-  asks for a scoping interview. Project setup, `lc`, and the astra.yaml
-  format are the lightcone and astra skills' — this one repeats none of it.
+  Scoping interview for a new scientific analysis (research question,
+  analysis structure, literature deep dive, finalize), and when a
+  literature pass is worth proposing. Use when the user wants an analysis
+  defined through conversation, or when a scientific choice could be
+  settled by the literature. Running `lc`, the literature pass itself and
+  the astra.yaml format are the lightcone and astra skills'.
 ---
 
 # Scoping a new analysis
@@ -14,7 +14,8 @@ description: >
 Read this when the user wants an analysis defined through conversation
 before any implementation code is written. The mechanics — `lc init`, the
 astra.yaml format, universe generation, `AGENTS.md` — are the lightcone and
-astra skills'; this skill carries only the interview.
+astra skills'; this skill carries the interview, and `references/literature.md`
+on when a literature pass is worth proposing.
 
 - [1. Research question](#1-research-question)
 - [2. Analysis structure](#2-analysis-structure)
