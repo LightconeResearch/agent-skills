@@ -1,10 +1,9 @@
 # The literature pass
 
-Read this when the user wants the analysis informed by published work. The
-pass turns papers into `prior_insights` attached to the options they support
-(the option → insight → evidence → DOI chain, described in the astra skill
-under *Citations, quotes, and supporting evidence*), so it runs against the
-spec's decisions, in one order — collect, then extract.
+Read this when the user wants the analysis informed by published work. It
+runs in one order — collect, then extract, then identify decisions — because
+decisions identified before the papers are read end up being the ones the
+analyst already had in mind.
 
 ## Collect
 
@@ -51,3 +50,20 @@ insights themselves go under `prior_insights:`.
 If a subagent reports quotes it could not verify, they are gone — do not
 add them back by hand, and do not cite the paper for a claim whose quote
 failed.
+
+## Identify decisions
+
+From the conversation *and* the literature: what could be done differently
+and still be defensible? Where did papers disagree or compare alternatives?
+Where was the user uncertain?
+
+Probe the blind spots analysts neglect — data exclusion, variable
+operationalization, inference criteria — not just method choices.
+
+Write candidates to `astra.yaml` as a batch for review; keep the chat output
+to a summary with ids.
+
+## Review
+
+Confirm or set each decision's `default`, keep the option structure and its
+evidence links, and drop any decision the user rejects.
