@@ -71,7 +71,7 @@ Open **Plugins** from the arrow beside **Create** and add the
 | Plugin | Skills | Adds |
 |---|---|---|
 | **`astra`** | `astra` | authoring guidance for [ASTRA](#-skills) analysis specs (`astra.yaml`); validate-on-save & session-start hooks |
-| **`lightcone`** | `lightcone`, `feedback`, `astra` | end-to-end guidance for working on a Lightcone project with the `lc` CLI — scoping, implementation, materialization, publishing, and reporting bugs or feedback on the stack as GitHub issues. Bundles the `astra` plugin (skill + hooks), so installing `lightcone` alone gets the full stack — don't install `astra` alongside it |
+| **`lightcone`** | `lightcone`, `feedback`, `astra` | end-to-end guidance for working on a Lightcone project with the `lc` CLI — project setup, implementation, materialization, publishing, and reporting bugs or feedback on the stack as GitHub issues. Bundles the `astra` plugin (skill + hooks), so installing `lightcone` alone gets the full stack — don't install `astra` alongside it |
 
 ## 🚀 Install a plugin
 
@@ -147,7 +147,7 @@ by plugin (for example `/astra` rather than `/astra:astra` in Claude Code).
 |---|---|
 | [`astra`](skills/astra) | Teaches the agent to author and revise an `astra.yaml`: the judgment a schema can't carry — what deserves to be a decision, when to split a sub-analysis, how to back claims with verifiable evidence. |
 | [`feedback`](skills/feedback) | Teaches the agent to turn a bug, feature request or docs problem with the Lightcone stack into a sanitized GitHub issue in [LightconeResearch/feedback](https://github.com/LightconeResearch/feedback): gather evidence from the session, check for duplicates, and file only the draft you approved. |
-| [`lightcone`](skills/lightcone) | Teaches the agent to work on a Lightcone project at any phase: interview the user to scope a new analysis, orient and summarize when resuming one, and drive the `lc` workflow — integrate recipes, materialize outputs, interpret status, diagnose failures, publish. |
+| [`lightcone`](skills/lightcone) | Teaches the agent to drive the `lc` workflow on a Lightcone project: start one with `lc init`, orient when resuming, integrate recipes, materialize outputs, interpret status, diagnose failures, add prior insights from papers, publish. |
 
 ## 📄 License
 

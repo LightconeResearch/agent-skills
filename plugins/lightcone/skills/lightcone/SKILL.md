@@ -3,8 +3,8 @@ name: lightcone
 description: >
   Companion for a Lightcone project — an ASTRA analysis (astra.yaml)
   executed with the `lc` CLI. Use this skill whenever the user wants to
-  scope, resume, plan, run, debug, publish or discuss such a project: "new
-  analysis", "scope a project", "resume the project", "where were we", "run
+  start, resume, plan, run, debug, publish or discuss such a project: "new
+  analysis", "lc init", "resume the project", "where were we", "run
   the pipeline", "lc status/materialize/run", "lc compute", "launch a
   cluster", "run on GPUs", "publish the analysis". Also
   use it whenever the working directory holds an astra.yaml and the user
@@ -21,9 +21,14 @@ declared inputs and decisions into outputs under `results/` — one output is
 one file, named by the spec — each committed with the code that produced it,
 the MyST report of the analysis is in index.md.
 
+This skill is the tooling: how a project is built, run, checked and
+published through `lc`. The science — what to ask the user, what deserves to
+be a decision — is yours, as in any analysis; `uvx astra-tools@0.2.18 guide`
+says what the format can hold.
+
 | What you are doing | Where to go |
 |---|---|
-| A research question, no spec yet | `references/scoping.md` — interview first, write no code |
+| No spec yet | [Start a new project](#start-a-new-project) |
 | Picking up an existing project | `lc status`, then summarize before asking what is next |
 | Anything that executes — `lc run`, `lc materialize` | [Get a cluster](#get-a-cluster) first |
 | Writing or debugging a script | `lc run <cluster> -- <argv>` — the sandbox a recipe gets |
@@ -60,6 +65,28 @@ checklist:
 Where a person can answer, offer and wait — **never install or upgrade
 unasked**, it is their machine. Where none can (headless, CI), act and say
 what you changed.
+
+## Start a new project
+
+1. `lc init [DIR]` — scaffolds an empty spec, a baseline universe that
+   selects nothing, a uv project, a git repository with `data/` and
+   `results/` annexed, and a MyST report. Idempotent; never overwrites what
+   you own; does **not** create `AGENTS.md`.
+2. Fill `astra.yaml` per the astra skill — `uvx astra-tools@0.2.18 guide`
+   covers what deserves to be a decision. Give every output a `format:` as
+   you declare it: `lc` writes each one to a single file,
+   `results/<universe>/<id>.<format>`, so anything that wants to be two
+   files is two outputs. Expect `MISSING_DECISION` on
+   `universes/baseline.yaml` from the first decision until step 3. Where a
+   decision's options or default rest on published work, cite it as
+   `prior_insights` linked from the options: `references/literature.md`.
+3. `uvx astra-tools@0.2.18 universe generate -n baseline --force` regenerates
+   the baseline from the decision defaults; then validate per the astra
+   skill. Generate no other universe unless the user asks.
+4. Write `AGENTS.md`: what the analysis is and where the spec lives, the
+   handful of commands this project uses day to day, and a `## Project
+   Notes` section for what the spec cannot hold — constraints, avenues
+   rejected, data quirks. Don't restate the spec.
 
 ## Get a cluster
 
@@ -263,8 +290,8 @@ what a later session reads to pick the work up.
   separate outputs, or declare a container format (`format: tar.gz`,
   `format: hdf5`) and write the one archive.
 - **`pip install` reaches nothing.** The lock is the environment: `uv add`.
-- **Don't re-interview on resume.** The spec and `AGENTS.md` already answer
-  the scoping questions; summarize state and ask what is *next*.
+- **Don't re-scope on resume.** The spec and `AGENTS.md` already describe
+  the analysis; summarize state and ask what is *next*.
 - **Six verbs, and `--help` is the authority.** `init`, `status`,
   `materialize`, `run`, `build`, and `compute` (`resources`, `launch`,
   `status`, `down`). Universes and outputs are selected by target
