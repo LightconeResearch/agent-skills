@@ -57,8 +57,16 @@ argument checks every spec and universe file under the current directory.
 Claims in ASTRA are backed by verifiable evidence: `prior_insights` (imported
 claims that motivate decisions) and `findings` (claims the analysis produces)
 both carry `evidence` entries — a `doi` with a verbatim quote for literature,
-or an `artifact` naming an output. The `paper` utilities manage the
-literature side end to end:
+or an `artifact` naming an output.
+
+A prior insight is attached to the option it supports through
+`Option.insights`, so every justified choice carries an auditable chain —
+option → insight → evidence → DOI — and `validate --verify-evidence` checks
+the last link against the cached PDF. An insight no option points at
+justifies nothing. (`uvx astra-tools@x.y.z spec insight` and `spec option`
+for the fields.)
+
+The `paper` utilities manage the literature side end to end:
 
 1. **Cache the source at authoring time** — run
    `uvx astra-tools@x.y.z paper add <doi>` the moment you cite a paper (pass

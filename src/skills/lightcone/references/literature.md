@@ -1,25 +1,19 @@
 # The literature pass
 
-Read this when the user wants the analysis informed by published work.
-
-Literature enters the spec through its decisions. A paper becomes one or
-more `prior_insights` — each a claim, a DOI, and a verbatim quote — and each
-insight is linked from the option it supports (`Option.insights`). That
-chain, option → insight → evidence → DOI, is what makes a decision's default
-defensible and mechanically verifiable, so the pass runs *against the
-spec's decisions*: subagents are briefed with the target decisions and
-return, per insight, which option it supports. When a paper shows an
-alternative the spec lacks, add it as an option — or, if it is a new choice
-point, as a decision — and link the insight to it.
-
-It runs in one order — collect, then extract.
+Read this when the user wants the analysis informed by published work. The
+pass turns papers into `prior_insights` attached to the options they support
+(the option → insight → evidence → DOI chain, described in the astra skill
+under *Citations, quotes, and supporting evidence*), so it runs against the
+spec's decisions, in one order — collect, then extract.
 
 ## Collect
 
 Ask for papers the user already has in mind, then search for a *limited* set
-of directly relevant ones (~2 per topic, max 10 per section). Present the
-list via `AskUserQuestion` with a one-line relevance note each, and let the
-user approve, reject, and add.
+of directly relevant ones (~2 per topic, max 10 per section). Relevant means
+bearing on a decision in the spec: a paper that compares its options,
+justifies one of them, or fixes a threshold or cut the analysis depends on.
+Present the list via `AskUserQuestion` with a one-line relevance note each,
+and let the user approve, reject, and add.
 
 ## Extract
 
