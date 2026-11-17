@@ -22,6 +22,10 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
   `scripts/e2e-hooks.mjs` (`npm run e2e`, and the `e2e-hooks` CI workflow)
   against real headless Claude Code and Codex sessions. To cover a new
   plugin, add a spec here — no runner changes needed.
+- `.github/workflows/eval.yml` — the agentic eval: calls the Harbor eval
+  hosted in lightcone-evals with this commit's built skills under test, one
+  leg per harness (claude-code, codex, opencode), each required to load a
+  skill.
 
 ## Documentation lives in another repo
 
