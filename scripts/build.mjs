@@ -44,5 +44,6 @@ for (const { source, dest, pins } of copies) {
 console.log(
   `Generated ${Object.keys(files).length} metadata files and ${copies.length} packaged files ` +
     `(skills + agents + hooks) across Claude (.claude-plugin), Codex (.agents/plugins), ` +
-    `the flat skills/ tree, the shared plugins/ dirs, and manifest.json.`,
+    `Antigravity (.antigravity-plugin + root hooks.json), the flat skills/ tree, the shared ` +
+    `plugins/ dirs, and manifest.json.`,
 );

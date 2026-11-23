@@ -10,6 +10,7 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-✓-d97757?style=flat-square&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-✓-000000?style=flat-square&logo=openai&logoColor=white)](https://github.com/openai/codex)
+[![Antigravity](https://img.shields.io/badge/Antigravity-✓-4285F4?style=flat-square&logo=google&logoColor=white)](https://antigravity.google)
 [![Skills](https://img.shields.io/badge/skills-3-7c3aed?style=flat-square)](#-skills)
 [![Plugins](https://img.shields.io/badge/plugins-2-7c3aed?style=flat-square)](#-plugins)
 
@@ -18,7 +19,7 @@
 ---
 
 Agent skills for the [Lightcone Research](https://github.com/LightconeResearch)
-stack, packaged as plugins to work across Claude Code, Codex,
+stack, packaged as plugins to work across Claude Code, Codex, Antigravity,
 and other compatible agents.
 
 ## 📦 Prerequisites
@@ -28,8 +29,9 @@ The only prerequisite is `uv`: [https://docs.astral.sh/uv/getting-started/instal
 
 ## 🛒 Add the marketplace
 
-One-time setup: register this repository as a plugin marketplace in your
-harness. It registers under the name `lightcone-research`, which is the
+One-time setup for Claude and Codex: register this repository as a plugin
+marketplace in your harness. (Antigravity takes no third-party marketplaces —
+skip to [its install steps](#-install-a-plugin).) It registers under the name `lightcone-research`, which is the
 `@lightcone-research` suffix in the install commands below.
 
 <details>
@@ -77,6 +79,8 @@ Open **Plugins** from the arrow beside **Create** and add the
 
 Plugin skills are namespaced by plugin name: once a plugin is installed, invoke
 its skills as `/<plugin>:<skill>` in Claude or `$<plugin>:<skill>` in Codex.
+Antigravity lists them by skill name (`/<skill>`) and prefixes a skill only
+when its name collides with another.
 The examples below install `astra`; substitute any plugin from the table above.
 
 <details>
@@ -114,6 +118,40 @@ Then invoke the skill in Codex, for example `$astra:astra`.
 
 Open **Plugins** from the arrow beside **Create**, then search for and install
 `astra`. Invoke `/astra:astra`.
+
+</details>
+
+<details>
+<summary><b>Antigravity</b> (CLI, app and IDE)</summary>
+
+Install a plugin directly from its GitHub subfolder URL with the `agy` CLI. It
+is staged into `~/.gemini/config/plugins/`, where the CLI, the app and the IDE
+all find it:
+
+```bash
+agy plugin install https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra
+```
+
+Pass `/tree/main/plugins/<name>` rather than the bare repository URL — pointing
+`agy plugin install` at the repository root bulk-installs every plugin under
+`plugins/`, which would install `astra` alongside `lightcone`.
+
+To update, run the same `agy plugin install` command again (it replaces the
+existing installation in place).
+
+Without the `agy` CLI, or to load directly from a local clone so `git pull`
+takes effect immediately, register the clone in `~/.gemini/config/plugins.json`
+using an **absolute path** (Antigravity does not expand `~`):
+
+```json
+{
+  "entries": [
+    { "path": "/path/to/lightcone-agent-skills/plugins", "include_only": ["astra"] }
+  ]
+}
+```
+
+Then invoke `/astra` in a conversation.
 
 </details>
 

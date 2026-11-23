@@ -1,9 +1,9 @@
 # AGENTS.md
 
 This repository is the **source of truth for the Lightcone Research agent skills**.
-It is not an application — it packages `SKILL.md`-based skills for three install
-targets (the `npx skills` CLI, the Claude Code plugin marketplace, and Codex plugins)
-from a single canonical source. Two plugins: `astra` (spec reference) and
+It is not an application — it packages `SKILL.md`-based skills for four install
+targets (the `npx skills` CLI, the Claude Code plugin marketplace, Codex plugins,
+and Antigravity plugins) from a single canonical source. Two plugins: `astra` (spec reference) and
 `lightcone` (project companion, which bundles `astra`). Plugin skills are
 namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 
@@ -12,7 +12,10 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 - `src/skills/<name>/SKILL.md` — the canonical skills. **Edit these.** One directory per
   skill; the directory name must equal the `name:` in the frontmatter.
 - `src/hooks/<plugin>/` — per-plugin `hooks.json` + bash scripts (`astra/` validates
-  on save and reminds the agent to load the skill).
+  on save and reminds the agent to load the skill). Written once, to the
+  Claude Code / Codex hook protocol.
+- `src/adapters/antigravity-hook.sh` — the one shim that runs those scripts
+  under Antigravity's different hook protocol (see below).
 - `skills.config.json` — declares how skills compose into the plugins.
   A plugin composes with others two ways:
   `dependencies` (bundled build-time closure) and `requires` (documented-only
@@ -21,7 +24,9 @@ namespaced by plugin name (e.g. `/astra:astra`, `/lightcone:lightcone`).
 - `tests/<plugin>.yaml` — declarative e2e hook-dispatch test specs, run by
   `scripts/e2e-hooks.mjs` (`npm run e2e`, and the `e2e-hooks` CI workflow)
   against real headless Claude Code and Codex sessions. To cover a new
-  plugin, add a spec here — no runner changes needed.
+  plugin, add a spec here — no runner changes needed. Antigravity dispatch is
+  covered hermetically by `scripts/test-hooks.mjs` (part of `npm test`), which
+  runs each generated root `hooks.json` the way Antigravity does.
 
 ## Documentation lives in another repo
 
@@ -70,18 +75,29 @@ all. To bump: edit the one number in `skills.config.json`, run
 If you arrived expecting a plain skills folder and found a generator, here's why it
 exists and the shape it takes, so nothing surprises you.
 
-**Why a generator at all (not hand-maintained JSON).** The three targets disagree on
+**Why a generator at all (not hand-maintained JSON).** The four targets disagree on
 layout. `npx skills` reads a flat top-level `skills/` tree — before any manifest —
 and its `update` re-fetches from the folder it installed from. The Claude and
 **Codex** (OpenAI Codex CLI) marketplaces instead point every plugin at a
 self-contained `plugins/<name>/` — `.claude-plugin/marketplace.json` and
 `.agents/plugins/marketplace.json`, plus a `plugins/<name>/.codex-plugin/plugin.json`
 *with its own `skills/` directory* per plugin — and, for a plugin that ships hooks,
-its own `hooks/` directory too (every harness reads the same `hooks.json`
+its own `hooks/` directory too (Claude and Codex read the same `hooks.json`
 protocol; hook commands locate the plugin root as `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}` —
-`CLAUDE_PLUGIN_ROOT` is the one root variable every harness defines, the fallback covers
-older versions — so the generator declares the same `hooks` file and packages the canonical
-`src/hooks/` tree under the plugin root). And every installed copy needs real tool
+`CLAUDE_PLUGIN_ROOT` is the one root variable both define, the fallback covers
+older Codex versions — so the generator declares the same `hooks` file and packages the canonical
+`src/hooks/` tree under the plugin root). **Antigravity** reuses the same
+`plugins/<name>/` dir through its multi-provider manifest,
+`plugins/<name>/.antigravity-plugin/plugin.json`, but its hooks differ on every
+axis. It loads only a root-level `hooks.json`, with named groups and flat
+SessionStart handlers, never `hooks/hooks.json`. It runs hooks in the plugin
+dir, with the agent's directory passed in a camelCase payload. Its
+SessionStart answers with `injectSteps`, and its PostToolUse cannot reach the
+model at all. So the build translates the canonical manifests into that root
+`hooks.json` (`antigravityHooks()` in `scripts/lib.mjs`). Every command there
+runs the canonical script through `src/adapters/antigravity-hook.sh`. A
+PostToolUse's context is stashed and injected by a generated PreInvocation
+handler before the next model call. And every installed copy needs real tool
 pins, which the canonical text deliberately lacks.
 Maintaining all of that against one set of skills by hand is exactly what drifts
 silently. So `skills.config.json` + `src/` is the single source, and everything
@@ -92,7 +108,7 @@ target — change the source and rebuild.** If a manifest looks wrong, the bug i
 **How the pieces fit.** `scripts/lib.mjs` is the engine: it loads the config, parses
 each `SKILL.md` frontmatter, computes the transitive skill closure per plugin (own +
 `dependencies` skills — a plugin's generated dir bundles its whole closure so it
-installs identically on both harnesses; `requires` prerequisites are deliberately
+installs identically on every harness; `requires` prerequisites are deliberately
 NOT in the closure), and returns the exact files + byte-copies every target needs.
 `build.mjs` writes
 them; `validate.mjs` regenerates in memory and diffs against disk. Both import `lib.mjs`
@@ -122,7 +138,7 @@ so the generator and the checker agree by construction.
 `manifest.json` registry from skill frontmatter, CI-validated, plus per-agent plugin
 dirs incl. `.codex-plugin/`) and supabase/agent-skills (the `source: "./"` + `strict:
 false` Claude marketplace style, and a build + sanity-test workflow). We trimmed both to
-zero-dep and reconciled them to the three-target need.
+zero-dep and reconciled them to the multi-target need.
 
 ## Authoring conventions
 

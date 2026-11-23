@@ -355,6 +355,174 @@ try {
   lcContext("lc/hostile-version", { version: '1.0"x\\y', env: TUI });
 
   console.log("✓ lightcone preflight: engine states, version floor, and ask/act mode all behave.");
+
+  // --- Antigravity dispatch -------------------------------------------------
+  // Antigravity reads the generated root hooks.json, not hooks/hooks.json, and
+  // every command there goes through the shared adapter. So these cases
+  // dispatch the PACKAGED plugin dirs the way Antigravity does — each command
+  // through `sh -c` in the plugin dir, with $PLUGIN_ROOT/$PLUGIN_DATA set and
+  // a camelCase payload on stdin — which tests the translated manifest, the
+  // adapter, and the canonical scripts behind it together. Every handler must
+  // print one JSON object, whatever it has to say.
+  const agyData = join(scratch, "agy-data");
+  const agyTmp = join(scratch, "agy-tmp");
+  mkdirSync(agyTmp);
+
+  function agyDispatch(plugin, event, payload, { toolName, env = {}, raw } = {}) {
+    const root = join(ROOT, "plugins", plugin);
+    const manifest = JSON.parse(readFileSync(join(root, "hooks.json"), "utf8"));
+    const outs = [];
+    for (const spec of Object.values(manifest)) {
+      for (const entry of spec[event] || []) {
+        // Tool events wrap handlers in {matcher, hooks}; the rest are flat.
+        const handlers = entry.hooks
+          ? new RegExp(`^(?:${entry.matcher})$`).test(toolName) ? entry.hooks : []
+          : [entry];
+        for (const h of handlers) {
+          const r = spawnSync("sh", ["-c", h.command], {
+            cwd: root,
+            encoding: "utf8",
+            input: raw ?? JSON.stringify(payload),
+            env: {
+              ...process.env,
+              PATH: `${bin}:${process.env.PATH}`,
+              PLUGIN_ROOT: root,
+              PLUGIN_DATA: agyData,
+              TMPDIR: agyTmp,
+              ...env,
+            },
+          });
+          if (r.status !== 0) throw new Error(`${plugin} ${event}: exited ${r.status}\n${r.stdout}${r.stderr}`);
+          try {
+            outs.push(JSON.parse(r.stdout));
+          } catch {
+            throw new Error(`${plugin} ${event}: output is not one JSON object\n${r.stdout}`);
+          }
+        }
+      }
+    }
+    return outs;
+  }
+  // Every system message the handlers injected, joined; "" when none did.
+  const injected = (outs) =>
+    outs.flatMap((o) => (o.injectSteps || []).map((s) => s.systemMessage.systemMessage)).join("\n---\n");
+  const agyPayload = (fields = {}) => ({
+    conversationId: "conv-a",
+    workspacePaths: [project],
+    cwd: project,
+    lastUserInput: "Please fix astra.yaml",
+    ...fields,
+  });
+  const edit = (file, fields = {}) =>
+    agyPayload({ hookEventName: "PostToolUse", toolCall: { id: "t1", name: "write_to_file", args: { TargetFile: file } }, ...fields });
+  const assertQuiet = (label, outs) => {
+    if (injected(outs) !== "") throw new Error(`${label}: expected no injected context\n${JSON.stringify(outs)}`);
+  };
+
+  // The translated matcher covers Antigravity's file-edit tools (both IDE/App
+  // and `agy` CLI names), and only those.
+  const agyMatcher = new RegExp(
+    `^(?:${JSON.parse(readFileSync(join(ROOT, "plugins/astra/hooks.json"), "utf8")).astra.PostToolUse[0].matcher})$`,
+  );
+  for (const tool of ["write_to_file", "write_file", "replace_file_content", "multi_replace_file_content", "edit_file"])
+    if (!agyMatcher.test(tool)) throw new Error(`agy/matcher: misses ${tool}`);
+  for (const tool of ["run_command", "view_file", "read_file"])
+    if (agyMatcher.test(tool)) throw new Error(`agy/matcher: matches ${tool}`);
+
+  // SessionStart → the primer, injected as a system message.
+  let msg = injected(agyDispatch("astra", "SessionStart", agyPayload({ hookEventName: "SessionStart" }), { env: { FAKE_UVX_RC: "0" } }));
+  assertIncludes("agy/session", msg, "ASTRA project — spec at ./astra.yaml");
+  assertIncludes("agy/session", msg, 'with "quotes" and a \\backslash');
+
+  // Older releases send no `cwd`: the first workspace path stands in, even as
+  // a file:// URI. Pretty-printed JSON stands in for protojson's whitespace.
+  const { cwd: _cwd, ...noCwd } = agyPayload({ workspacePaths: [`file://${project}`] });
+  msg = injected(agyDispatch("astra", "SessionStart", null, { raw: JSON.stringify(noCwd, null, 2), env: { FAKE_UVX_RC: "0" } }));
+  assertIncludes("agy/session-workspace", msg, "ASTRA project — spec at ./astra.yaml");
+
+  // Outside a project the hook stays silent — answering {} — even though the
+  // plugin dir it runs in is not the agent's directory.
+  assertQuiet("agy/session-elsewhere", agyDispatch("astra", "SessionStart", agyPayload({ cwd: scratch, workspacePaths: [scratch] })));
+
+  // PostToolUse has no channel to the model: it answers {} and stashes; the
+  // next PreInvocation delivers the report, escapes intact, exactly once.
+  let outs = agyDispatch("astra", "PostToolUse", edit(join(project, "astra.yaml")), { toolName: "write_to_file" });
+  if (outs.length !== 1 || JSON.stringify(outs[0]) !== "{}")
+    throw new Error(`agy/save: PostToolUse must answer {}\n${JSON.stringify(outs)}`);
+  msg = injected(agyDispatch("astra", "PreInvocation", agyPayload()));
+  assertIncludes("agy/save-deliver", msg, "ASTRA validation FAILED for the project");
+  assertIncludes("agy/save-deliver", msg, 'with "quotes" and a \\backslash');
+  assertQuiet("agy/save-once", agyDispatch("astra", "PreInvocation", agyPayload()));
+
+  // Two edits before one model call → both reports, in one message.
+  agyDispatch("astra", "PostToolUse", edit(join(project, "astra.yaml")), { toolName: "replace_file_content", env: { FAKE_UVX_RC: "0" } });
+  agyDispatch("astra", "PostToolUse", edit(join(project, "universes", "baseline.yaml")), { toolName: "multi_replace_file_content" });
+  msg = injected(agyDispatch("astra", "PreInvocation", agyPayload()));
+  assertIncludes("agy/save-two", msg, "ASTRA validation passed");
+  assertIncludes("agy/save-two", msg, "ASTRA validation FAILED");
+
+  // A stash belongs to its conversation.
+  agyDispatch("astra", "PostToolUse", edit(join(project, "astra.yaml")), { toolName: "write_to_file" });
+  assertQuiet("agy/other-conversation", agyDispatch("astra", "PreInvocation", agyPayload({ conversationId: "conv-b" })));
+  assertIncludes("agy/own-conversation", injected(agyDispatch("astra", "PreInvocation", agyPayload())), "ASTRA validation FAILED");
+
+  // Editing a non-ASTRA file is silent and never runs uvx — even though the
+  // raw payload's lastUserInput mentions astra.yaml, which the adapter must
+  // not pass on to the substring prefilter.
+  before = uvxCalls().length;
+  agyDispatch("astra", "PostToolUse", edit(join(project, "README.md")), { toolName: "write_to_file" });
+  if (uvxCalls().length !== before) throw new Error("agy/save-silent: uvx was invoked");
+  assertQuiet("agy/save-silent", agyDispatch("astra", "PreInvocation", agyPayload()));
+
+  // `agy` CLI uses `edit_file` / `write_file` with `args.Path` (not `TargetFile`).
+  const cliEdit = (tool, file) =>
+    agyPayload({ hookEventName: "PostToolUse", toolCall: { id: "t2", name: tool, args: { Path: file } } });
+  agyDispatch("astra", "PostToolUse", cliEdit("edit_file", join(project, "astra.yaml")), { toolName: "edit_file" });
+  msg = injected(agyDispatch("astra", "PreInvocation", agyPayload()));
+  assertIncludes("agy/cli-edit-file", msg, "ASTRA validation FAILED for the project");
+  before = uvxCalls().length;
+  agyDispatch("astra", "PostToolUse", cliEdit("write_file", join(project, "README.md")), { toolName: "write_file" });
+  if (uvxCalls().length !== before) throw new Error("agy/cli-silent: uvx was invoked");
+  assertQuiet("agy/cli-silent", agyDispatch("astra", "PreInvocation", agyPayload()));
+
+  // A write_to_file payload carries the whole file. The adapter must still
+  // find its fields — wherever they sit, here after 2 MB of content — well
+  // inside a hook timeout: bash prefix removal (${input#*…}) is quadratic and
+  // never finishes on this, so a regression shows up as a timeout here.
+  const bigEdit = edit(join(project, "astra.yaml"));
+  bigEdit.toolCall.args.CodeContent = 'line with "quotes" and \\ backslash\n'.repeat(60000);
+  const { cwd: bigCwd, ...bigRest } = bigEdit;
+  const bigStart = Date.now();
+  const bigRun = spawnSync("sh", ["-c", "bash ./hooks/scripts/antigravity-hook.sh PostToolUse validate-on-save.sh"], {
+    cwd: join(ROOT, "plugins", "astra"),
+    encoding: "utf8",
+    input: JSON.stringify({ ...bigRest, cwd: bigCwd }), // cwd last, after the content
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, PLUGIN_DATA: agyData, TMPDIR: agyTmp },
+    timeout: 20000,
+  });
+  if (bigRun.error || bigRun.status !== 0 || bigRun.stdout.trim() !== "{}")
+    throw new Error(`agy/large-payload: did not complete (${Date.now() - bigStart} ms)\n${bigRun.error || bigRun.stdout + bigRun.stderr}`);
+  assertIncludes("agy/large-payload", injected(agyDispatch("astra", "PreInvocation", agyPayload())), "ASTRA validation FAILED");
+
+  // Without $PLUGIN_DATA (a plugin loaded from a workspace, not installed)
+  // the stash falls back to a private per-user dir under $TMPDIR.
+  const noData = { PLUGIN_DATA: "" };
+  agyDispatch("astra", "PostToolUse", edit(join(project, "astra.yaml")), { toolName: "write_to_file", env: noData });
+  assertIncludes("agy/no-plugin-data", injected(agyDispatch("astra", "PreInvocation", agyPayload(), { env: noData })), "ASTRA validation FAILED");
+
+  // lightcone bundles astra: both groups fire at session start, and lightcone's
+  // own preflight reports the engine it found from the agent's directory.
+  writeFileSync(lcPath, `#!/bin/sh\nprintf '%s\\n' 'lc, version ${floor}'\n`, { mode: 0o755 });
+  msg = injected(
+    agyDispatch("lightcone", "SessionStart", agyPayload({ hookEventName: "SessionStart" }), {
+      env: { PATH: `${lcBin}:${bin}:${process.env.PATH}`, FAKE_UVX_RC: "0" },
+    }),
+  );
+  assertIncludes("agy/lightcone", msg, "ASTRA project — spec at ./astra.yaml");
+  assertIncludes("agy/lightcone", msg, `Lightcone CLI ready: lc ${floor}`);
+  assertIncludes("agy/lightcone", msg, "the execution layer for ./astra.yaml");
+
+  console.log("✓ Antigravity dispatch: translated hooks.json, adapter, and stash-then-deliver all behave.");
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

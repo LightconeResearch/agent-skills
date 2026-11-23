@@ -5,7 +5,7 @@
 // generator (build.mjs) and the drift check (validate.mjs) agree by construction.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -38,7 +38,7 @@ function filesUnder(relDir) {
 // canonical sources ever looks like a number a contributor should wonder about
 // updating.
 
-const PIN_SCAN_DIRS = ["src/skills", "src/hooks"];
+const PIN_SCAN_DIRS = ["src/skills", "src/hooks", "src/adapters"];
 export const PIN_SCAN_EXTS = /\.(md|sh|json|ya?ml)$/;
 export const PIN_PLACEHOLDER = "x.y.z";
 
@@ -198,6 +198,115 @@ export function mergeHooks(hookPaths) {
   return jsonl({ hooks: merged });
 }
 
+// --- Antigravity hooks ------------------------------------------------------
+// Antigravity reads the same kind of hooks.json, but differs on every axis
+// that matters, so the build translates the canonical (Claude/Codex) manifests
+// into a separate root-level plugins/<name>/hooks.json — the only place a
+// native Antigravity plugin's hooks load from (it ignores hooks/hooks.json):
+//   - shape: top-level keys are named hook groups; SessionStart is a flat list
+//     of handlers, only the tool events keep the {matcher, hooks} wrapper;
+//   - tool names: matchers name Antigravity's tools (write_to_file, …);
+//   - process: a hook runs in the plugin dir with $PLUGIN_ROOT set, and the
+//     agent's directory arrives in the payload instead;
+//   - output: SessionStart answers with injectSteps, and PostToolUse can only
+//     answer {} — it has no channel to the model at all.
+// Every command therefore goes through one shared adapter
+// (src/adapters/antigravity-hook.sh) that runs the canonical script in the
+// agent's directory and converts its additionalContext — so the canonical
+// scripts stay single-protocol. A PostToolUse's context is stashed per
+// conversation and delivered by a PreInvocation handler the build adds to the
+// same group, which fires before the next model call.
+
+export const ANTIGRAVITY_ADAPTER = "src/adapters/antigravity-hook.sh";
+const ANTIGRAVITY_ADAPTER_SCRIPT = "antigravity-hook.sh";
+export const PLUGIN_LOGO = "src/assets/logo.svg";
+
+/** Canonical matcher token → Antigravity tool names. Antigravity's IDE/App
+ *  and CLI expose different tool names for file operations (`write_to_file` /
+ *  `replace_file_content` / `multi_replace_file_content` / `view_file` in the
+ *  IDE/App vs `write_file` / `edit_file` / `read_file` in `agy` CLI), so each
+ *  token lists both. `apply_patch` is Codex's own edit tool and has no
+ *  counterpart. A token missing here fails the build rather than silently
+ *  dropping the hook. */
+const ANTIGRAVITY_TOOLS = {
+  Write: ["write_to_file", "write_file"],
+  Edit: ["replace_file_content", "multi_replace_file_content", "edit_file"],
+  MultiEdit: ["multi_replace_file_content", "edit_file"],
+  apply_patch: [],
+  Bash: ["run_command"],
+  Read: ["view_file", "read_file"],
+};
+const ANTIGRAVITY_EDIT_TOOLS = new Set([
+  "write_to_file",
+  "write_file",
+  "replace_file_content",
+  "multi_replace_file_content",
+  "edit_file",
+]);
+// The bundled customization guide says matcher targets are step types
+// (CORTEX_STEP_TYPE_* lowercased), under which every file edit is a
+// `code_action` step; the hooks reference names the tools above. A matcher
+// on file edits lists both, so it fires under either reading — the hook
+// scripts prefilter on the edited path, so an extra match costs nothing.
+const ANTIGRAVITY_EDIT_STEP = "code_action";
+
+const CANONICAL_HOOK_COMMAND = /^bash "\$\{CLAUDE_PLUGIN_ROOT:-\$PLUGIN_ROOT\}\/hooks\/scripts\/([\w.-]+\.sh)"$/;
+
+function antigravityMatcher(matcher, where) {
+  if (!matcher) return "";
+  const names = [];
+  for (const token of matcher.split("|")) {
+    const mapped = ANTIGRAVITY_TOOLS[token];
+    if (!mapped) throw new Error(`${where}: matcher token "${token}" has no Antigravity tool mapping — add it to ANTIGRAVITY_TOOLS in scripts/lib.mjs`);
+    names.push(...mapped);
+  }
+  if (names.some((n) => ANTIGRAVITY_EDIT_TOOLS.has(n))) names.push(ANTIGRAVITY_EDIT_STEP);
+  const out = [...new Set(names)];
+  if (!out.length) throw new Error(`${where}: matcher "${matcher}" matches no Antigravity tool`);
+  return out.join("|");
+}
+
+function antigravityHandler(handler, event, where) {
+  const m = CANONICAL_HOOK_COMMAND.exec(handler.command || "");
+  if (!m)
+    throw new Error(
+      `${where}: command must have the form bash "\${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/scripts/<name>.sh" to be translated for Antigravity`,
+    );
+  const out = { type: "command", command: `bash ./hooks/scripts/${ANTIGRAVITY_ADAPTER_SCRIPT} ${event} ${m[1]}` };
+  if (handler.timeout) out.timeout = handler.timeout;
+  return out;
+}
+
+/** Translate canonical hooks.json files into one Antigravity hooks.json: one
+ *  named group per source plugin (the dir under src/hooks/). */
+export function antigravityHooks(hookPaths) {
+  const groups = {};
+  for (const rel of hookPaths) {
+    const group = basename(dirname(rel)); // src/hooks/<plugin>/hooks.json → <plugin>
+    const { hooks } = JSON.parse(readFileSync(join(ROOT, rel), "utf8"));
+    const out = {};
+    for (const [event, entries] of Object.entries(hooks || {})) {
+      const where = `${rel} ${event}`;
+      if (event === "SessionStart") {
+        out.SessionStart = entries.flatMap((e) => e.hooks.map((h) => antigravityHandler(h, event, where)));
+      } else if (event === "PostToolUse") {
+        out.PostToolUse = entries.map((e) => ({
+          matcher: antigravityMatcher(e.matcher, where),
+          hooks: e.hooks.map((h) => antigravityHandler(h, event, where)),
+        }));
+        // The stashed context's only way to the model.
+        out.PreInvocation = [
+          { type: "command", command: `bash ./hooks/scripts/${ANTIGRAVITY_ADAPTER_SCRIPT} PreInvocation`, timeout: 10 },
+        ];
+      } else {
+        throw new Error(`${where}: no Antigravity translation for ${event} yet — extend antigravityHooks() in scripts/lib.mjs`);
+      }
+    }
+    groups[group] = out;
+  }
+  return jsonl(groups);
+}
+
 /** Produce every generated artifact. Returns:
  *   - files: { relPath: jsonString }  (deterministic, newline-terminated)
  *   - copies: [{ source: canonicalRelPath, dest: generatedRelPath, kind }]
@@ -265,11 +374,13 @@ export function buildArtifacts(model) {
   }
 
   // --- Self-contained per-plugin dirs (plugins/<name>/) --------------------
-  // Each dir carries the whole closure and ships both harnesses' plugin
-  // manifests. Skills/agents/hooks are generated copies of the canonical trees;
-  // this is necessary because plugin installers archive the plugin directory
-  // without following symlinks that point outside it. Claude and Codex both
-  // auto-discover skills/, agents/, and hooks/hooks.json under the plugin root.
+  // Each dir carries the whole closure and ships every harness's plugin
+  // manifest (Claude, Codex, Antigravity). Skills/agents/hooks are generated
+  // copies of the canonical trees; this is necessary because plugin installers
+  // archive the plugin directory without following symlinks that point outside
+  // it. Claude and Codex both auto-discover skills/, agents/, and
+  // hooks/hooks.json under the plugin root; Antigravity discovers skills/ too,
+  // but reads hooks only from a root hooks.json (see antigravityHooks()).
   //
   // Hooks: Codex reads the same hooks.json protocol (SessionStart/PostToolUse
   // with hookSpecificOutput.additionalContext); commands locate the plugin root
@@ -325,6 +436,29 @@ export function buildArtifacts(model) {
     };
     files[`plugins/${p.name}/.codex-plugin/plugin.json`] = jsonl(codexManifest);
 
+    // Antigravity: `.antigravity-plugin/plugin.json` is its manifest location
+    // for a dir that also ships other harnesses' manifests. The schema rejects
+    // unknown keys, so this carries only fields it defines; skills/ is
+    // auto-discovered, and hooks load from the root hooks.json written below.
+    files[`plugins/${p.name}/.antigravity-plugin/plugin.json`] = jsonl({
+      $schema: "https://antigravity.google/schemas/v1/plugin.json",
+      name: p.name,
+      displayName,
+      version: p.version,
+      description: p.description,
+      logo: "assets/logo.svg",
+      author: mk.owner,
+      homepage: base.homepage,
+      repository: base.repository,
+      license: base.license,
+    });
+    copies.push({
+      kind: "asset",
+      pins,
+      source: PLUGIN_LOGO,
+      dest: `plugins/${p.name}/assets/logo.svg`,
+    });
+
     // skills/ — materialize the full closure from canonical src/skills/. This
     // keeps generated plugins self-contained while src/skills/ remains the
     // authoring source.
@@ -377,6 +511,14 @@ export function buildArtifacts(model) {
       const manifestDest = `plugins/${p.name}/hooks/hooks.json`;
       if (closHooks.length === 1) copies.push({ kind: "hook", pins, source: closHooks[0], dest: manifestDest });
       else files[manifestDest] = mergeHooks(closHooks);
+
+      // Antigravity: its own translated manifest at the plugin root, and the
+      // adapter every one of its commands runs, beside the canonical scripts.
+      const adapterDest = `plugins/${p.name}/hooks/scripts/${ANTIGRAVITY_ADAPTER_SCRIPT}`;
+      if (seenDest.has(adapterDest))
+        throw new Error(`plugin "${p.name}": a hook script is named ${ANTIGRAVITY_ADAPTER_SCRIPT}, which the Antigravity adapter reserves`);
+      copies.push({ kind: "hook", pins, source: ANTIGRAVITY_ADAPTER, dest: adapterDest });
+      files[`plugins/${p.name}/hooks.json`] = antigravityHooks(closHooks);
     }
   }
 
