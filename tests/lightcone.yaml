@@ -19,27 +19,35 @@
 plugin: lightcone
 
 # The hook frames its report around ./astra.yaml, so the session opens on a
-# real (minimal, valid) project — the same fixture as tests/astra.yaml.
+# real (minimal, valid) ASTRA 0.1 project — the same fixture as
+# tests/astra.yaml, in a git repository with its input staged, since the
+# bundled astra hooks fire in these sessions too and 0.1 validates nothing
+# outside one.
 project:
   astra.yaml: |
-    version: "0.0.13"
-    name: "E2E fixture"
+    spec_version: "0.1.0"
+    label: "E2E fixture"
     description: "Minimal valid analysis used as the e2e project fixture."
 
     inputs:
-      - id: primary_data
-        type: data
+      primary_data:
+        path: data/primary.csv
         description: "Placeholder input."
 
     outputs:
-      - id: main_result
+      main_result:
         type: metric
+        format: json
         description: "Placeholder output."
         inputs: [primary_data]
         recipe:
           command: python analyze.py --data {inputs.primary_data} --out {output}
+  data/primary.csv: |
+    x
+    1
 
 setup:
+  - git init -q && git add -A
   # Both uv dirs point into $E2E_BIN — the scratch bin dir, first on the PATH
   # the hooks inherit and deleted with the scratch area afterwards. A bare
   # `uv tool install` would instead land `lc` in the developer's own
@@ -62,3 +70,4 @@ tests:
       - The Lightcone CLI is not installed   # `lc` never reached the hook's PATH
       - did not report a version             # broken install, or a foreign `lc`
       - older than the {pin:lightcone-cli} this skill   # install older than the pin
+      - predates ASTRA 0.1                   # the fixture was mistaken for a 0.0.x spec

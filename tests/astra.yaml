@@ -60,25 +60,25 @@
 
 plugin: astra
 
-# A genuinely minimal VALID project (checked against the pinned astra-tools
-# validator): one decision in astra.yaml, and a universe that selects it —
-# so the project is valid as a whole, and deleting the decision from
-# astra.yaml alone leaves the universe pointing at nothing.
+# A genuinely minimal VALID ASTRA 0.1 project (checked against the pinned
+# astra-tools validator): one tracked input, one decision, one output that
+# uses it, and a universe — written in astra.yaml, as 0.1 has it — that
+# selects it. Deleting the decision then leaves both the output and the
+# universe naming nothing.
 project:
   astra.yaml: |
-    version: "0.0.13"
-    name: "E2E fixture"
+    spec_version: "0.1.0"
+    label: "E2E fixture"
     description: "Minimal valid analysis used as the e2e project fixture."
 
     inputs:
-      - id: primary_data
-        type: data
+      primary_data:
+        path: data/primary.csv
         description: "Placeholder input."
 
     decisions:
       example_method:
         label: "Which method to use."
-        default: option_a
         options:
           option_a:
             label: "Method A."
@@ -86,25 +86,34 @@ project:
             label: "Method B."
 
     outputs:
-      - id: main_result
+      main_result:
         type: metric
+        format: json
         description: "Placeholder output."
         inputs: [primary_data]
+        decisions: [example_method]
         recipe:
-          command: python analyze.py --data {inputs.primary_data} --out {output}
-  universes/baseline.yaml: |
-    id: baseline
-    description: Baseline
-    decisions:
-      example_method: option_a
+          command: python analyze.py --data {inputs.primary_data} --method {decisions.example_method} --out {output}
+
+    universes:
+      baseline:
+        decisions:
+          example_method: option_a
+  data/primary.csv: |
+    x
+    1
 
 # No stubs: this spec runs the REAL toolchain. Both astra hooks delegate to
 # `uvx astra-tools@<pin>`, so a broken uv install, an unresolvable pin, or a
 # crashing CLI all surface — the hooks catch those and inject degraded
-# messages, which forbid_context turns into failures. Warm the pinned
-# environment once up front so the first hook invocation isn't racing its
-# 90-second timeout against a cold download.
+# messages, which forbid_context turns into failures. ASTRA 0.1 validates an
+# analysis only inside a git repository, with its inputs tracked, so setup
+# makes one and stages the fixture (tracked is enough; nothing is committed,
+# so no git identity is needed). Then warm the pinned environment once up
+# front so the first hook invocation isn't racing its 90-second timeout
+# against a cold download.
 setup:
+  - git init -q && git add -A
   - uvx astra-tools@x.y.z --help
 
 tests:
@@ -112,11 +121,13 @@ tests:
     event: SessionStart
     prompt: "Reply with exactly: OK"
     # The primer splices real `astra info` output, which opens with the
-    # analysis name from the fixture — proof the pinned CLI ran and parsed it.
+    # analysis label from the fixture — proof the pinned CLI ran and read it.
     expect_context: E2E fixture
     forbid_context:
       - Could not run       # `astra info` failed
       - is not installed    # uv missing on the runner
+      - does not validate   # the fixture (or its git setup) is no longer valid
+      - predates ASTRA 0.1  # the fixture was mistaken for a 0.0.x spec
 
   - name: validate-on-save
     event: PostToolUse
@@ -132,7 +143,7 @@ tests:
       - validation FAILED   # spec rejected
       - not validated       # uv missing, or the toolchain crashed
 
-  - name: validate-on-save-stale-universe
+  - name: validate-on-save-broken-reference
     event: PostToolUse
     prompt: >-
       A file named astra.yaml exists in the current directory. Using your file
@@ -141,9 +152,9 @@ tests:
       of the file unchanged. Do nothing else, and do not explain.
     edits_file: astra.yaml
     attempts: 3
-    # astra.yaml is still valid on its own; only whole-project validation sees
-    # that universes/baseline.yaml now selects a decision that no longer exists.
-    expect_context: UNKNOWN_DECISION
+    # The output and the universe still name the deleted decision: only the
+    # validator's report, spliced through, carries this rule's code.
+    expect_context: UNRESOLVED_ADDRESS
     forbid_context:
-      - ASTRA validation passed   # the hook validated astra.yaml alone
+      - ASTRA validation passed   # the report did not reach the agent
       - not validated       # uv missing, or the toolchain crashed

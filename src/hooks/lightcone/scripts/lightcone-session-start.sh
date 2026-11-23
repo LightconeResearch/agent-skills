@@ -49,6 +49,17 @@ if [ -f astra.yaml ]; then
     where="Lightcone project — the execution layer for ./astra.yaml"
     closing="Activate the lightcone skill to work on this project."
     in_project=1
+    # A spec from before ASTRA 0.1 names its version `version:` where 0.1
+    # writes `spec_version:`, and the lc this plugin pins reads only 0.1: the
+    # whole project needs upgrading before any verb works on it. Checked in
+    # pure bash, on top-level keys only (they start a line).
+    nl=$'\n'
+    spec=$(<astra.yaml)
+    case "$nl$spec" in
+        *"${nl}spec_version:"*) ;;
+        *"${nl}version:"*)
+            closing="This project predates ASTRA 0.1 (its astra.yaml has \`version:\`, not \`spec_version:\`), which this lc does not read: activate the lightcone skill and follow its references/upgrading.md before running anything." ;;
+    esac
 else
     where="Lightcone plugin active — this directory holds no astra.yaml, so there is no project here yet."
     closing="Activate the lightcone skill to scope one, or to work on a project elsewhere."
@@ -169,7 +180,7 @@ fi
 # Outside a project the line is kept to one sentence, since its only job
 # there is to spare that round trip.
 if [ "$in_project" -eq 1 ]; then
-    emit "Lightcone CLI ready: lc $found. Run \`lc status\` to see what state the analysis's outputs are in."
+    emit "Lightcone CLI ready: lc $found. Run \`lc status\` to see where the analysis's results stand."
 else
     printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Lightcone CLI ready: lc %s (Lightcone plugin active; this directory holds no astra.yaml yet).\\n"}}\n' "$found"
 fi

@@ -12,6 +12,10 @@ of directly relevant ones (~2 per topic, max 10 per section). Present the
 list via `AskUserQuestion` with a one-line relevance note each, and let the
 user approve, reject, and add.
 
+Only arXiv papers download by themselves. Say, in that list, which approved
+papers are not on arXiv: for each, the user supplies the PDF (the astra
+skill's evidence workflow adds it with `--pdf`), or it is dropped.
+
 Collect candidates *during* the conversation phases, and process them here.
 **Never spawn a search or an extraction while the interview is still
 running**: a subagent returning mid-conversation interrupts the user's train
@@ -31,8 +35,7 @@ you know:
 - the analysis context — what the analysis is, and which decisions this
   paper might inform;
 - the paper's DOI (and arXiv version, if any) and its cached-PDF path;
-- the target decisions: each id, its label, and its options;
-- the current timestamp, ISO 8601, for `created_at`.
+- the target decisions: each id, its label, and its options.
 
 Show progress as results land, so a long pass doesn't look stalled:
 

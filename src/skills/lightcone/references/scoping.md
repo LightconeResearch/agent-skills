@@ -13,24 +13,25 @@ code is written yet. For the literature pass inside phase 3, read
 
 ## Before you start
 
-`lc init [DIR]` scaffolds the project — an empty spec (no inputs, outputs or
-decisions yet), a baseline universe that selects nothing, a uv project, a git
-repository (with `data/` and `results/` backed by git-annex, so a plain
-`git add` there stores the bytes properly), and a MyST report. It is
-idempotent, never overwrites what you own, and does **not** create
-`AGENTS.md`; you write that at finalize.
+`lc init [DIR]` scaffolds the project — an empty ASTRA 0.1 spec (a
+`spec_version` and a `label`; no inputs, outputs, decisions or universes
+yet), a uv project, a git repository on `main` (with `data/` and `results/`
+backed by git-annex, so a plain `git add` there stores the bytes properly),
+and a MyST report. It is idempotent, never overwrites what you own, commits
+nothing — the scaffold waits, uncommitted, for the user's first commit —
+and does **not** create `AGENTS.md`; you write that at finalize.
 
-Once the spec gains its first decision, validation (including the
-validate-on-save hook) reports `MISSING_DECISION` for
-`universes/baseline.yaml`. That is expected while decisions are in flux —
-leave the universe alone; finalize regenerates it.
+The spec has no universe until finalize writes one. Until then validation
+passes with none, and `astra info` shows the decisions without selections —
+that is expected while decisions are in flux.
 
 Build the spec through conversation, writing to `astra.yaml` after each
 phase. Announce each phase with its banner so the user can follow.
 
 **You are a specification agent in this mode, not an implementation agent** —
-create or modify only `astra.yaml`, `universes/*`, and `AGENTS.md`, and write
-no Python/R/implementation code until scoping is done.
+create or modify only `astra.yaml` and `AGENTS.md` (and add the data files
+the user hands you under `data/`), and write no Python/R/implementation code
+until scoping is done.
 
 ## 1. Research question
 
@@ -40,8 +41,8 @@ Stage banner: **RESEARCH QUESTION**
 
 Sharpen it: what would a clear answer look like, and why does it matter?
 "Analyze this data" is not a research question — push back until it is. Set
-`name` in `astra.yaml`. (Leave the scaffolded empty `description` for the
-finalize step — written too early it goes stale.)
+`label` in `astra.yaml` (the scaffold put the folder's name there). Leave
+`description` for the finalize step — written too early it goes stale.
 
 ## 2. Analysis structure
 
@@ -54,10 +55,17 @@ Stage banner: **ANALYSIS STRUCTURE**
   analysis, the product being the validated estimator.
 - **One output per output.** A single metric, a single plot, or a single
   artifact each — never a bundle like "performance_metrics". This is
-  enforced, not advisory: `lc` writes each output to one file,
-  `results/<universe>/<id>.<format>`, so give every output a `format:` (its
-  file extension) as you declare it, and split anything that wanted to be
-  two files into two outputs.
+  enforced, not advisory: each result is one file,
+  `results/<universe>/<id>.<format>`, so give every output its `type` and
+  `format:` (its file extension) as you declare it, and split anything that
+  wanted to be two files into two outputs. Its `recipe.command` is required
+  too; while scoping, write the command the script will be called with — the
+  script itself comes later.
+- **Inputs are files in the project.** Each is one file under `data/`,
+  declared by `path` and committed (`git add` it — ASTRA does not validate
+  an input git does not track). Data that is downloaded, or lives elsewhere
+  on a shared filesystem, is not an input: it becomes an output built once
+  whose recipe fetches it, or the user copies it into `data/`. Ask which.
 
 Update `astra.yaml` with `inputs` and `outputs`.
 
@@ -78,11 +86,12 @@ before scoping is done — never fabricate one.
 Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
 
 1. Checkpoint: "Anything else that should inform this analysis?"
-2. **Regenerate the baseline universe** from the decision defaults,
-   overwriting the scaffolded one that selects nothing:
-   `uvx astra-tools@x.y.z universe generate -n baseline --force`. Generate
-   no other universe unless the user asks for more (universe commands: astra
-   skill).
+2. **Write the baseline universe** in `astra.yaml`: a `baseline` entry
+   under `universes:` selecting, for every decision, the option the review
+   settled on. ASTRA has no decision defaults and nothing generates a
+   universe — this entry *is* where those choices live. Write no other
+   universe unless the user asks for more; each variant then
+   `derived_from: baseline` and sets only what changes (astra skill).
 3. Validate the spec per the astra skill — verifying evidence too, if any
    was extracted — and iterate until clean.
 4. Fill in the empty `description:` with a short orientation paragraph now
@@ -97,7 +106,9 @@ Stage banner: **FINALIZING**, and **SPECIFICATION COMPLETE** when done.
    outcome — constraints the user mentioned, avenues considered and
    rejected, data quirks. The spec stays the source of truth for structure,
    decisions and evidence; don't restate it here.
-6. Show a summary table and confirm with the user. Scoping is done:
+6. Show a summary table and confirm with the user, and offer to make the
+   project's first commit (the scaffold, the spec, `AGENTS.md` and the data
+   files) — `lc init` left all of it uncommitted. Scoping is done:
    everything needed to carry the work into implementation is now in
    `astra.yaml` and `AGENTS.md`.
 

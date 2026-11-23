@@ -3,13 +3,14 @@
 // network, no real astra).
 //
 // The shims are deliberately thin: string-match the raw payload, then
-// delegate to the pinned `uvx astra-tools@<pin>` invocation, whose --json
-// mode returns ONE JSON-encoded string that the shim splices into the
-// response envelope. So the tests stub uvx (controllable exit code +
+// delegate to the pinned `uvx astra-tools@<pin>` invocation, whose plain-text
+// report (always on stdout) the shim JSON-escapes in pure bash and splices
+// into the response envelope. So the tests stub uvx (controllable exit code +
 // invocation log) and assert the shim's halves: the prefilter (non-ASTRA
 // events exit silently WITHOUT invoking uvx), the delegation (correct astra
 // arguments), and the envelope (every emitted line must JSON.parse, with the
-// spliced report intact).
+// spliced report intact — quotes, backslashes, tabs and box-drawing
+// characters included, and control characters dropped).
 //
 // A fake `astra` that always SUCCEEDS also sits on PATH: if any script ever
 // regresses to running a PATH astra instead of uvx, the expected FAILED
@@ -28,22 +29,25 @@ const project = join(scratch, "project");
 const bin = join(scratch, "bin");
 const uvxLog = join(scratch, "uvx-invocations.log");
 
+const SPEC = 'spec_version: "0.1.0"\nlabel: test\n';
+const LEGACY_SPEC = 'version: "0.0.13"\nname: test\n';
 mkdirSync(project, { recursive: true });
 mkdirSync(bin);
-writeFileSync(join(project, "astra.yaml"), "id: test\n");
-// The fake emits what the real --json mode emits: one JSON-encoded string
-// (here with embedded quotes and a backslash, to prove the splice needs no
-// re-escaping). FAKE_UVX_GARBAGE simulates a toolchain that never got to
-// astra (uvx resolution failure, crash) — non-JSON noise on stdout.
+writeFileSync(join(project, "astra.yaml"), SPEC);
+// The fake prints what astra prints: a plain-text report on stdout, here
+// carrying every character the shim must escape (quotes, a backslash, a tab,
+// box drawing, and an ESC it must drop). FAKE_UVX_GARBAGE simulates a
+// toolchain that never got to astra (uvx resolution failure, crash): noise
+// on stderr and nothing on stdout.
 writeFileSync(
   join(bin, "uvx"),
   `#!/bin/sh
 echo "$*" >> "${uvxLog}"
 if [ -n "\${FAKE_UVX_GARBAGE}" ]; then
-  echo "error: no interpreter found"
+  echo "error: no interpreter found" >&2
   exit 2
 fi
-printf '%s\\n' "\\"fake report: $* | with \\\\\\"quotes\\\\\\" and a \\\\\\\\backslash\\""
+printf 'fake report: %s\\n  1:1 error X with "quotes" and a \\\\backslash\\tand a tab \\342\\224\\217\\033[1m\\n' "$*"
 exit "\${FAKE_UVX_RC:-1}"
 `,
   { mode: 0o755 },
@@ -83,9 +87,22 @@ function assertIncludes(label, haystack, needle) {
   }
 }
 
+function assertExcludes(label, haystack, needle) {
+  if (haystack.includes(needle)) {
+    throw new Error(`${label}: unexpected ${JSON.stringify(needle)}\n${haystack}`);
+  }
+}
+
 function assertSilent(label, stdout, before) {
   if (stdout !== "") throw new Error(`${label}: expected no output\n${stdout}`);
   if (uvxCalls().length !== before) throw new Error(`${label}: uvx was invoked`);
+}
+
+// The spliced report, character for character: what survives the escaping.
+function assertReport(label, context) {
+  assertIncludes(label, context, "fake report:");
+  assertIncludes(label, context, 'with "quotes" and a \\backslash\tand a tab ┏[1m');
+  assertExcludes(label, context, "\u001b");
 }
 
 const uvxCalls = () => (existsSync(uvxLog) ? readFileSync(uvxLog, "utf8").trim().split("\n") : []);
@@ -105,12 +122,11 @@ try {
     run("validate-on-save.sh", writePayload),
     "PostToolUse",
   );
-  assertIncludes("save/fail", context, "ASTRA validation FAILED for the project");
-  assertIncludes("save/fail", context, "fake report:");
-  assertIncludes("save/fail", context, 'with "quotes" and a \\backslash');
+  assertIncludes("save/fail", context, "ASTRA validation FAILED");
+  assertReport("save/fail", context);
   const [firstCall] = uvxCalls();
   assertIncludes("save/fail uvx args", firstCall, "astra-tools@");
-  assertIncludes("save/fail uvx args", firstCall, "validate --json");
+  assertIncludes("save/fail uvx args", firstCall, " validate");
 
   // Passing validation → single-line passed message.
   context = parsedContext(
@@ -120,7 +136,7 @@ try {
   );
   assertIncludes("save/pass", context, "ASTRA validation passed");
 
-  // Toolchain failure (no JSON string on stdout) → toolchain message, valid JSON.
+  // Toolchain failure (nothing on stdout) → toolchain message, valid JSON.
   context = parsedContext(
     "save/toolchain",
     run("validate-on-save.sh", writePayload, { FAKE_UVX_GARBAGE: "1" }),
@@ -138,45 +154,47 @@ try {
   context = parsedContext("save/patch", run("validate-on-save.sh", patchPayload), "PostToolUse");
   assertIncludes("save/patch", context, "ASTRA validation FAILED");
 
-  // Editing a universe file triggers the same whole-project run.
-  mkdirSync(join(project, "universes"), { recursive: true });
-  writeFileSync(join(project, "universes", "baseline.yaml"), "id: baseline\n");
+  // A declared analysis's own astra.yaml triggers the same whole-tree run.
   context = parsedContext(
-    "save/universe",
+    "save/declared",
     run(
       "validate-on-save.sh",
       JSON.stringify({
         cwd: project,
         tool_name: "Edit",
-        tool_input: { file_path: join(project, "universes", "baseline.yaml") },
+        tool_input: { file_path: join(project, "stage", "astra.yaml") },
         tool_response: {},
       }),
     ),
     "PostToolUse",
   );
-  assertIncludes("save/universe", context, "ASTRA validation FAILED");
+  assertIncludes("save/declared", context, "ASTRA validation FAILED");
 
-  // Non-ASTRA event → silent, and uvx is never invoked.
-  let before = uvxCalls().length;
-  assertSilent(
-    "save/silent",
-    run(
-      "validate-on-save.sh",
-      JSON.stringify({
-        cwd: project,
-        tool_name: "Write",
-        tool_input: { file_path: join(project, "README.md") },
-        tool_response: {},
-      }),
-    ),
-    before,
-  );
+  // Non-ASTRA events → silent, and uvx is never invoked. That includes a
+  // pre-0.1 universes/ file: ASTRA 0.1 writes universes in astra.yaml, and
+  // nothing reads that folder any more.
+  for (const file of ["README.md", join("universes", "baseline.yaml")]) {
+    const before = uvxCalls().length;
+    assertSilent(
+      `save/silent ${file}`,
+      run(
+        "validate-on-save.sh",
+        JSON.stringify({
+          cwd: project,
+          tool_name: "Write",
+          tool_input: { file_path: join(project, file) },
+          tool_response: {},
+        }),
+      ),
+      before,
+    );
+  }
 
   // Payload mentions astra.yaml, but the session dir has no spec → silent
   // (the mention was incidental, e.g. docs content), and no uvx run.
   const noProject = join(scratch, "no-project");
   mkdirSync(noProject);
-  before = uvxCalls().length;
+  let before = uvxCalls().length;
   assertSilent(
     "save/no-project",
     run(
@@ -194,16 +212,26 @@ try {
   );
 
   // --- session-start ------------------------------------------------------
-  // Healthy toolchain → primer with the spliced info header.
+  // Healthy toolchain → primer with the spliced `astra info` summary.
   context = parsedContext(
     "session/primer",
     run("astra-session-start.sh", "{}", { FAKE_UVX_RC: "0" }),
     "SessionStart",
   );
   assertIncludes("session/primer", context, "ASTRA project — spec at ./astra.yaml");
-  assertIncludes("session/primer", context, "fake report:");
+  assertReport("session/primer", context);
   assertIncludes("session/primer", context, "Activate the astra skill");
-  assertIncludes("session/primer uvx args", uvxCalls().at(-1), "info --json");
+  assertExcludes("session/primer", context, "predates ASTRA 0.1");
+  assertIncludes("session/primer uvx args", uvxCalls().at(-1), " info");
+
+  // An analysis that breaks a rule → its report, said to be one.
+  context = parsedContext(
+    "session/invalid",
+    run("astra-session-start.sh", "{}", { FAKE_UVX_RC: "1" }),
+    "SessionStart",
+  );
+  assertIncludes("session/invalid", context, "does not validate");
+  assertReport("session/invalid", context);
 
   // Toolchain failure → degraded message, still valid JSON.
   context = parsedContext(
@@ -213,11 +241,23 @@ try {
   );
   assertIncludes("session/toolchain", context, "Could not run `astra info`");
 
+  // A spec written before ASTRA 0.1 → pointed at the upgrade reference,
+  // whatever astra then says about it.
+  writeFileSync(join(project, "astra.yaml"), LEGACY_SPEC);
+  context = parsedContext(
+    "session/legacy",
+    run("astra-session-start.sh", "{}", { FAKE_UVX_RC: "1" }),
+    "SessionStart",
+  );
+  assertIncludes("session/legacy", context, "predates ASTRA 0.1");
+  assertIncludes("session/legacy", context, "upgrading-from-0.0.md");
+  writeFileSync(join(project, "astra.yaml"), SPEC);
+
   // Outside an ASTRA project → silent.
   before = uvxCalls().length;
   assertSilent("session/elsewhere", run("astra-session-start.sh", "{}", {}, scratch), before);
 
-  console.log("✓ ASTRA hook shims: prefilter, uvx delegation, and JSON splicing all behave.");
+  console.log("✓ ASTRA hook shims: prefilter, uvx delegation, and report splicing all behave.");
 
   // --- lightcone engine preflight -----------------------------------------
   // The PACKAGED copy is under test, not the canonical one: the version floor
@@ -349,6 +389,21 @@ try {
   assertIncludes("lc/headless", lcContext("lc/headless", { env: HEADLESS }), "No one can be asked");
   assertIncludes("lc/ci", lcContext("lc/ci", { env: { ...TUI, CI: "true" } }), "No one can be asked");
   assertIncludes("lc/unknown-harness", lcContext("lc/unknown-harness", { env: {} }), "Ask the user");
+
+  // A project whose spec predates ASTRA 0.1 is pointed at the upgrade
+  // reference before anything runs; a 0.1 spec is not.
+  writeFileSync(join(project, "astra.yaml"), LEGACY_SPEC);
+  assertIncludes(
+    "lc/legacy-spec",
+    lcContext("lc/legacy-spec", { version: floor, env: TUI }),
+    "references/upgrading.md",
+  );
+  writeFileSync(join(project, "astra.yaml"), SPEC);
+  assertExcludes(
+    "lc/current-spec",
+    lcContext("lc/current-spec", { version: floor, env: TUI }),
+    "predates ASTRA 0.1",
+  );
 
   // A foreign `lc` whose version carries JSON metacharacters must not break
   // the envelope — parsedContext throws if the line no longer parses.
