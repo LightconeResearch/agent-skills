@@ -1,0 +1,30 @@
+{
+  "astra": {
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|code_action",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ./hooks/scripts/antigravity-hook.sh PostToolUse validate-on-save.sh",
+            "timeout": 90
+          }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "bash ./hooks/scripts/antigravity-hook.sh PreInvocation",
+        "timeout": 10
+      }
+    ],
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "bash ./hooks/scripts/antigravity-hook.sh SessionStart astra-session-start.sh",
+        "timeout": 90
+      }
+    ]
+  }
+}
