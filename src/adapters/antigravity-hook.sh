@@ -17,11 +17,11 @@
 #      (`cwd`, or only `workspacePaths` on older releases). The canonical
 #      scripts look for ./astra.yaml, so the adapter cd's there first.
 #   2. The payload. Antigravity sends camelCase protojson (`toolCall.args.
-#      TargetFile`); the scripts read Claude's snake_case shape. The adapter
-#      hands them a minimal Claude-shaped payload — the directory and the
-#      edited file — not the raw one, whose `lastUserInput` would trip
-#      validate-on-save's substring prefilter on every edit of a session whose
-#      prompt mentioned astra.yaml.
+#      TargetFile` in IDE/App, `toolCall.args.Path` in `agy` CLI); the scripts
+#      read Claude's snake_case shape. The adapter hands them a minimal
+#      Claude-shaped payload — the directory and the edited file — not the raw
+#      one, whose `lastUserInput` would trip validate-on-save's substring
+#      prefilter on every edit of a session whose prompt mentioned astra.yaml.
 #   3. The way back to the model. The scripts answer with
 #      hookSpecificOutput.additionalContext. Antigravity's SessionStart takes
 #      that text as an injected system message. Its PostToolUse can only answer
@@ -109,8 +109,9 @@ case "$event" in
         cd "$dir" 2>/dev/null || empty
 
         # 2. The Claude-shaped payload the script was written against.
+        #    Antigravity IDE/App sends `TargetFile`; the `agy` CLI sends `Path`.
         file_json=''
-        json_string TargetFile && file_json=$REPLY
+        { json_string TargetFile || json_string Path; } && file_json=$REPLY
         payload='{"hook_event_name":"'$event'","cwd":"'$cwd_json'","tool_input":{'
         [ -n "$file_json" ] && payload+='"file_path":"'$file_json'"'
         payload+='}}'

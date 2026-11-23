@@ -11,6 +11,7 @@ rule: **edit the source, then regenerate.** Never hand-edit a generated file.
 | `src/agents/*.md` | Claude subagents | ✅ |
 | `src/hooks/<plugin>/hooks.json`, `src/hooks/<plugin>/scripts/*.sh` | Per-plugin hooks (Claude/Codex protocol) | ✅ |
 | `src/adapters/antigravity-hook.sh` | Runs those hook scripts under Antigravity's protocol | ✅ |
+| `src/assets/logo.svg` | Plugin logo bundled into each generated plugin | ✅ |
 | `skills.config.json` | How skills compose into plugins | ✅ |
 | `scripts/*.mjs` | Generator + validator | ✅ |
 | `.claude-plugin/marketplace.json` | Claude marketplace manifest | ⚙️ generated |

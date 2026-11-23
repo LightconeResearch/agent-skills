@@ -124,24 +124,29 @@ Open **Plugins** from the arrow beside **Create**, then search for and install
 <details>
 <summary><b>Antigravity</b> (CLI, app and IDE)</summary>
 
-Antigravity installs a plugin from a directory. Clone this repository once, then
-install the plugin's directory with the `agy` CLI. It is copied into
-`~/.gemini/config/plugins/`, where the CLI, the app and the IDE all find it:
+Install a plugin directly from its GitHub subfolder URL with the `agy` CLI. It
+is staged into `~/.gemini/config/plugins/`, where the CLI, the app and the IDE
+all find it:
 
 ```bash
-git clone https://github.com/LightconeResearch/agent-skills ~/.local/share/lightcone-agent-skills
-agy plugin install ~/.local/share/lightcone-agent-skills/plugins/astra
+agy plugin install https://github.com/LightconeResearch/agent-skills/tree/main/plugins/astra
 ```
 
-To update, `git pull` in the clone and run the same `agy plugin install`.
+Pass `/tree/main/plugins/<name>` rather than the bare repository URL — pointing
+`agy plugin install` at the repository root bulk-installs every plugin under
+`plugins/`, which would install `astra` alongside `lightcone`.
 
-Without the `agy` CLI, or to have every `git pull` take effect directly, register
-the clone in `~/.gemini/config/plugins.json` instead:
+To update, run the same `agy plugin install` command again (it replaces the
+existing installation in place).
+
+Without the `agy` CLI, or to load directly from a local clone so `git pull`
+takes effect immediately, register the clone in `~/.gemini/config/plugins.json`
+using an **absolute path** (Antigravity does not expand `~`):
 
 ```json
 {
   "entries": [
-    { "path": "~/.local/share/lightcone-agent-skills/plugins", "include_only": ["astra"] }
+    { "path": "/path/to/lightcone-agent-skills/plugins", "include_only": ["astra"] }
   ]
 }
 ```

@@ -2,7 +2,7 @@
   "astra": {
     "PostToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|code_action",
+        "matcher": "write_to_file|write_file|replace_file_content|multi_replace_file_content|edit_file|code_action",
         "hooks": [
           {
             "type": "command",

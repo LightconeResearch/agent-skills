@@ -219,20 +219,30 @@ export function mergeHooks(hookPaths) {
 
 export const ANTIGRAVITY_ADAPTER = "src/adapters/antigravity-hook.sh";
 const ANTIGRAVITY_ADAPTER_SCRIPT = "antigravity-hook.sh";
+export const PLUGIN_LOGO = "src/assets/logo.svg";
 
-/** Canonical matcher token → Antigravity tool names. Antigravity's hooks
- *  reference names its model-facing tools; apply_patch is Codex's own edit
- *  tool and has no counterpart. A token missing here fails the build rather
- *  than silently dropping the hook. */
+/** Canonical matcher token → Antigravity tool names. Antigravity's IDE/App
+ *  and CLI expose different tool names for file operations (`write_to_file` /
+ *  `replace_file_content` / `multi_replace_file_content` / `view_file` in the
+ *  IDE/App vs `write_file` / `edit_file` / `read_file` in `agy` CLI), so each
+ *  token lists both. `apply_patch` is Codex's own edit tool and has no
+ *  counterpart. A token missing here fails the build rather than silently
+ *  dropping the hook. */
 const ANTIGRAVITY_TOOLS = {
-  Write: ["write_to_file"],
-  Edit: ["replace_file_content", "multi_replace_file_content"],
-  MultiEdit: ["multi_replace_file_content"],
+  Write: ["write_to_file", "write_file"],
+  Edit: ["replace_file_content", "multi_replace_file_content", "edit_file"],
+  MultiEdit: ["multi_replace_file_content", "edit_file"],
   apply_patch: [],
   Bash: ["run_command"],
-  Read: ["view_file"],
+  Read: ["view_file", "read_file"],
 };
-const ANTIGRAVITY_EDIT_TOOLS = new Set(["write_to_file", "replace_file_content", "multi_replace_file_content"]);
+const ANTIGRAVITY_EDIT_TOOLS = new Set([
+  "write_to_file",
+  "write_file",
+  "replace_file_content",
+  "multi_replace_file_content",
+  "edit_file",
+]);
 // The bundled customization guide says matcher targets are step types
 // (CORTEX_STEP_TYPE_* lowercased), under which every file edit is a
 // `code_action` step; the hooks reference names the tools above. A matcher
@@ -436,10 +446,17 @@ export function buildArtifacts(model) {
       displayName,
       version: p.version,
       description: p.description,
+      logo: "assets/logo.svg",
       author: mk.owner,
       homepage: base.homepage,
       repository: base.repository,
       license: base.license,
+    });
+    copies.push({
+      kind: "asset",
+      pins,
+      source: PLUGIN_LOGO,
+      dest: `plugins/${p.name}/assets/logo.svg`,
     });
 
     // skills/ — materialize the full closure from canonical src/skills/. This

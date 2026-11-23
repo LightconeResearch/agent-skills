@@ -419,13 +419,14 @@ try {
     if (injected(outs) !== "") throw new Error(`${label}: expected no injected context\n${JSON.stringify(outs)}`);
   };
 
-  // The translated matcher covers Antigravity's file-edit tools, and only those.
+  // The translated matcher covers Antigravity's file-edit tools (both IDE/App
+  // and `agy` CLI names), and only those.
   const agyMatcher = new RegExp(
     `^(?:${JSON.parse(readFileSync(join(ROOT, "plugins/astra/hooks.json"), "utf8")).astra.PostToolUse[0].matcher})$`,
   );
-  for (const tool of ["write_to_file", "replace_file_content", "multi_replace_file_content"])
+  for (const tool of ["write_to_file", "write_file", "replace_file_content", "multi_replace_file_content", "edit_file"])
     if (!agyMatcher.test(tool)) throw new Error(`agy/matcher: misses ${tool}`);
-  for (const tool of ["run_command", "view_file"])
+  for (const tool of ["run_command", "view_file", "read_file"])
     if (agyMatcher.test(tool)) throw new Error(`agy/matcher: matches ${tool}`);
 
   // SessionStart → the primer, injected as a system message.
@@ -472,6 +473,17 @@ try {
   agyDispatch("astra", "PostToolUse", edit(join(project, "README.md")), { toolName: "write_to_file" });
   if (uvxCalls().length !== before) throw new Error("agy/save-silent: uvx was invoked");
   assertQuiet("agy/save-silent", agyDispatch("astra", "PreInvocation", agyPayload()));
+
+  // `agy` CLI uses `edit_file` / `write_file` with `args.Path` (not `TargetFile`).
+  const cliEdit = (tool, file) =>
+    agyPayload({ hookEventName: "PostToolUse", toolCall: { id: "t2", name: tool, args: { Path: file } } });
+  agyDispatch("astra", "PostToolUse", cliEdit("edit_file", join(project, "astra.yaml")), { toolName: "edit_file" });
+  msg = injected(agyDispatch("astra", "PreInvocation", agyPayload()));
+  assertIncludes("agy/cli-edit-file", msg, "ASTRA validation FAILED for the project");
+  before = uvxCalls().length;
+  agyDispatch("astra", "PostToolUse", cliEdit("write_file", join(project, "README.md")), { toolName: "write_file" });
+  if (uvxCalls().length !== before) throw new Error("agy/cli-silent: uvx was invoked");
+  assertQuiet("agy/cli-silent", agyDispatch("astra", "PreInvocation", agyPayload()));
 
   // A write_to_file payload carries the whole file. The adapter must still
   // find its fields — wherever they sit, here after 2 MB of content — well
