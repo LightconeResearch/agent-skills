@@ -55,7 +55,7 @@ CUDA_VISIBLE_DEVICES=0 lc compute launch --cpus 4 --memory 8GB --gpus GPU:1 --wa
   them before building anything.
 - An `lc run` probe under plain Docker or Podman gets no GPUs, and its
   note says so; that says nothing about the allocation's hardware.
-- A standalone `datalad rerun` of a GPU output needs its own
+- A standalone `datalad rerun` of a GPU result needs its own
   `CUDA_VISIBLE_DEVICES`; it inherits nothing from the old allocation.
 
 ## Recipe resources
@@ -70,9 +70,9 @@ recipe:
 
 | Field | `lc` |
 |---|---|
-| `cpus` | Whole number, default 1 |
+| `cpus` | Whole number, default 1 (ASTRA allows fractions; `lc` refuses them) |
 | `memory` | Units required: `512Mi`, `8Gi` (binary), `8GB` (decimal). Omitted reserves no RAM |
-| `gpus` | Whole number, default 0; the type is chosen at allocation, not here |
+| `gpus` | Whole number; the type is chosen at allocation, not here. For none, leave it out: ASTRA refuses `gpus: 0` |
 | `time_limit`, `disk`, fractional `cpus` | **Refused** by `lc materialize`, though `lc status` and `--check` pass them. Walltime is `lc compute launch --time` |
 
 - Reservations are **scheduling, not enforcement**. A recipe that spawns
@@ -83,10 +83,10 @@ recipe:
   `cpus` says. A recipe that should use N threads declares `cpus: N` *and*
   gets the variables: exported before `lc compute launch` (every recipe on
   that cluster gets them), or set in the command
-  (`env OMP_NUM_THREADS=8 python …`), which changes the recipe string and
-  so makes the output `stale`.
-- Editing `resources:` alone makes nothing `stale`: an output's identity is
-  its rendered recipe, decisions and format.
+  (`env OMP_NUM_THREADS=8 python …`), which changes the command and so
+  makes its results `stale`.
+- Editing `resources:` alone makes nothing `stale`: a result is made from
+  its command, inputs, decisions and format, not from what it reserved.
 
 ## Waiting and lifetime
 

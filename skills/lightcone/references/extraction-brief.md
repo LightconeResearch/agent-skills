@@ -36,22 +36,27 @@ One claim per insight. Never combine two findings into one.
 
 Every quote must be checked against the PDF text before you return it. Check
 them in one batch rather than one at a time — the tool extracts the PDF text
-once and matches everything against it:
+once and matches everything against it. Each item is a quote and its page,
+written exactly as `astra.yaml` writes them:
 
 ```bash
-echo '{"quotes": [
-  {"text": "…", "page": 5, "prefix": "…", "suffix": "…"},
-  {"text": "…", "page": 12, "prefix": "…", "suffix": "…"}
-]}' | uvx astra-tools@0.2.18 paper verify-quotes "<DOI>"
+echo '[
+  {"quote": {"exact": "…", "prefix": "…", "suffix": "…"}, "location": {"value": "page=5"}},
+  {"quote": {"exact": "…", "prefix": "…", "suffix": "…"}, "location": {"value": "page=12"}}
+]' | uvx astra-tools@0.3.0rc4 paper verify-quotes "<DOI>"
 ```
 
-Add `--version N` for an arXiv paper. The result is JSON: each quote comes
-back `verified` or `not_found`, with a summary.
+Add `--version N` for an arXiv paper. The result is a JSON list in the same
+order: each quote's `state` — `found`; `elsewhere`, in the paper but not on
+the page you gave; `not_found`; or `no_paper` — and, where it is in the
+paper, the `page` it is on.
 
-For anything `not_found`, re-read that part of the PDF, correct the text,
-prefix and suffix, and verify again. **Stop after three rounds.** Drop the
-quotes that still fail, and say which ones you dropped and why — a dropped
-quote is a normal outcome, an unverified one is not.
+For `elsewhere`, take the page from the tool's answer: validation requires
+the quote on the page its location gives. For anything `not_found`, re-read
+that part of the PDF, correct the text, prefix and suffix, and verify again.
+**Stop after three rounds.** Drop the quotes that still fail, and say which
+ones you dropped and why — a dropped quote is a normal outcome, an
+unverified one is not.
 
 ## Return format
 
@@ -60,19 +65,16 @@ Return only this YAML, with no prose around it:
 ```yaml
 prior_insights:
   <insight_id>:
-    id: <insight_id>
     claim: "<what we learned from this paper>"
-    created_at: "<ISO 8601 timestamp you were given>"
     evidence:
-      - id: ev1
-        doi: "<DOI>"
+      - doi: "<DOI>"
         version: <arXiv version, omit for non-arXiv>
         quote:
           exact: "<verified quote>"
           prefix: "<~20-100 chars before>"
           suffix: "<~20-100 chars after>"
         location:
-          page: <page number>
+          value: page=<page number>
     scope: "<when this applies — omit unless the claim is genuinely limited>"
 
 decision_links:
@@ -92,9 +94,10 @@ which option each insight bears on. The caller translates it; you never
 write it into `astra.yaml` yourself.
 
 The rest of that shape is ASTRA's own, reproduced here so you need nothing
-but this file. If a field is ever rejected downstream, the authority is
-`uvx astra-tools@0.2.18 spec insight` (and `spec evidence`), which is served
-in sync with the validator — not this copy.
+but this file: the insight's id is its key, and neither an insight nor its
+evidence carries an `id` field. If a field is ever rejected downstream, the
+authority is `uvx astra-tools@0.3.0rc4 spec insight` (and `spec evidence`),
+which is served in sync with the validator — not this copy.
 
 ## Rules
 
@@ -104,7 +107,10 @@ in sync with the validator — not this copy.
   failure.
 - Only insights whose quotes verified.
 - `prefix` and `suffix` are required on every quote.
-- For arXiv papers, always include the version.
+- For arXiv papers, always include the version — a whole number, `2` for
+  the second revision.
+- The page goes in `location.value` as `page=<n>`, and must be the page the
+  quote is on.
 - Never invent a quote, and never smooth one out. If the PDF has an odd
   line break or a ligature, the quote has it too.
 
@@ -114,6 +120,6 @@ in sync with the validator — not this copy.
 |---|---|---|
 | `not_found`, quote looks right | Paraphrased, or a typo crept in | Re-read the page and copy the text again, character for character |
 | `not_found` on a short quote | The words appear in several places | Lengthen the quote, or give more prefix/suffix |
-| Paper not in cache | The caller was meant to cache it before spawning you | Stop and report that; do not cache it yourself |
-| Wrong page reported | The quote exists elsewhere in the PDF | Take the page from the tool's own output |
+| `no_paper` | The caller was meant to cache it before spawning you | Stop and report that; do not cache it yourself |
+| `elsewhere` | The quote is on another page than the one you gave | Take the page from the tool's own output |
 | Persistent `not_found` | OCR artifacts, ligatures, unicode dashes | Choose a shorter span that avoids the problem characters |
